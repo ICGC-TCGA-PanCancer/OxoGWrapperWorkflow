@@ -9,7 +9,7 @@ import net.sourceforge.seqware.pipeline.workflowV2.model.Job;
 public class OxoGWrapperWorkflow extends AbstractWorkflowDataModel {
 
 	private String oxoQScore = "";
-	private String donorID;
+	// private String donorID;
 	private String aliquotID;
 	private String bamObjectID;
 	private String sangerVCFObjectID;
@@ -26,7 +26,7 @@ public class OxoGWrapperWorkflow extends AbstractWorkflowDataModel {
 	private String GITemail = "";
 	private String GITname = "ICGC AUTOMATION";
 	private String GITPemFile = "";
-	
+
 	private String tumourBAM;
 	private String normalBAM;
 	private String sangerVCF;
@@ -43,10 +43,10 @@ public class OxoGWrapperWorkflow extends AbstractWorkflowDataModel {
 			this.JSONfileName = getProperty("JSONfileName");
 			this.GITemail = getProperty("GITemail");
 			this.GITname = getProperty("GITname");
-			
-			if (hasPropertyAndNotNull("donorID")) {
-				this.donorID = getProperty("donorID");
-			}
+
+			// if (hasPropertyAndNotNull("donorID")) {
+			// this.donorID = getProperty("donorID");
+			// }
 			if (hasPropertyAndNotNull("bamObjectID")) {
 				this.bamObjectID = getProperty("bamObjectID");
 			}
@@ -68,17 +68,18 @@ public class OxoGWrapperWorkflow extends AbstractWorkflowDataModel {
 		}
 	}
 
-	private Job copyCollabTokenFile()
-	{
+	private Job copyCollabTokenFile() {
 		Job copyCollabTokenFileJob = this.getWorkflow().createBashJob("copy collab token file");
-		copyCollabTokenFileJob.setCommand("cp ~/.gnos/collab.token /home/seqware/downloads/icgc-storage-client-*/conf/application.properties");
+		copyCollabTokenFileJob.setCommand(
+				"cp ~/.gnos/collab.token /home/seqware/downloads/icgc-storage-client-*/conf/application.properties");
 		return copyCollabTokenFileJob;
 	}
-	
+
 	private Job getBAM(Job parentJob) {
 		Job getBamFileJob = this.getWorkflow().createBashJob("get BAM file");
 		getBamFileJob.addParent(parentJob);
-		getBamFileJob.setCommand("icgc-storage-client download --object-id " + this.bamObjectID + " --output-dir /datastore/bam");
+		getBamFileJob.setCommand(
+				"icgc-storage-client download --object-id " + this.bamObjectID + " --output-dir /datastore/bam");
 		this.normalBAM = "/datstore/bam/normal.bam";
 		this.tumourBAM = "/datstore/bam/tumour.bam";
 		return getBamFileJob;
@@ -86,17 +87,17 @@ public class OxoGWrapperWorkflow extends AbstractWorkflowDataModel {
 
 	private Job getVCF(Job parentJob, String workflowName, String objectID) {
 		Job getVCFJob = this.getWorkflow().createBashJob("get VCF for workflow " + workflowName);
-		String outDir = "/datastore/vcf-"+workflowName;
-		getVCFJob.setCommand("icgc-storage-client download --object-id " + objectID + " --output-dir "+outDir);
+		String outDir = "/datastore/vcf-" + workflowName;
+		getVCFJob.setCommand("icgc-storage-client download --object-id " + objectID + " --output-dir " + outDir);
 		getVCFJob.addParent(parentJob);
-		
+
 		if (workflowName.equals("Sanger"))
 			this.sangerVCF = outDir + "/somefile.vcf";
 		else if (workflowName.equals("DKFZ_EMBL"))
 			this.dkfzEmblVCF = outDir + "/somefile.vcf";
 		else if (workflowName.equals("Broad"))
 			this.broadVCF = outDir + "/somefile.vcf";
-		
+
 		return getVCFJob;
 	}
 
@@ -106,7 +107,7 @@ public class OxoGWrapperWorkflow extends AbstractWorkflowDataModel {
 				+ this.aliquotID + " " + this.tumourBAM + " " + this.normalBAM + " " + this.oxoQScore + " "
 				+ this.sangerVCF + " " + this.dkfzEmblVCF + " " + this.broadVCF;
 		runOxoGWorkflow.setCommand(
-				"docker run -v /refdata9/:/cga/fh/pcawg_pipeline/refdata/ -v /oncotator_db/:/cga/fh/pcawg_pipeline/refdata/public/oncotator_db oxog "
+				"docker run --name oxog_run -v /refdata9/:/cga/fh/pcawg_pipeline/refdata/ -v /oncotator_db/:/cga/fh/pcawg_pipeline/refdata/public/oncotator_db oxog "
 						+ oxogCommand);
 		// Running OxoG has multiple parents. Each download-input-file job is a
 		// parent and this can only run when they are all done.
@@ -116,6 +117,12 @@ public class OxoGWrapperWorkflow extends AbstractWorkflowDataModel {
 		return runOxoGWorkflow;
 	}
 
+	private Job getOxoGLogs(Job parent) {
+		Job getLog = this.getWorkflow().createBashJob("cat OxoG logs");
+		getLog.setCommand("docker logs oxog_run");
+		return getLog;
+	}
+	
 	private Job pullRepo(Job getReferenceDataJob) {
 		Job installerJob = this.getWorkflow().createBashJob("install_dependencies");
 		installerJob.getCommand().addArgument("if [[ ! -d ~/.ssh/ ]]; then  mkdir ~/.ssh; fi \n");
@@ -135,7 +142,7 @@ public class OxoGWrapperWorkflow extends AbstractWorkflowDataModel {
 	private Job gitMove(Job lastJob, String src, String dst) {
 		Job manageGit = this.getWorkflow().createBashJob("git_manage_" + src + "_" + dst);
 		String path = this.JSONlocation + "/" + this.JSONrepoName + "/" + this.JSONfolderName;
-		String gitroot = this.JSONlocation + "/" + this.JSONrepoName;
+		// String gitroot = this.JSONlocation + "/" + this.JSONrepoName;
 		manageGit.getCommand().addArgument("git config --global user.name " + this.GITname + " \n");
 		manageGit.getCommand().addArgument("git config --global user.email " + this.GITemail + " \n");
 		manageGit.getCommand().addArgument("if [[ ! -d " + path + " ]]; then mkdir -p " + path + "; fi \n");
@@ -158,7 +165,7 @@ public class OxoGWrapperWorkflow extends AbstractWorkflowDataModel {
 	public void buildWorkflow() {
 		this.init();
 		Job copyCollabToken = this.copyCollabTokenFile();
-		
+
 		// Pull the repo.
 		Job pullRepo = this.pullRepo(copyCollabToken);
 		// indicate job is in downloading stage.
@@ -174,22 +181,27 @@ public class OxoGWrapperWorkflow extends AbstractWorkflowDataModel {
 			move2running.addParent(j);
 		}
 		Job oxoG = this.doOxoG(Arrays.asList(move2running));
+		Job getLogs = this.getOxoGLogs(oxoG);
+		
 		// indicate job is in uploading stage.
-		Job move2uploading = gitMove(oxoG, "running-jobs", "uploading-jobs");
+		Job move2uploading = gitMove(getLogs, "running-jobs", "uploading-jobs");
 
-		//The tar file contains all results.
+		// The tar file contains all results.
 		Job uploadResults = this.getWorkflow().createBashJob("upload results");
-		uploadResults.setCommand("rsync /cga/fh/pcawg_pipeline/jobResults_pipette/results/" + this.aliquotID +".oxoG.somatic.snv_mnv.vcf.gz.tar  " + this.uploadURL);
+		uploadResults.setCommand("rsync /cga/fh/pcawg_pipeline/jobResults_pipette/results/" + this.aliquotID
+				+ ".oxoG.somatic.snv_mnv.vcf.gz.tar  " + this.uploadURL);
 		uploadResults.addParent(move2uploading);
 
-//		Job uploadMergeVCF = this.getWorkflow().createBashJob("upload merge VCFs");
-//		uploadMergeVCF.setCommand("rsync " + this.donorID + ".merge.vcf " + this.uploadURL);
-//		uploadMergeVCF.addParent(move2uploading);
+		// Job uploadMergeVCF = this.getWorkflow().createBashJob("upload merge
+		// VCFs");
+		// uploadMergeVCF.setCommand("rsync " + this.donorID + ".merge.vcf " +
+		// this.uploadURL);
+		// uploadMergeVCF.addParent(move2uploading);
 
 		// indicate job is complete.
 		Job move2finished = gitMove(null, "uploading-jobs", "completed-jobs");
 		move2finished.addParent(uploadResults);
-		//move2finished.addParent(uploadMergeVCF);
+		// move2finished.addParent(uploadMergeVCF);
 	}
 
 }
