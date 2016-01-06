@@ -68,6 +68,13 @@ public class OxoGWrapperWorkflow extends AbstractWorkflowDataModel {
 		}
 	}
 
+	private Job copyCollabTokenFile()
+	{
+		Job copyCollabTokenFileJob = this.getWorkflow().createBashJob("copy collab token file");
+		copyCollabTokenFileJob.setCommand("cp ~/.gnos/collab.token /home/seqware/downloads/icgc-storage-client-*/conf/application.properties");
+		return copyCollabTokenFileJob;
+	}
+	
 	private Job getBAM(Job parentJob) {
 		Job getBamFileJob = this.getWorkflow().createBashJob("get BAM file");
 		getBamFileJob.addParent(parentJob);
@@ -150,8 +157,10 @@ public class OxoGWrapperWorkflow extends AbstractWorkflowDataModel {
 	@Override
 	public void buildWorkflow() {
 		this.init();
+		Job copyCollabToken = this.copyCollabTokenFile();
+		
 		// Pull the repo.
-		Job pullRepo = this.pullRepo(null);
+		Job pullRepo = this.pullRepo(copyCollabToken);
 		// indicate job is in downloading stage.
 		Job move2download = gitMove(pullRepo, "queued-jobs", "downloading-jobs");
 
