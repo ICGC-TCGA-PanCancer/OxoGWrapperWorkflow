@@ -11,7 +11,8 @@ public class OxoGWrapperWorkflow extends AbstractWorkflowDataModel {
 	private String oxoQScore = "";
 	// private String donorID;
 	private String aliquotID;
-	private String bamObjectID;
+	private String bamNormalObjectID;
+	private String bamTumourObjectID;
 	private String sangerVCFObjectID;
 	private String dkfzemblVCFObjectID;
 	private String broadVCFObjectID;
@@ -40,15 +41,20 @@ public class OxoGWrapperWorkflow extends AbstractWorkflowDataModel {
 			}
 			this.JSONrepo = getProperty("JSONrepo");
 			this.JSONfolderName = getProperty("JSONfolderName");
-			this.JSONfileName = getProperty("JSONfileName");
+			if (hasPropertyAndNotNull("JSONfileName")) {
+				this.JSONfileName = getProperty("JSONfileName");
+			}
 			this.GITemail = getProperty("GITemail");
 			this.GITname = getProperty("GITname");
 
 			// if (hasPropertyAndNotNull("donorID")) {
 			// this.donorID = getProperty("donorID");
 			// }
-			if (hasPropertyAndNotNull("bamObjectID")) {
-				this.bamObjectID = getProperty("bamObjectID");
+			if (hasPropertyAndNotNull("bamNormalObjectID")) {
+				this.bamNormalObjectID = getProperty("bamNormalObjectID");
+			}
+			if (hasPropertyAndNotNull("bamTumourObjectID")) {
+				this.bamTumourObjectID = getProperty("bamTumourObjectID");
 			}
 			if (hasPropertyAndNotNull("sangerVCFObjectID")) {
 				this.sangerVCFObjectID = getProperty("sangerVCFObjectID");
@@ -79,7 +85,7 @@ public class OxoGWrapperWorkflow extends AbstractWorkflowDataModel {
 		Job getBamFileJob = this.getWorkflow().createBashJob("get BAM file");
 		getBamFileJob.addParent(parentJob);
 		getBamFileJob.setCommand(
-				"icgc-storage-client download --object-id " + this.bamObjectID + " --output-dir /datastore/bam");
+				"icgc-storage-client download --object-id " + this.bamNormalObjectID + " --output-dir /datastore/bam");
 		this.normalBAM = "/datstore/bam/normal.bam";
 		this.tumourBAM = "/datstore/bam/tumour.bam";
 		return getBamFileJob;
@@ -114,6 +120,9 @@ public class OxoGWrapperWorkflow extends AbstractWorkflowDataModel {
 		for (Job j : parents) {
 			runOxoGWorkflow.addParent(j);
 		}
+
+		Job getLogs = this.getOxoGLogs(runOxoGWorkflow);
+
 		return runOxoGWorkflow;
 	}
 
@@ -122,7 +131,7 @@ public class OxoGWrapperWorkflow extends AbstractWorkflowDataModel {
 		getLog.setCommand("docker logs oxog_run");
 		return getLog;
 	}
-	
+
 	private Job pullRepo(Job getReferenceDataJob) {
 		Job installerJob = this.getWorkflow().createBashJob("install_dependencies");
 		installerJob.getCommand().addArgument("if [[ ! -d ~/.ssh/ ]]; then  mkdir ~/.ssh; fi \n");
@@ -181,10 +190,9 @@ public class OxoGWrapperWorkflow extends AbstractWorkflowDataModel {
 			move2running.addParent(j);
 		}
 		Job oxoG = this.doOxoG(Arrays.asList(move2running));
-		Job getLogs = this.getOxoGLogs(oxoG);
-		
+
 		// indicate job is in uploading stage.
-		Job move2uploading = gitMove(getLogs, "running-jobs", "uploading-jobs");
+		Job move2uploading = gitMove(oxoG, "running-jobs", "uploading-jobs");
 
 		// The tar file contains all results.
 		Job uploadResults = this.getWorkflow().createBashJob("upload results");
