@@ -100,8 +100,13 @@ public class OxoGWrapperWorkflow extends AbstractWorkflowDataModel {
 		// TODO: finish modifying this workflow to work without everything being built into a single seqware-derived image. This means
 		// not assuming that icgc-client and the workflow itself will reside inside the same container as seqware. So the download commands
 		// need to be re-written.
-		String storageClientDockerCmdNormal = "docker run -e STORAGE_PROFILE=collab -v /datastore/bam/normal/logs/client.log:/icgc/icgc-storage-client/logs/client.log:rw -v /home/ubuntu/.gnos/collab.token:/icgc/icgc-storage-client/conf/application.properties:ro -v /datastore/bam/normal:/downloads/:rw icgc/icgc-storage-client /icgc/icgc-storage-client/bin/icgc-storage-client --object-id "
-				+this.bamNormalObjectID+" --output-dir /downloads/";
+		String storageClientDockerCmdNormal ="docker run "
+					+ " -e STORAGE_PROFILE=collab "
+				    + " -v /datastore/bam/normal/logs/client.log:/icgc/icgc-storage-client/logs/client.log:rw "
+					+ " -v /home/ubuntu/.gnos/collab.token:/icgc/icgc-storage-client/conf/application.properties:ro "
+				    + " -v /datastore/bam/normal:/downloads/:rw icgc/icgc-storage-client "
+					+ " /icgc/icgc-storage-client/bin/icgc-storage-client --object-id "
+						+ this.bamNormalObjectID+" --output-dir /downloads/";
 		getNormalBamFileJob.setCommand(storageClientDockerCmdNormal);
 		this.normalBAM = "/datastore/bam/normal/*.bam";
 		
@@ -110,8 +115,13 @@ public class OxoGWrapperWorkflow extends AbstractWorkflowDataModel {
 		getTumourBamFileJob.addParent(getNormalBamFileJob);
 		//getTumourBamFileJob.setCommand(
 		//		"icgc-storage-client download --object-id " + this.bamTumourObjectID + " --output-dir /datastore/bam/tumour/");
-		String storageClientDockerCmdTumour = "docker run -e STORAGE_PROFILE=collab -v /datastore/bam/tumour/logs/client.log:/icgc/icgc-storage-client/logs/client.log:rw -v /home/ubuntu/.gnos/collab.token:/icgc/icgc-storage-client/conf/application.properties:ro -v /datastore/bam/tumour:/downloads/:rw icgc/icgc-storage-client /icgc/icgc-storage-client/bin/icgc-storage-client --object-id "
-				+this.bamTumourObjectID+" --output-dir /downloads/";
+		String storageClientDockerCmdTumour = "docker run "
+					+ " -e STORAGE_PROFILE=collab "
+				    + " -v /datastore/bam/tumour/logs/client.log:/icgc/icgc-storage-client/logs/client.log:rw "
+					+ " -v /home/ubuntu/.gnos/collab.token:/icgc/icgc-storage-client/conf/application.properties:ro "
+				    + " -v /datastore/bam/tumour:/downloads/:rw icgc/icgc-storage-client "
+					+ " /icgc/icgc-storage-client/bin/icgc-storage-client --object-id "
+						+ this.bamTumourObjectID+" --output-dir /downloads/";
 		getTumourBamFileJob.setCommand(storageClientDockerCmdTumour);
 		this.tumourBAM = "/datastore/bam/tumour/*.bam";
 		
