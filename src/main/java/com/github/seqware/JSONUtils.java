@@ -19,6 +19,7 @@ public abstract class JSONUtils {
 	static final String SANGER_VCF_OBJECT_ID = "sangerVCFObjectID";
 	static final String BAM_NORMAL_OBJECT_ID = "bamNormalObjectID";
 	static final String BAM_TUMOUR_OBJECT_ID = "bamTumourObjectID";
+	static final String ALIQUOT_ID = "aliquotID";
 
 	public static Map<String,String> processJSONFile(String filePath) {
 		
@@ -61,6 +62,10 @@ public abstract class JSONUtils {
 					break;
 				}
 			}
+			
+			//Get the aliquot ID from the tumour. This may get more complicated in multi-tumour scenarios.
+			String aliquotID = (String) tumours.get(0).get("aliquot_id");
+			results.put(ALIQUOT_ID, aliquotID);
 
 			// Get VCF Object IDs
 			// Sanger
@@ -114,7 +119,7 @@ public abstract class JSONUtils {
 			//Get OxoQ Score
 			String oxoqScore = String.valueOf((Double)jsonContents.get("OxoQ_score"));
 			results.put(OXOQ_SCORE, oxoqScore);
-
+			
 		} catch (FileNotFoundException e) {
 			// TODO Auto-generated catch block
 			e.printStackTrace();

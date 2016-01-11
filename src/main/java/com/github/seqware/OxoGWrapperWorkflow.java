@@ -77,6 +77,7 @@ public class OxoGWrapperWorkflow extends AbstractWorkflowDataModel {
 			this.sangerVCFObjectID = inputsFromJSON.get(JSONUtils.SANGER_VCF_OBJECT_ID);
 			this.dkfzemblVCFObjectID = inputsFromJSON.get(JSONUtils.DKFZEMBL_VCF_OBJECT_ID);
 			this.oxoQScore = inputsFromJSON.get(JSONUtils.OXOQ_SCORE);
+			this.aliquotID = inputsFromJSON.get(JSONUtils.ALIQUOT_ID);
 			
 		} catch (Exception e) {
 			throw new RuntimeException(e);
