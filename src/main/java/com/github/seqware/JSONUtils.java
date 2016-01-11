@@ -13,6 +13,13 @@ import com.google.gson.reflect.TypeToken;
 
 public abstract class JSONUtils {
 
+	static final String OXOQ_SCORE = "oxoqScore";
+	static final String BROAD_VCF_OBJECT_ID = "broadVCFObjectID";
+	static final String DKFZEMBL_VCF_OBJECT_ID = "dkfzemblVCFObjectID";
+	static final String SANGER_VCF_OBJECT_ID = "sangerVCFObjectID";
+	static final String BAM_NORMAL_OBJECT_ID = "bamNormalObjectID";
+	static final String BAM_TUMOUR_OBJECT_ID = "bamTumourObjectID";
+
 	public static Map<String,String> processJSONFile(String filePath) {
 		
 		Map<String,String> results = new HashMap<String,String>();
@@ -32,7 +39,7 @@ public abstract class JSONUtils {
 				String fileName = fileDetails.get("file_name");
 				if (fileName.endsWith(".bam")) {
 					//this.bamNormalObjectID = fileDetails.get("object_id");
-					results.put("bamNormalObjectID", fileDetails.get("object_id"));
+					results.put(BAM_NORMAL_OBJECT_ID, fileDetails.get("object_id"));
 					// break the for-loop, no need to keep going through other
 					// file details.
 					break;
@@ -48,7 +55,7 @@ public abstract class JSONUtils {
 				String fileName = fileDetails.get("file_name");
 				if (fileName.endsWith(".bam")) {
 					//this.bamTumourObjectID = fileDetails.get("object_id");
-					results.put("bamTumourObjectID", fileDetails.get("object_id"));
+					results.put(BAM_TUMOUR_OBJECT_ID, fileDetails.get("object_id"));
 					// break the for-loop, no need to keep going through other
 					// file details.
 					break;
@@ -67,7 +74,7 @@ public abstract class JSONUtils {
 				// ".somatic.sv.vcf.gz", ".somatic.indel.vcf.gz"
 				if (fileName.endsWith(".somatic.snv_mnv.vcf.gz")) {
 					//this.sangerVCFObjectID = fileDetails.get("object_id");
-					results.put("sangerVCFObjectID", fileDetails.get("object_id"));
+					results.put(SANGER_VCF_OBJECT_ID, fileDetails.get("object_id"));
 					// break the for-loop, no need to keep going through other
 					// file details.
 					break;
@@ -81,7 +88,7 @@ public abstract class JSONUtils {
 				// TODO: Get the other VCF files. Also, DKFZ needs to be
 				// filtered to not use the "embl-delly" files.
 				if (fileName.contains("dkfz-snvCalling") && fileName.endsWith(".somatic.snv_mnv.vcf.gz")) {
-					results.put("dkfzemblVCFObjectID", fileDetails.get("object_id"));
+					results.put(DKFZEMBL_VCF_OBJECT_ID, fileDetails.get("object_id"));
 					//this.dkfzemblVCFObjectID = fileDetails.get("object_id");
 					// break the for-loop, no need to keep going through other
 					// file details.
@@ -96,13 +103,17 @@ public abstract class JSONUtils {
 				// TODO: Broad produces a number of VCFs, need to find out
 				// exactly which ones to download.
 				if (fileName.contains("broad-mutect") && fileName.endsWith(".somatic.snv_mnv.vcf.gz")) {
-					results.put("broadVCFObjectID", fileDetails.get("object_id"));
+					results.put(BROAD_VCF_OBJECT_ID, fileDetails.get("object_id"));
 					//this.broadVCFObjectID = fileDetails.get("object_id");
 					// break the for-loop, no need to keep going through other
 					// file details.
 					break;
 				}
 			}
+			
+			//Get OxoQ Score
+			String oxoqScore = String.valueOf((Double)jsonContents.get("OxoQ_score"));
+			results.put(OXOQ_SCORE, oxoqScore);
 
 		} catch (FileNotFoundException e) {
 			// TODO Auto-generated catch block
