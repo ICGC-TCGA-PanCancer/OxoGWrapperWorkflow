@@ -69,7 +69,7 @@ public class OxoGWrapperWorkflow extends AbstractWorkflowDataModel {
 			if (hasPropertyAndNotNull("uploadURL")) {
 				this.uploadURL = getProperty("uploadURL");
 			}
-
+			
 			Map<String,String> inputsFromJSON = JSONUtils.processJSONFile(this.JSONfileName);
 			this.bamNormalObjectID = inputsFromJSON.get(JSONUtils.BAM_NORMAL_OBJECT_ID);
 			this.bamTumourObjectID = inputsFromJSON.get(JSONUtils.BAM_TUMOUR_OBJECT_ID);
@@ -94,15 +94,25 @@ public class OxoGWrapperWorkflow extends AbstractWorkflowDataModel {
 	private Job getBAMs(Job parentJob) {
 		Job getNormalBamFileJob = this.getWorkflow().createBashJob("get Normal BAM file");
 		getNormalBamFileJob.addParent(parentJob);
-		getNormalBamFileJob.setCommand(
-				"icgc-storage-client download --object-id " + this.bamNormalObjectID + " --output-dir /datastore/bam/normal/");
+//		getNormalBamFileJob.setCommand(
+//				"icgc-storage-client download --object-id " + this.bamNormalObjectID + " --output-dir /datastore/bam/normal/");
+
+		// TODO: finish modifying this workflow to work without everything being built into a single seqware-derived image. This means
+		// not assuming that icgc-client and the workflow itself will reside inside the same container as seqware. So the download commands
+		// need to be re-written.
+		String storageClientDockerCmdNormal = "docker run -e STORAGE_PROFILE=collab -v /datastore/bam/normal/logs/client.log:/icgc/icgc-storage-client/logs/client.log:rw -v /home/ubuntu/.gnos/collab.token:/icgc/icgc-storage-client/conf/application.properties:ro -v /datastore/bam/normal:/downloads/:rw icgc/icgc-storage-client /icgc/icgc-storage-client/bin/icgc-storage-client --object-id "
+				+this.bamNormalObjectID+" --output-dir /downloads/";
+		getNormalBamFileJob.setCommand(storageClientDockerCmdNormal);
 		this.normalBAM = "/datastore/bam/normal/*.bam";
 		
 		
 		Job getTumourBamFileJob = this.getWorkflow().createBashJob("get Tumour BAM file");
 		getTumourBamFileJob.addParent(getNormalBamFileJob);
-		getTumourBamFileJob.setCommand(
-				"icgc-storage-client download --object-id " + this.bamTumourObjectID + " --output-dir /datastore/bam/tumour/");
+		//getTumourBamFileJob.setCommand(
+		//		"icgc-storage-client download --object-id " + this.bamTumourObjectID + " --output-dir /datastore/bam/tumour/");
+		String storageClientDockerCmdTumour = "docker run -e STORAGE_PROFILE=collab -v /datastore/bam/tumour/logs/client.log:/icgc/icgc-storage-client/logs/client.log:rw -v /home/ubuntu/.gnos/collab.token:/icgc/icgc-storage-client/conf/application.properties:ro -v /datastore/bam/tumour:/downloads/:rw icgc/icgc-storage-client /icgc/icgc-storage-client/bin/icgc-storage-client --object-id "
+				+this.bamTumourObjectID+" --output-dir /downloads/";
+		getTumourBamFileJob.setCommand(storageClientDockerCmdTumour);
 		this.tumourBAM = "/datastore/bam/tumour/*.bam";
 		
 		return getTumourBamFileJob;
@@ -127,11 +137,10 @@ public class OxoGWrapperWorkflow extends AbstractWorkflowDataModel {
 	private Job doOxoG(Collection<Job> parents) {
 		Job runOxoGWorkflow = this.getWorkflow().createBashJob("Run OxoG");
 		String oxogMounts = " -v /datastore/refdata/:/cga/fh/pcawg_pipeline/refdata/ "+
-                " -v /datastore/oncotator_db/:/cga/fh/pcawg_pipeline/refdata/public/oncotator_db/ " + 
-                " -v /datastore/oxog_workspace/:/cga/fh/pcawg_pipeline/jobResults_pipette/jobs/"+this.aliquotID+"/:rw " +
-                " -v /datastore/bam/:/datafiles/BAM/ "+
-                " -v /datastore/vcf/:/datafiles/VCF/ "+
-                " -v /datastore/oxog_results/:/cga/fh/pcawg_pipeline/jobResults_pipette/results:rw ";
+          " -v /datastore/oncotator_db/:/cga/fh/pcawg_pipeline/refdata/public/oncotator_db/ " + 
+          " -v /datastore/oxog_workspace/:/cga/fh/pcawg_pipeline/jobResults_pipette/jobs/"+this.aliquotID+"/:rw " +
+          " -v /datastore/bam/:/datafiles/BAM/  -v /datastore/vcf/:/datafiles/VCF/ "+
+          " -v /datastore/oxog_results/:/cga/fh/pcawg_pipeline/jobResults_pipette/results:rw ";
 		String oxogCommand = "/cga/fh/pcawg_pipeline/pipelines/run_one_pipeline.bash pcawg /cga/fh/pcawg_pipeline/pipelines/oxog_pipeline.py "
 				+ this.aliquotID + " " + this.tumourBAM + " " + this.normalBAM + " " + this.oxoQScore + " "
 				+ this.sangerVCF + " " + this.dkfzEmblVCF + " " + this.broadVCF;
@@ -157,6 +166,16 @@ public class OxoGWrapperWorkflow extends AbstractWorkflowDataModel {
 		return getLog;
 	}
 
+	private Job doUpload(Job parentJob) {
+		// Might need to run gtupload to generate the analysis.xml and manifest files (but not actually upload). 
+		// The tar file contains all results.
+		Job uploadResults = this.getWorkflow().createBashJob("upload results");
+		uploadResults.setCommand("rsync /cga/fh/pcawg_pipeline/jobResults_pipette/results/" + this.aliquotID
+				+ ".oxoG.somatic.snv_mnv.vcf.gz.tar  " + this.uploadURL);
+		uploadResults.addParent(parentJob);
+		return uploadResults;
+	}
+	
 	private Job pullRepo(Job getReferenceDataJob) {
 		Job installerJob = this.getWorkflow().createBashJob("install_dependencies");
 		installerJob.getCommand().addArgument("if [[ ! -d ~/.ssh/ ]]; then  mkdir ~/.ssh; fi \n");
@@ -218,12 +237,7 @@ public class OxoGWrapperWorkflow extends AbstractWorkflowDataModel {
 
 		// indicate job is in uploading stage.
 		Job move2uploading = gitMove(oxoG, "running-jobs", "uploading-jobs");
-		// Might need to run gtupload to generate the analysis.xml and manifest files (but not actually upload). 
-		// The tar file contains all results.
-		Job uploadResults = this.getWorkflow().createBashJob("upload results");
-		uploadResults.setCommand("rsync /cga/fh/pcawg_pipeline/jobResults_pipette/results/" + this.aliquotID
-				+ ".oxoG.somatic.snv_mnv.vcf.gz.tar  " + this.uploadURL);
-		uploadResults.addParent(move2uploading);
+		Job uploadResults = doUpload(move2uploading);
 
 		// Job uploadMergeVCF = this.getWorkflow().createBashJob("upload merge
 		// VCFs");
@@ -236,5 +250,4 @@ public class OxoGWrapperWorkflow extends AbstractWorkflowDataModel {
 		move2finished.addParent(uploadResults);
 		// move2finished.addParent(uploadMergeVCF);
 	}
-
 }
