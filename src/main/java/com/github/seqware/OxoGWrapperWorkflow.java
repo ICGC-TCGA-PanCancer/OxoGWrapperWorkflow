@@ -2,6 +2,7 @@ package com.github.seqware;
 
 import java.util.Arrays;
 import java.util.Collection;
+import java.util.Map;
 
 import net.sourceforge.seqware.pipeline.workflowV2.AbstractWorkflowDataModel;
 import net.sourceforge.seqware.pipeline.workflowV2.model.Job;
@@ -69,6 +70,14 @@ public class OxoGWrapperWorkflow extends AbstractWorkflowDataModel {
 				this.uploadURL = getProperty("uploadURL");
 			}
 
+			Map<String,String> inputsFromJSON = JSONUtils.processJSONFile(this.JSONfileName);
+			this.bamNormalObjectID = inputsFromJSON.get(JSONUtils.BAM_NORMAL_OBJECT_ID);
+			this.bamTumourObjectID = inputsFromJSON.get(JSONUtils.BAM_TUMOUR_OBJECT_ID);
+			this.broadVCFObjectID = inputsFromJSON.get(JSONUtils.BROAD_VCF_OBJECT_ID);
+			this.sangerVCFObjectID = inputsFromJSON.get(JSONUtils.SANGER_VCF_OBJECT_ID);
+			this.dkfzemblVCFObjectID = inputsFromJSON.get(JSONUtils.DKFZEMBL_VCF_OBJECT_ID);
+			this.oxoQScore = inputsFromJSON.get(JSONUtils.OXOQ_SCORE);
+			
 		} catch (Exception e) {
 			throw new RuntimeException(e);
 		}
@@ -81,19 +90,26 @@ public class OxoGWrapperWorkflow extends AbstractWorkflowDataModel {
 		return copyCollabTokenFileJob;
 	}
 
-	private Job getBAM(Job parentJob) {
-		Job getBamFileJob = this.getWorkflow().createBashJob("get BAM file");
-		getBamFileJob.addParent(parentJob);
-		getBamFileJob.setCommand(
-				"icgc-storage-client download --object-id " + this.bamNormalObjectID + " --output-dir /datastore/bam");
-		this.normalBAM = "/datstore/bam/normal.bam";
-		this.tumourBAM = "/datstore/bam/tumour.bam";
-		return getBamFileJob;
+	private Job getBAMs(Job parentJob) {
+		Job getNormalBamFileJob = this.getWorkflow().createBashJob("get Normal BAM file");
+		getNormalBamFileJob.addParent(parentJob);
+		getNormalBamFileJob.setCommand(
+				"icgc-storage-client download --object-id " + this.bamNormalObjectID + " --output-dir /datastore/bam/normal/");
+		this.normalBAM = "/datastore/bam/normal/*.bam";
+		
+		
+		Job getTumourBamFileJob = this.getWorkflow().createBashJob("get Tumour BAM file");
+		getTumourBamFileJob.addParent(getNormalBamFileJob);
+		getTumourBamFileJob.setCommand(
+				"icgc-storage-client download --object-id " + this.bamTumourObjectID + " --output-dir /datastore/bam/tumour/");
+		this.tumourBAM = "/datastore/bam/tumour/*.bam";
+		
+		return getTumourBamFileJob;
 	}
 
 	private Job getVCF(Job parentJob, String workflowName, String objectID) {
 		Job getVCFJob = this.getWorkflow().createBashJob("get VCF for workflow " + workflowName);
-		String outDir = "/datastore/vcf-" + workflowName;
+		String outDir = "/datastore/vcf";
 		getVCFJob.setCommand("icgc-storage-client download --object-id " + objectID + " --output-dir " + outDir);
 		getVCFJob.addParent(parentJob);
 
@@ -109,25 +125,33 @@ public class OxoGWrapperWorkflow extends AbstractWorkflowDataModel {
 
 	private Job doOxoG(Collection<Job> parents) {
 		Job runOxoGWorkflow = this.getWorkflow().createBashJob("Run OxoG");
+		String oxogMounts = " -v /datastore/refdata/:/cga/fh/pcawg_pipeline/refdata/ "+
+                " -v /datastore/oncotator_db/:/cga/fh/pcawg_pipeline/refdata/public/oncotator_db/ " + 
+                " -v /datastore/oxog_workspace/:/cga/fh/pcawg_pipeline/jobResults_pipette/jobs/"+this.aliquotID+"/:rw " +
+                " -v /datastore/bam/:/datafiles/BAM/ "+
+                " -v /datastore/vcf/:/datafiles/VCF/ "+
+                " -v /datastore/oxog_results/:/cga/fh/pcawg_pipeline/jobResults_pipette/results:rw ";
 		String oxogCommand = "/cga/fh/pcawg_pipeline/pipelines/run_one_pipeline.bash pcawg /cga/fh/pcawg_pipeline/pipelines/oxog_pipeline.py "
 				+ this.aliquotID + " " + this.tumourBAM + " " + this.normalBAM + " " + this.oxoQScore + " "
 				+ this.sangerVCF + " " + this.dkfzEmblVCF + " " + this.broadVCF;
 		runOxoGWorkflow.setCommand(
-				"docker run --name oxog_run -v /refdata9/:/cga/fh/pcawg_pipeline/refdata/ -v /oncotator_db/:/cga/fh/pcawg_pipeline/refdata/public/oncotator_db oxog "
-						+ oxogCommand);
+				"docker run --name=\"oxog_container\" "+oxogMounts+" oxog " + oxogCommand);
 		// Running OxoG has multiple parents. Each download-input-file job is a
 		// parent and this can only run when they are all done.
+		// Running all downloads in parallel could be useful if they don't all download at maximum speed.
 		for (Job j : parents) {
 			runOxoGWorkflow.addParent(j);
 		}
 
 		Job getLogs = this.getOxoGLogs(runOxoGWorkflow);
 
-		return runOxoGWorkflow;
+		return getLogs;
 	}
 
 	private Job getOxoGLogs(Job parent) {
-		Job getLog = this.getWorkflow().createBashJob("cat OxoG logs");
+		Job getLog = this.getWorkflow().createBashJob("cat OxoG docker logs");
+		// This will get the docker logs, but we may also want to get the logs
+		// in the mounted oxog_workspace dir...
 		getLog.setCommand("docker logs oxog_run");
 		return getLog;
 	}
@@ -180,7 +204,7 @@ public class OxoGWrapperWorkflow extends AbstractWorkflowDataModel {
 		// indicate job is in downloading stage.
 		Job move2download = gitMove(pullRepo, "queued-jobs", "downloading-jobs");
 
-		Job bamJob = this.getBAM(move2download);
+		Job bamJob = this.getBAMs(move2download);
 		Job sangerVCFJob = this.getVCF(move2download, "Sanger", this.sangerVCFObjectID);
 		Job dkfzEmblVCFJob = this.getVCF(move2download, "DKFZ_EMBL", this.dkfzemblVCFObjectID);
 		Job broadVCFJob = this.getVCF(move2download, "Broad", this.broadVCFObjectID);
@@ -193,7 +217,7 @@ public class OxoGWrapperWorkflow extends AbstractWorkflowDataModel {
 
 		// indicate job is in uploading stage.
 		Job move2uploading = gitMove(oxoG, "running-jobs", "uploading-jobs");
-
+		// Might need to run gtupload to generate the analysis.xml and manifest files (but not actually upload). 
 		// The tar file contains all results.
 		Job uploadResults = this.getWorkflow().createBashJob("upload results");
 		uploadResults.setCommand("rsync /cga/fh/pcawg_pipeline/jobResults_pipette/results/" + this.aliquotID
