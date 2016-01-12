@@ -104,7 +104,8 @@ public class OxoGWrapperWorkflow extends AbstractWorkflowDataModel {
 					+ " -e STORAGE_PROFILE=collab "
 				    + " -v /datastore/bam/normal/logs/client.log:/icgc/icgc-storage-client/logs/client.log:rw "
 					+ " -v /home/ubuntu/.gnos/collab.token:/icgc/icgc-storage-client/conf/application.properties:ro "
-				    + " -v /datastore/bam/normal:/downloads/:rw icgc/icgc-storage-client "
+				    + " -v /datastore/bam/normal:/downloads/:rw"
+				    + " icgc/icgc-storage-client "
 					+ " /icgc/icgc-storage-client/bin/icgc-storage-client --object-id "
 						+ this.bamNormalObjectID+" --output-dir /downloads/";
 		getNormalBamFileJob.setCommand(storageClientDockerCmdNormal);
@@ -119,7 +120,8 @@ public class OxoGWrapperWorkflow extends AbstractWorkflowDataModel {
 					+ " -e STORAGE_PROFILE=collab "
 				    + " -v /datastore/bam/tumour/logs/client.log:/icgc/icgc-storage-client/logs/client.log:rw "
 					+ " -v /home/ubuntu/.gnos/collab.token:/icgc/icgc-storage-client/conf/application.properties:ro "
-				    + " -v /datastore/bam/tumour:/downloads/:rw icgc/icgc-storage-client "
+				    + " -v /datastore/bam/tumour:/downloads/:rw"
+				    + " icgc/icgc-storage-client "
 					+ " /icgc/icgc-storage-client/bin/icgc-storage-client --object-id "
 						+ this.bamTumourObjectID+" --output-dir /downloads/";
 		getTumourBamFileJob.setCommand(storageClientDockerCmdTumour);
@@ -128,20 +130,49 @@ public class OxoGWrapperWorkflow extends AbstractWorkflowDataModel {
 		return getTumourBamFileJob;
 	}
 
+	// This will download VCFs for a workflow, based on an object ID. It will also perform the VCF Primitives
+	// operation on the indel VCF and then do VCFCombine on
+	// the indel, sv, and snv VCFs.
 	private Job getVCF(Job parentJob, String workflowName, String objectID) {
 		Job getVCFJob = this.getWorkflow().createBashJob("get VCF for workflow " + workflowName);
-		String outDir = "/datastore/vcf";
-		getVCFJob.setCommand("icgc-storage-client download --object-id " + objectID + " --output-dir " + outDir);
+		String outDir = "/datastore/vcf/"+workflowName;
+		String getVCFCommand = "docker run "
+				+ " -e STORAGE_PROFILE=collab "
+			    + " -v /datastore/bam/tumour/logs/client.log:/icgc/icgc-storage-client/logs/client.log:rw "
+				+ " -v /home/ubuntu/.gnos/collab.token:/icgc/icgc-storage-client/conf/application.properties:ro "
+			    + " -v "+outDir+"/:/downloads/:rw"
+	    		+ " icgc/icgc-storage-client "
+				+ " /icgc/icgc-storage-client/bin/icgc-storage-client --object-id " + objectID+" --output-dir /downloads/";
+		getVCFJob.setCommand(getVCFCommand);
 		getVCFJob.addParent(parentJob);
 
+		Job unzip = this.getWorkflow().createBashJob("unzip VCFs");
+		unzip.setCommand("gunzip "+outDir+"/*.vcf.gz");
+		unzip.addParent(getVCFJob);
+		
+		Job vcfPrimitivesJob = this.getWorkflow().createBashJob("run VCF primitives on indel");
+		String runVCFPrimitivesCommand = " docker run --rm " +
+										" -v "+outDir+"/*.somatic.indel.vcf:/datastore/datafile.vcf " +
+										" compbio/ngseasy-base:a1.0-002 vcfallelicprimitives /datastore/datafile.vcf  "+
+									" > "+outDir+"/somatic.indel.PRIMITIVES.vcf";
+		vcfPrimitivesJob.setCommand(runVCFPrimitivesCommand);
+		
+		Job vcfCombineJob = this.getWorkflow().createBashJob("run VCF Combine on VCFs for workflow");
+		String runVCFCombineCommand = " docker run --rm "+
+									  " -v "+outDir+"/:/VCFs/"+
+									  " compbio/ngseasy-base:a1.0-002 vcfcombine /VCFs/*somatic.snv_mnv.vcf /VCFs/*somatic.indel.PRIMITIVES.vcf /VCFs/*somatic.sv.vcf" +
+								  " > "+outDir+"/snv_AND_indel_AND_sv.vcf";
+		vcfCombineJob.setCommand(runVCFCombineCommand);
+		vcfPrimitivesJob.addParent(vcfPrimitivesJob);
+		
 		if (workflowName.equals("Sanger"))
-			this.sangerVCF = outDir + "/somefile.vcf";
+			this.sangerVCF = outDir + "/snv_AND_indel_AND_sv.vcf";
 		else if (workflowName.equals("DKFZ_EMBL"))
-			this.dkfzEmblVCF = outDir + "/somefile.vcf";
+			this.dkfzEmblVCF = outDir + "/snv_AND_indel_AND_sv.vcf";
 		else if (workflowName.equals("Broad"))
-			this.broadVCF = outDir + "/somefile.vcf";
+			this.broadVCF = outDir + "/snv_AND_indel_AND_sv.vcf";
 
-		return getVCFJob;
+		return vcfPrimitivesJob;
 	}
 
 	private Job doOxoG(Collection<Job> parents) {
