@@ -2,7 +2,6 @@ package com.github.seqware;
 
 import java.util.Arrays;
 import java.util.Collection;
-import java.util.Map;
 
 import net.sourceforge.seqware.pipeline.workflowV2.AbstractWorkflowDataModel;
 import net.sourceforge.seqware.pipeline.workflowV2.model.Job;
@@ -40,13 +39,23 @@ public class OxoGWrapperWorkflow extends AbstractWorkflowDataModel {
 			if (hasPropertyAndNotNull("OxoQScore")) {
 				this.oxoQScore = getProperty("OxoQScore");
 			}
-			this.JSONrepo = getProperty("JSONrepo");
-			this.JSONfolderName = getProperty("JSONfolderName");
+			
+			if (hasPropertyAndNotNull("JSONrepo")){
+				this.JSONrepo = getProperty("JSONrepo");
+			}
+			if (hasPropertyAndNotNull("JSONfolderName")){
+				this.JSONfolderName = getProperty("JSONfolderName");
+			}
 			if (hasPropertyAndNotNull("JSONfileName")) {
 				this.JSONfileName = getProperty("JSONfileName");
 			}
-			this.GITemail = getProperty("GITemail");
-			this.GITname = getProperty("GITname");
+			if (hasPropertyAndNotNull("GITemail")) {
+				this.GITemail = getProperty("GITemail");				
+			}
+			
+			if (hasPropertyAndNotNull("GITname")) {
+				this.GITemail = getProperty("GITname");				
+			}
 
 			// if (hasPropertyAndNotNull("donorID")) {
 			// this.donorID = getProperty("donorID");
@@ -69,20 +78,17 @@ public class OxoGWrapperWorkflow extends AbstractWorkflowDataModel {
 			if (hasPropertyAndNotNull("uploadURL")) {
 				this.uploadURL = getProperty("uploadURL");
 			}
-			
-			Map<String,String> inputsFromJSON = JSONUtils.processJSONFile(this.JSONfileName);
-			this.bamNormalObjectID = inputsFromJSON.get(JSONUtils.BAM_NORMAL_OBJECT_ID);
-			this.bamTumourObjectID = inputsFromJSON.get(JSONUtils.BAM_TUMOUR_OBJECT_ID);
-			this.broadVCFObjectID = inputsFromJSON.get(JSONUtils.BROAD_VCF_OBJECT_ID);
-			this.sangerVCFObjectID = inputsFromJSON.get(JSONUtils.SANGER_VCF_OBJECT_ID);
-			this.dkfzemblVCFObjectID = inputsFromJSON.get(JSONUtils.DKFZEMBL_VCF_OBJECT_ID);
-			this.oxoQScore = inputsFromJSON.get(JSONUtils.OXOQ_SCORE);
-			this.aliquotID = inputsFromJSON.get(JSONUtils.ALIQUOT_ID);
+			if (hasPropertyAndNotNull("aliquotID")) {
+				this.aliquotID = getProperty("aliquotID");				
+			}
+
 			
 		} catch (Exception e) {
 			throw new RuntimeException(e);
 		}
 	}
+
+	
 
 	private Job copyCollabTokenFile() {
 		Job copyCollabTokenFileJob = this.getWorkflow().createBashJob("copy collab token file");
@@ -190,6 +196,8 @@ public class OxoGWrapperWorkflow extends AbstractWorkflowDataModel {
 		// Running OxoG has multiple parents. Each download-input-file job is a
 		// parent and this can only run when they are all done.
 		// Running all downloads in parallel could be useful if they don't all download at maximum speed.
+		// Also, the download-input jobs will do the PRIMITIVES and Combine processing on the VCFs and that
+		// can definitely be done in parallel (per workflow).
 		for (Job j : parents) {
 			runOxoGWorkflow.addParent(j);
 		}
@@ -264,7 +272,7 @@ public class OxoGWrapperWorkflow extends AbstractWorkflowDataModel {
 		Job pullRepo = this.pullRepo(copyCollabToken);
 		// indicate job is in downloading stage.
 		Job move2download = gitMove(pullRepo, "queued-jobs", "downloading-jobs");
-
+		//Job getDataFromJSON = 
 		Job bamJob = this.getBAMs(move2download);
 		Job sangerVCFJob = this.getVCF(move2download, "Sanger", this.sangerVCFObjectID);
 		Job dkfzEmblVCFJob = this.getVCF(move2download, "DKFZ_EMBL", this.dkfzemblVCFObjectID);
