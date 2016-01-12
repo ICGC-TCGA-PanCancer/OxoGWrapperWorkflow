@@ -21,16 +21,17 @@ public abstract class JSONUtils {
 	static final String BAM_TUMOUR_OBJECT_ID = "bamTumourObjectID";
 	static final String ALIQUOT_ID = "aliquotID";
 
-	public static Map<String,String> processJSONFile(String filePath) {
-		
-		Map<String,String> results = new HashMap<String,String>();
+	public static Map<String, String> processJSONFile(String filePath) {
 
-		Type simpleMapType = new TypeToken<Map<String, Object>>() {
-		}.getType();
+		Map<String, String> results = new HashMap<String, String>();
+
+		Type simpleMapType = new TypeToken<Map<String, Object>>() {}.getType();
 		Gson gson = new Gson();
 
 		Reader json;
 		try {
+			// TODO: Investigate using JsonPath
+			// (https://github.com/jayway/JsonPath) to make this simpler.
 			json = new FileReader(filePath);
 			Map<String, Object> jsonContents = gson.fromJson(json, simpleMapType);
 			// Get normal BAM object ID
@@ -39,7 +40,7 @@ public abstract class JSONUtils {
 			for (Map<String, String> fileDetails : normalFiles) {
 				String fileName = fileDetails.get("file_name");
 				if (fileName.endsWith(".bam")) {
-					//this.bamNormalObjectID = fileDetails.get("object_id");
+					// this.bamNormalObjectID = fileDetails.get("object_id");
 					results.put(BAM_NORMAL_OBJECT_ID, fileDetails.get("object_id"));
 					// break the for-loop, no need to keep going through other
 					// file details.
@@ -55,15 +56,16 @@ public abstract class JSONUtils {
 			for (Map<String, String> fileDetails : tumourFiles) {
 				String fileName = fileDetails.get("file_name");
 				if (fileName.endsWith(".bam")) {
-					//this.bamTumourObjectID = fileDetails.get("object_id");
+					// this.bamTumourObjectID = fileDetails.get("object_id");
 					results.put(BAM_TUMOUR_OBJECT_ID, fileDetails.get("object_id"));
 					// break the for-loop, no need to keep going through other
 					// file details.
 					break;
 				}
 			}
-			
-			//Get the aliquot ID from the tumour. This may get more complicated in multi-tumour scenarios.
+
+			// Get the aliquot ID from the tumour. This may get more complicated
+			// in multi-tumour scenarios.
 			String aliquotID = (String) tumours.get(0).get("aliquot_id");
 			results.put(ALIQUOT_ID, aliquotID);
 
@@ -78,7 +80,7 @@ public abstract class JSONUtils {
 				// object IDs for suffixes: ".somatic.snv_mnv.vcf.gz",
 				// ".somatic.sv.vcf.gz", ".somatic.indel.vcf.gz"
 				if (fileName.endsWith(".somatic.snv_mnv.vcf.gz")) {
-					//this.sangerVCFObjectID = fileDetails.get("object_id");
+					// this.sangerVCFObjectID = fileDetails.get("object_id");
 					results.put(SANGER_VCF_OBJECT_ID, fileDetails.get("object_id"));
 					// break the for-loop, no need to keep going through other
 					// file details.
@@ -94,7 +96,7 @@ public abstract class JSONUtils {
 				// filtered to not use the "embl-delly" files.
 				if (fileName.contains("dkfz-snvCalling") && fileName.endsWith(".somatic.snv_mnv.vcf.gz")) {
 					results.put(DKFZEMBL_VCF_OBJECT_ID, fileDetails.get("object_id"));
-					//this.dkfzemblVCFObjectID = fileDetails.get("object_id");
+					// this.dkfzemblVCFObjectID = fileDetails.get("object_id");
 					// break the for-loop, no need to keep going through other
 					// file details.
 					break;
@@ -109,17 +111,16 @@ public abstract class JSONUtils {
 				// exactly which ones to download.
 				if (fileName.contains("broad-mutect") && fileName.endsWith(".somatic.snv_mnv.vcf.gz")) {
 					results.put(BROAD_VCF_OBJECT_ID, fileDetails.get("object_id"));
-					//this.broadVCFObjectID = fileDetails.get("object_id");
+					// this.broadVCFObjectID = fileDetails.get("object_id");
 					// break the for-loop, no need to keep going through other
 					// file details.
 					break;
 				}
 			}
-			
-			//Get OxoQ Score
-			String oxoqScore = String.valueOf((Double)jsonContents.get("OxoQ_score"));
+
+			// Get OxoQ Score
+			String oxoqScore = String.valueOf((Double) jsonContents.get("OxoQ_score"));
 			results.put(OXOQ_SCORE, oxoqScore);
-			
 		} catch (FileNotFoundException e) {
 			// TODO Auto-generated catch block
 			e.printStackTrace();

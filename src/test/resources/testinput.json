@@ -1,7 +1,7 @@
 {
     "project_code": "RECA-EU", 
     "submitter_donor_id": "C0005", 
-    "OxoG_score": 222,
+    "OxoQ_score": 222,
     "is_TCGA_donor": false,    
 
     "normal":{
