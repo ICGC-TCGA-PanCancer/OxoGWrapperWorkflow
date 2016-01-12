@@ -20,6 +20,7 @@ public abstract class JSONUtils {
 	static final String BAM_NORMAL_OBJECT_ID = "bamNormalObjectID";
 	static final String BAM_TUMOUR_OBJECT_ID = "bamTumourObjectID";
 	static final String ALIQUOT_ID = "aliquotID";
+	static final String SUBMITTER_DONOR_ID = "submitterDonorID";
 
 	public static Map<String, String> processJSONFile(String filePath) {
 
@@ -34,6 +35,7 @@ public abstract class JSONUtils {
 			// (https://github.com/jayway/JsonPath) to make this simpler.
 			json = new FileReader(filePath);
 			Map<String, Object> jsonContents = gson.fromJson(json, simpleMapType);
+			
 			// Get normal BAM object ID
 			Map<String, Object> normal = (Map<String, Object>) jsonContents.get("normal");
 			List<Map<String, String>> normalFiles = (List<Map<String, String>>) normal.get("files");
@@ -121,6 +123,11 @@ public abstract class JSONUtils {
 			// Get OxoQ Score
 			String oxoqScore = String.valueOf((Double) jsonContents.get("OxoQ_score"));
 			results.put(OXOQ_SCORE, oxoqScore);
+			
+			//get donor ID
+			String submitterDonorID = (String) jsonContents.get("submitter_donor_id");
+			results.put(SUBMITTER_DONOR_ID, submitterDonorID);
+			
 		} catch (FileNotFoundException e) {
 			// TODO Auto-generated catch block
 			e.printStackTrace();
