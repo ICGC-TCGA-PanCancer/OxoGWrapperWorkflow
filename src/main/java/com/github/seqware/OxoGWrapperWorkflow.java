@@ -130,11 +130,13 @@ public class OxoGWrapperWorkflow extends AbstractWorkflowDataModel {
 		unzip.addParent(getVCFJob);
 		
 		Job vcfPrimitivesJob = this.getWorkflow().createBashJob("run VCF primitives on indel");
-		String runVCFPrimitivesCommand = " docker run --rm " +
-										" -v "+outDir+"/*.somatic.indel.vcf:/datastore/datafile.vcf " +
-										" compbio/ngseasy-base:a1.0-002 vcfallelicprimitives /datastore/datafile.vcf  "+
-									" > "+outDir+"/somatic.indel.PRIMITIVES.vcf";
-		vcfPrimitivesJob.setCommand(runVCFPrimitivesCommand);
+		String runBCFToolsNormCommand = " docker run --rm " +
+										" -v "+outDir+"/*.somatic.indel.vcf:/datastore/datafile.vcf "
+										+ " -v /datastore/refdata/public:/ref" +
+										" compbio/ngseasy-base:a1.0-002 "
+										+ "bcftools norm -c w -m -any -O -z -f /ref/Homo_sapiens_assembly19.fasta  /datastore/datafile.vcf  "+
+									" > "+outDir+"/somatic.indel.bcftools-norm.vcf";
+		vcfPrimitivesJob.setCommand(runBCFToolsNormCommand);
 		vcfPrimitivesJob.addParent(unzip);
 		
 		Job vcfCombineJob = this.getWorkflow().createBashJob("run VCF Combine on VCFs for workflow");
