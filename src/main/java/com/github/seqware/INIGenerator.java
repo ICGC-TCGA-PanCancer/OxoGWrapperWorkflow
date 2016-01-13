@@ -8,12 +8,12 @@ import java.util.Map;
 public class INIGenerator {
 	
 	private static String ini = "uploadURL = http://some.rsync.server.com/oxogUpload/\n"+
-					"JSONrepo = \"git@github.com:ICGC-TCGA-PanCancer/oxog-transfer-operations.git\"\n"+ 
+					"JSONrepo = https://github.com/ICGC-TCGA-PanCancer/oxog-ops.git\n"+ 
 					"JSONrepoName = oxog-ops\n"+
 					"JSONfolderName = oxog-collab-jobs-test\n"+
 					"JSONlocation = /home/seqware/gitroot/\n"+
 					//"JSONfileName = SomeDonor_1234.json\n"+ 
-					"GITemail = username@users.noreply.github.com\n"+
+					"GITemail = icgc-bot@users.noreply.github.com\n"+
 					"GITname = \"ICGC Automation\"\n"+
 					"GITPemFile = /home/ubuntu/.gnos/git.pem\n";
 	
@@ -35,7 +35,7 @@ public class INIGenerator {
 			}
 			sb.append(ini);
 			String donorID = fromJSON.get(JSONUtils.SUBMITTER_DONOR_ID);
-			sb.append("JSONfileName = "+donorID);
+			sb.append("JSONfileName = "+donorID+".json");
 			
 			
 			Files.write(Paths.get("./"+donorID+".INI"), sb.toString().getBytes());

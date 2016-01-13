@@ -19,7 +19,7 @@ public class OxoGWrapperWorkflow extends AbstractWorkflowDataModel {
 	private String uploadURL;
 
 	private String JSONrepo = null;
-	private String JSONrepoName = "oxog-job-control";
+	private String JSONrepoName = "oxog-ops";
 	private String JSONfolderName = null;
 	private String JSONlocation = "/datastore/gitroot";
 	private String JSONfileName = null;
@@ -33,69 +33,114 @@ public class OxoGWrapperWorkflow extends AbstractWorkflowDataModel {
 	private String sangerVCF;
 	private String dkfzEmblVCF;
 	private String broadVCF;
+	
+	private boolean gitMoveTestMode = false;
 
+	private String getMandatoryProperty(String propName) throws Exception
+	{
+		if (hasPropertyAndNotNull(propName)) {
+			return getProperty(propName);
+		}
+		else {
+			throw new Exception ("Property with key "+propName+ " cannot be null!");
+		}
+	}
+	
 	private void init() {
 		try {
-			if (hasPropertyAndNotNull("OxoQScore")) {
-				this.oxoQScore = getProperty("OxoQScore");
-			}
 			
-			if (hasPropertyAndNotNull("JSONrepo")){
-				this.JSONrepo = getProperty("JSONrepo");
-			}
-			if (hasPropertyAndNotNull("JSONfolderName")){
-				this.JSONfolderName = getProperty("JSONfolderName");
-			}
-			if (hasPropertyAndNotNull("JSONfileName")) {
-				this.JSONfileName = getProperty("JSONfileName");
-			}
-			if (hasPropertyAndNotNull("GITemail")) {
-				this.GITemail = getProperty("GITemail");				
-			}
+			this.oxoQScore = this.getMandatoryProperty(JSONUtils.OXOQ_SCORE);
+//			if (hasPropertyAndNotNull("OxoQScore")) {
+//				this.oxoQScore = getProperty("OxoQScore");
+//			}
 			
-			if (hasPropertyAndNotNull("GITname")) {
-				this.GITemail = getProperty("GITname");				
-			}
+			this.JSONrepo = this.getMandatoryProperty("JSONrepo");
+			
+//			if (hasPropertyAndNotNull("JSONrepo")){
+//				this.JSONrepo = getProperty("JSONrepo");
+//			}
 
+			this.JSONrepoName = this.getMandatoryProperty("JSONrepoName");
+//			if (hasPropertyAndNotNull("JSONrepoName")){
+//				this.JSONrepoName = getProperty("JSONrepoName");
+//			}
+
+			this.JSONfolderName = this.getMandatoryProperty("JSONfolderName");
+//			if (hasPropertyAndNotNull("JSONfolderName")){
+//				this.JSONfolderName = getProperty("JSONfolderName");
+//			}
+
+			this.JSONfileName = this.getMandatoryProperty("JSONfileName");
+//			if (hasPropertyAndNotNull("JSONfileName")) {
+//				this.JSONfileName = getProperty("JSONfileName");
+//			}
+			
+			this.GITemail = this.getMandatoryProperty("GITemail");
+//			if (hasPropertyAndNotNull("GITemail")) {
+//				this.GITemail = getProperty("GITemail");				
+//			}
+			
+			this.GITname = this.getMandatoryProperty("GITname");
+//			if (hasPropertyAndNotNull("GITname")) {
+//				this.GITname = getProperty("GITname");				
+//			}
+			
 			// if (hasPropertyAndNotNull("donorID")) {
 			// this.donorID = getProperty("donorID");
 			// }
-			if (hasPropertyAndNotNull("bamNormalObjectID")) {
-				this.bamNormalObjectID = getProperty("bamNormalObjectID");
+			
+			this.bamNormalObjectID = this.getMandatoryProperty(JSONUtils.BAM_NORMAL_OBJECT_ID);
+//			if (hasPropertyAndNotNull("bamNormalObjectID")) {
+//				this.bamNormalObjectID = getProperty("bamNormalObjectID");
+//			}
+			this.bamTumourObjectID = this.getMandatoryProperty(JSONUtils.BAM_TUMOUR_OBJECT_ID);
+//			if (hasPropertyAndNotNull("bamTumourObjectID")) {
+//				this.bamTumourObjectID = getProperty("bamTumourObjectID");
+//			}
+			this.sangerVCFObjectID = this.getMandatoryProperty(JSONUtils.SANGER_VCF_OBJECT_ID);
+//			if (hasPropertyAndNotNull("sangerVCFObjectID")) {
+//				this.sangerVCFObjectID = getProperty("sangerVCFObjectID");
+//			}
+			this.dkfzemblVCFObjectID = this.getMandatoryProperty(JSONUtils.DKFZEMBL_VCF_OBJECT_ID);
+//			if (hasPropertyAndNotNull("dkfzemblVCFObjectID")) {
+//				this.dkfzemblVCFObjectID = getProperty("dkfzemblVCFObjectID");
+//			}
+			this.broadVCFObjectID = this.getMandatoryProperty(JSONUtils.BROAD_VCF_OBJECT_ID);
+//			if (hasPropertyAndNotNull("broadVCFObjectID")) {
+//				this.broadVCFObjectID = getProperty("broadVCFObjectID");
+//			}
+			this.uploadURL = this.getMandatoryProperty("uploadURL");
+//			if (hasPropertyAndNotNull("uploadURL")) {
+//				this.uploadURL = getProperty("uploadURL");
+//			}
+			this.aliquotID = this.getMandatoryProperty(JSONUtils.ALIQUOT_ID);
+//			if (hasPropertyAndNotNull("aliquotID")) {
+//				this.aliquotID = getProperty("aliquotID");
+//			}
+			
+			this.aliquotID = this.getMandatoryProperty("GITPemFile");
+//			if (hasPropertyAndNotNull("GITPemFile")) {
+//				this.GITPemFile = getProperty("GITPemFile");	
+//			}
+			if (hasPropertyAndNotNull("gitMoveTestMode")) {
+				//gitMoveTestMode is not mandatory - it should default to false.
+				this.gitMoveTestMode = Boolean.valueOf(getProperty("gitMoveTestMode"));
 			}
-			if (hasPropertyAndNotNull("bamTumourObjectID")) {
-				this.bamTumourObjectID = getProperty("bamTumourObjectID");
-			}
-			if (hasPropertyAndNotNull("sangerVCFObjectID")) {
-				this.sangerVCFObjectID = getProperty("sangerVCFObjectID");
-			}
-			if (hasPropertyAndNotNull("dkfzemblVCFObjectID")) {
-				this.dkfzemblVCFObjectID = getProperty("dkfzemblVCFObjectID");
-			}
-			if (hasPropertyAndNotNull("broadVCFObjectID")) {
-				this.broadVCFObjectID = getProperty("broadVCFObjectID");
-			}
-			if (hasPropertyAndNotNull("uploadURL")) {
-				this.uploadURL = getProperty("uploadURL");
-			}
-			if (hasPropertyAndNotNull("aliquotID")) {
-				this.aliquotID = getProperty("aliquotID");				
-			}
-
 			
 		} catch (Exception e) {
-			throw new RuntimeException(e);
+			throw new RuntimeException("Exception encountered during workflow init: "+e.getMessage(),e);
 		}
 	}
 
 	
 
-	private Job copyCollabTokenFile() {
-		Job copyCollabTokenFileJob = this.getWorkflow().createBashJob("copy collab token file");
-		copyCollabTokenFileJob.setCommand(
-				"cp ~/.gnos/collab.token /home/seqware/downloads/icgc-storage-client-*/conf/application.properties");
-		return copyCollabTokenFileJob;
-	}
+//	private Job copyCollabTokenFile() {
+//		System.out.println("Copying Collaboratory token file");
+//		Job copyCollabTokenFileJob = this.getWorkflow().createBashJob("copy collab token file");
+//		copyCollabTokenFileJob.setCommand(
+//				"cp ~/.gnos/collab.token /home/seqware/downloads/icgc-storage-client-*/conf/application.properties");
+//		return copyCollabTokenFileJob;
+//	}
 
 	private Job getBAMs(Job parentJob) {
 		Job getNormalBamFileJob = this.getWorkflow().createBashJob("get Normal BAM file");
@@ -106,13 +151,13 @@ public class OxoGWrapperWorkflow extends AbstractWorkflowDataModel {
 		// TODO: finish modifying this workflow to work without everything being built into a single seqware-derived image. This means
 		// not assuming that icgc-client and the workflow itself will reside inside the same container as seqware. So the download commands
 		// need to be re-written.
-		String storageClientDockerCmdNormal ="docker run "
+		String storageClientDockerCmdNormal ="docker run --rm"
 					+ " -e STORAGE_PROFILE=collab "
-				    + " -v /datastore/bam/normal/logs/client.log:/icgc/icgc-storage-client/logs/client.log:rw "
+				    + " -v /datastore/bam/normal/logs/:/icgc/icgc-storage-client/logs/:rw "
 					+ " -v /home/ubuntu/.gnos/collab.token:/icgc/icgc-storage-client/conf/application.properties:ro "
 				    + " -v /datastore/bam/normal:/downloads/:rw"
 				    + " icgc/icgc-storage-client "
-					+ " /icgc/icgc-storage-client/bin/icgc-storage-client --object-id "
+					+ " /icgc/icgc-storage-client/bin/icgc-storage-client download --object-id "
 						+ this.bamNormalObjectID+" --output-dir /downloads/";
 		getNormalBamFileJob.setCommand(storageClientDockerCmdNormal);
 		this.normalBAM = "/datastore/bam/normal/*.bam";
@@ -122,13 +167,13 @@ public class OxoGWrapperWorkflow extends AbstractWorkflowDataModel {
 		getTumourBamFileJob.addParent(getNormalBamFileJob);
 		//getTumourBamFileJob.setCommand(
 		//		"icgc-storage-client download --object-id " + this.bamTumourObjectID + " --output-dir /datastore/bam/tumour/");
-		String storageClientDockerCmdTumour = "docker run "
+		String storageClientDockerCmdTumour = "docker run --rm"
 					+ " -e STORAGE_PROFILE=collab "
-				    + " -v /datastore/bam/tumour/logs/client.log:/icgc/icgc-storage-client/logs/client.log:rw "
+				    + " -v /datastore/bam/tumour/logs/:/icgc/icgc-storage-client/logs/:rw "
 					+ " -v /home/ubuntu/.gnos/collab.token:/icgc/icgc-storage-client/conf/application.properties:ro "
 				    + " -v /datastore/bam/tumour:/downloads/:rw"
 				    + " icgc/icgc-storage-client "
-					+ " /icgc/icgc-storage-client/bin/icgc-storage-client --object-id "
+					+ " /icgc/icgc-storage-client/bin/icgc-storage-client download --object-id "
 						+ this.bamTumourObjectID+" --output-dir /downloads/";
 		getTumourBamFileJob.setCommand(storageClientDockerCmdTumour);
 		this.tumourBAM = "/datastore/bam/tumour/*.bam";
@@ -142,13 +187,13 @@ public class OxoGWrapperWorkflow extends AbstractWorkflowDataModel {
 	private Job getVCF(Job parentJob, String workflowName, String objectID) {
 		Job getVCFJob = this.getWorkflow().createBashJob("get VCF for workflow " + workflowName);
 		String outDir = "/datastore/vcf/"+workflowName;
-		String getVCFCommand = "docker run "
+		String getVCFCommand = "docker run --rm"
 				+ " -e STORAGE_PROFILE=collab "
-			    + " -v /datastore/bam/tumour/logs/client.log:/icgc/icgc-storage-client/logs/client.log:rw "
+			    + " -v /datastore/bam/tumour/logs/:/icgc/icgc-storage-client/logs/:rw "
 				+ " -v /home/ubuntu/.gnos/collab.token:/icgc/icgc-storage-client/conf/application.properties:ro "
 			    + " -v "+outDir+"/:/downloads/:rw"
 	    		+ " icgc/icgc-storage-client "
-				+ " /icgc/icgc-storage-client/bin/icgc-storage-client --object-id " + objectID+" --output-dir /downloads/";
+				+ " /icgc/icgc-storage-client/bin/icgc-storage-client download --object-id " + objectID+" --output-dir /downloads/";
 		getVCFJob.setCommand(getVCFCommand);
 		getVCFJob.addParent(parentJob);
 
@@ -162,6 +207,7 @@ public class OxoGWrapperWorkflow extends AbstractWorkflowDataModel {
 										" compbio/ngseasy-base:a1.0-002 vcfallelicprimitives /datastore/datafile.vcf  "+
 									" > "+outDir+"/somatic.indel.PRIMITIVES.vcf";
 		vcfPrimitivesJob.setCommand(runVCFPrimitivesCommand);
+		vcfPrimitivesJob.addParent(unzip);
 		
 		Job vcfCombineJob = this.getWorkflow().createBashJob("run VCF Combine on VCFs for workflow");
 		String runVCFCombineCommand = " docker run --rm "+
@@ -169,7 +215,7 @@ public class OxoGWrapperWorkflow extends AbstractWorkflowDataModel {
 									  " compbio/ngseasy-base:a1.0-002 vcfcombine /VCFs/*somatic.snv_mnv.vcf /VCFs/*somatic.indel.PRIMITIVES.vcf /VCFs/*somatic.sv.vcf" +
 								  " > "+outDir+"/snv_AND_indel_AND_sv.vcf";
 		vcfCombineJob.setCommand(runVCFCombineCommand);
-		vcfPrimitivesJob.addParent(vcfPrimitivesJob);
+		vcfCombineJob.addParent(vcfPrimitivesJob);
 		
 		if (workflowName.equals("Sanger"))
 			this.sangerVCF = outDir + "/snv_AND_indel_AND_sv.vcf";
@@ -178,7 +224,7 @@ public class OxoGWrapperWorkflow extends AbstractWorkflowDataModel {
 		else if (workflowName.equals("Broad"))
 			this.broadVCF = outDir + "/snv_AND_indel_AND_sv.vcf";
 
-		return vcfPrimitivesJob;
+		return vcfCombineJob;
 	}
 
 	private Job doOxoG(Collection<Job> parents) {
@@ -212,6 +258,7 @@ public class OxoGWrapperWorkflow extends AbstractWorkflowDataModel {
 		// This will get the docker logs, but we may also want to get the logs
 		// in the mounted oxog_workspace dir...
 		getLog.setCommand("docker logs oxog_run");
+		getLog.addParent(parent);
 		return getLog;
 	}
 
@@ -225,51 +272,70 @@ public class OxoGWrapperWorkflow extends AbstractWorkflowDataModel {
 		return uploadResults;
 	}
 	
-	private Job pullRepo(Job getReferenceDataJob) {
-		Job installerJob = this.getWorkflow().createBashJob("install_dependencies");
-		installerJob.getCommand().addArgument("if [[ ! -d ~/.ssh/ ]]; then  mkdir ~/.ssh; fi \n");
-		installerJob.getCommand().addArgument("cp " + this.GITPemFile + " ~/.ssh/id_rsa \n");
-		installerJob.getCommand().addArgument("chmod 600 ~/.ssh/id_rsa \n");
-		installerJob.getCommand().addArgument("echo 'StrictHostKeyChecking no' > ~/.ssh/config \n");
-		installerJob.getCommand().addArgument("if [[ -d " + this.JSONlocation + " ]]; then  exit 0; fi \n");
-		installerJob.getCommand().addArgument("mkdir -p " + this.JSONlocation + " \n");
-		installerJob.getCommand().addArgument("cd " + this.JSONlocation + " \n");
-		installerJob.getCommand().addArgument("git config --global user.name " + this.GITname + " \n");
-		installerJob.getCommand().addArgument("git config --global user.email " + this.GITemail + " \n");
-		installerJob.getCommand().addArgument("git clone " + this.JSONrepo + " \n");
-		installerJob.addParent(getReferenceDataJob);
-		return (installerJob);
+	private Job pullRepo() {
+		Job pullRepoJob = this.getWorkflow().createBashJob("pull_git_repo");
+		pullRepoJob.getCommand().addArgument("if [[ ! -d ~/.ssh/ ]]; then  mkdir ~/.ssh; fi \n");
+		pullRepoJob.getCommand().addArgument("cp " + this.GITPemFile + " ~/.ssh/id_rsa \n");
+		pullRepoJob.getCommand().addArgument("chmod 600 ~/.ssh/id_rsa \n");
+		pullRepoJob.getCommand().addArgument("echo 'StrictHostKeyChecking no' > ~/.ssh/config \n");
+		//pullRepoJob.getCommand().addArgument("[ -d "+this.JSONlocation+"/"+JSONrepo+" ] && exit 0 \n");
+		pullRepoJob.getCommand().addArgument("[ -d "+this.JSONlocation+" ] || mkdir -p "+this.JSONlocation+" \n");
+		pullRepoJob.getCommand().addArgument("cd " + this.JSONlocation + " \n");
+		pullRepoJob.getCommand().addArgument("git config --global user.name " + this.GITname + " \n");
+		pullRepoJob.getCommand().addArgument("git config --global user.email " + this.GITemail + " \n");
+		pullRepoJob.getCommand().addArgument("[ -d "+this.JSONlocation+"/"+this.JSONrepoName+" ] || git clone " + this.JSONrepo + " \n");
+		//pullRepoJob.getCommand().addArgument("cd "+this.JSONrepoName+" \n");
+		//pullRepoJob.getCommand().addArgument("git pull \n");
+		pullRepoJob.getCommand().addArgument("echo $? \n");
+		pullRepoJob.getCommand().addArgument("echo \"contents: \"\n");
+		pullRepoJob.getCommand().addArgument("ls -la  \n");
+		return pullRepoJob;
 	}
 
 	private Job gitMove(Job lastJob, String src, String dst) {
 		Job manageGit = this.getWorkflow().createBashJob("git_manage_" + src + "_" + dst);
 		String path = this.JSONlocation + "/" + this.JSONrepoName + "/" + this.JSONfolderName;
 		// String gitroot = this.JSONlocation + "/" + this.JSONrepoName;
+		// It shouldn't be necessary to do this config again if it was already done in pullRepo, but probably safer this way.
 		manageGit.getCommand().addArgument("git config --global user.name " + this.GITname + " \n");
 		manageGit.getCommand().addArgument("git config --global user.email " + this.GITemail + " \n");
-		manageGit.getCommand().addArgument("if [[ ! -d " + path + " ]]; then mkdir -p " + path + "; fi \n");
+		// I think maybe it should be an error if the *repo* doesn't exist.
+		manageGit.getCommand().addArgument("cd "+this.JSONlocation +"/" + this.JSONrepoName + " \n");
+		//manageGit.getCommand().addArgument("if [[ ! -d " + path + " ]]; then mkdir -p " + path + "; fi \n");
+		manageGit.getCommand().addArgument("[ -d "+path+" ] || mkdir -p "+path+" \n");
 		manageGit.getCommand().addArgument("cd " + path + " \n");
 		manageGit.getCommand().addArgument("# This is not idempotent: git pull \n");
-		manageGit.getCommand().addArgument("git checkout master \n");
-		manageGit.getCommand().addArgument("git reset --hard origin/master \n");
-		manageGit.getCommand().addArgument("git fetch --all \n");
-		manageGit.getCommand().addArgument("if [[ ! -d " + dst + " ]]; then mkdir " + dst + "; fi \n");
-		manageGit.getCommand().addArgument("if [[ -d " + src + " ]]; then git mv " + path + "/" + src + "/"
-				+ this.JSONfileName + " " + path + "/" + dst + "; fi \n");
-		manageGit.getCommand().addArgument("git stage . \n");
-		manageGit.getCommand().addArgument("git commit -m '" + dst + ": " + this.JSONfileName + "' \n");
-		manageGit.getCommand().addArgument("git push \n");
+
+		if (!gitMoveTestMode) {
+			manageGit.getCommand().addArgument("git checkout master \n");
+			manageGit.getCommand().addArgument("git reset --hard origin/master \n");
+			manageGit.getCommand().addArgument("git fetch --all \n");
+		}
+		//manageGit.getCommand().addArgument("if [[ ! -d " + dst + " ]]; then mkdir " + dst + "; fi \n");
+		manageGit.getCommand().addArgument("[ -d "+dst+" ] || mkdir -p "+dst+" \n");
+		
+		if (!gitMoveTestMode) {
+			manageGit.getCommand().addArgument("if [[ -d " + src + " ]]; then git mv " + path + "/" + src + "/"
+					+ this.JSONfileName + " " + path + "/" + dst + "; fi \n");
+			manageGit.getCommand().addArgument("git stage . \n");
+			manageGit.getCommand().addArgument("git commit -m '" + dst + ": " + this.JSONfileName + "' \n");
+			manageGit.getCommand().addArgument("git push \n");
+		}
+		else {
+			manageGit.getCommand().addArgument("if [[ -d " + src + " ]]; then mv " + path + "/" + src + "/"
+					+ this.JSONfileName + " " + path + "/" + dst + "; fi \n");
+		}
 		manageGit.addParent(lastJob);
-		return (manageGit);
+		return manageGit;
 	}
 
 	@Override
 	public void buildWorkflow() {
 		this.init();
-		Job copyCollabToken = this.copyCollabTokenFile();
+//		Job copyCollabToken = this.copyCollabTokenFile();
 
 		// Pull the repo.
-		Job pullRepo = this.pullRepo(copyCollabToken);
+		Job pullRepo = this.pullRepo();
 		// indicate job is in downloading stage.
 		Job move2download = gitMove(pullRepo, "queued-jobs", "downloading-jobs");
 		//Job getDataFromJSON = 
@@ -278,8 +344,13 @@ public class OxoGWrapperWorkflow extends AbstractWorkflowDataModel {
 		Job dkfzEmblVCFJob = this.getVCF(move2download, "DKFZ_EMBL", this.dkfzemblVCFObjectID);
 		Job broadVCFJob = this.getVCF(move2download, "Broad", this.broadVCFObjectID);
 		// indicate job is running.
-		Job move2running = gitMove(null, "queued-jobs", "running-jobs");
-		for (Job j : Arrays.asList(bamJob, sangerVCFJob, dkfzEmblVCFJob, broadVCFJob)) {
+		
+		
+		
+		//Note: because of the way that addParent works, we need to pass at least ONE parent
+		//object here, and then add the rest in a loop below.
+		Job move2running = gitMove(bamJob, "queued-jobs", "running-jobs");
+		for (Job j : Arrays.asList(sangerVCFJob, dkfzEmblVCFJob, broadVCFJob)) {
 			move2running.addParent(j);
 		}
 		Job oxoG = this.doOxoG(Arrays.asList(move2running));
@@ -295,8 +366,8 @@ public class OxoGWrapperWorkflow extends AbstractWorkflowDataModel {
 		// uploadMergeVCF.addParent(move2uploading);
 
 		// indicate job is complete.
-		Job move2finished = gitMove(null, "uploading-jobs", "completed-jobs");
-		move2finished.addParent(uploadResults);
+		Job move2finished = gitMove(uploadResults, "uploading-jobs", "completed-jobs");
+		//move2finished.addParent(uploadResults);
 		// move2finished.addParent(uploadMergeVCF);
 	}
 }

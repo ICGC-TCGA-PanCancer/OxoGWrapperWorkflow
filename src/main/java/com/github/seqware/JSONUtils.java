@@ -13,7 +13,7 @@ import com.google.gson.reflect.TypeToken;
 
 public abstract class JSONUtils {
 
-	static final String OXOQ_SCORE = "oxoqScore";
+	static final String OXOQ_SCORE = "OxoQScore";
 	static final String BROAD_VCF_OBJECT_ID = "broadVCFObjectID";
 	static final String DKFZEMBL_VCF_OBJECT_ID = "dkfzemblVCFObjectID";
 	static final String SANGER_VCF_OBJECT_ID = "sangerVCFObjectID";
@@ -24,7 +24,7 @@ public abstract class JSONUtils {
 
 	public static Map<String, String> processJSONFile(String filePath) {
 
-		Map<String, String> results = new HashMap<String, String>();
+		Map<String, String> results = new HashMap<String, String>(8);
 
 		Type simpleMapType = new TypeToken<Map<String, Object>>() {}.getType();
 		Gson gson = new Gson();
@@ -124,7 +124,7 @@ public abstract class JSONUtils {
 			String oxoqScore = String.valueOf((Double) jsonContents.get("OxoQ_score"));
 			results.put(OXOQ_SCORE, oxoqScore);
 			
-			//get donor ID
+			// Get donor ID
 			String submitterDonorID = (String) jsonContents.get("submitter_donor_id");
 			results.put(SUBMITTER_DONOR_ID, submitterDonorID);
 			
