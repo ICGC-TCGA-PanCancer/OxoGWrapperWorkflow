@@ -77,34 +77,22 @@ public class OxoGWrapperWorkflow extends AbstractWorkflowDataModel {
 		}
 	}
 
-	enum NormalOrTumour{
+	enum BAMType{
 		normal,tumour
 	}
-	private Job getBAM(Job parentJob, String objectID, NormalOrTumour bamType) {
+	private Job getBAM(Job parentJob, String objectID, BAMType bamType) {
 		Job getBamFileJob = this.getWorkflow().createBashJob("get "+bamType.toString()+" BAM file");
 		getBamFileJob.addParent(parentJob);
 		String storageClientDockerCmdNormal ="docker run --rm"
-					+ " -e STORAGE_PROFILE=collab "
-				    + " -v /datastore/bam/"+bamType.toString()+"/logs/:/icgc/icgc-storage-client/logs/:rw "
-					+ " -v /home/ubuntu/.gnos/collab.token:/icgc/icgc-storage-client/conf/application.properties:ro "
-				    + " -v /datastore/bam/"+bamType.toString()+":/downloads/:rw"
-				    + " icgc/icgc-storage-client "
-					+ " /icgc/icgc-storage-client/bin/icgc-storage-client download --object-id "
-						+ objectID +" --output-dir /downloads/";
+				+ " -e STORAGE_PROFILE=collab "
+			    + " -v /datastore/bam/"+bamType.toString()+"/logs/:/icgc/icgc-storage-client/logs/:rw "
+				+ " -v /home/ubuntu/.gnos/collab.token:/icgc/icgc-storage-client/conf/application.properties:ro "
+			    + " -v /datastore/bam/"+bamType.toString()+":/downloads/:rw"
+			    + " icgc/icgc-storage-client "
+				+ " /icgc/icgc-storage-client/bin/icgc-storage-client download --object-id "
+					+ objectID +" --output-dir /downloads/";
 		getBamFileJob.setCommand(storageClientDockerCmdNormal);
-//		
-//		Job getTumourBamFileJob = this.getWorkflow().createBashJob("get Tumour BAM file");
-//		getTumourBamFileJob.addParent(getNormalBamFileJob);
-//		String storageClientDockerCmdTumour = "docker run --rm"
-//					+ " -e STORAGE_PROFILE=collab "
-//				    + " -v /datastore/bam/tumour/logs/:/icgc/icgc-storage-client/logs/:rw "
-//					+ " -v /home/ubuntu/.gnos/collab.token:/icgc/icgc-storage-client/conf/application.properties:ro "
-//				    + " -v /datastore/bam/tumour:/downloads/:rw"
-//				    + " icgc/icgc-storage-client "
-//					+ " /icgc/icgc-storage-client/bin/icgc-storage-client download --object-id "
-//						+ this.bamTumourObjectID+" --output-dir /downloads/";
-//		getTumourBamFileJob.setCommand(storageClientDockerCmdTumour);
-//		this.tumourBAM = "/datastore/bam/tumour/*.bam";
+
 		return getBamFileJob;
 	}
 
@@ -129,20 +117,20 @@ public class OxoGWrapperWorkflow extends AbstractWorkflowDataModel {
 		unzip.addParent(getVCFJob);
 		
 		Job vcfPrimitivesJob = this.getWorkflow().createBashJob("run VCF primitives on indel");
-		String runBCFToolsNormCommand = " docker run --rm " +
-										" -v "+outDir+"/*.somatic.indel.vcf:/datastore/datafile.vcf "
-										+ " -v /datastore/refdata/public:/ref" +
-										" compbio/ngseasy-base:a1.0-002 "
-										+ "bcftools norm -c w -m -any -O -z -f /ref/Homo_sapiens_assembly19.fasta  /datastore/datafile.vcf  "+
-									" > "+outDir+"/somatic.indel.bcftools-norm.vcf";
+		String runBCFToolsNormCommand = " docker run --rm "
+					+ " -v "+outDir+"/*.somatic.indel.vcf:/datastore/datafile.vcf "
+					+ " -v /datastore/refdata/public:/ref"
+					+ " compbio/ngseasy-base:a1.0-002 " 
+					+ " bcftools norm -c w -m -any -O -z -f /ref/Homo_sapiens_assembly19.fasta  /datastore/datafile.vcf "  
+				+ " > "+outDir+"/somatic.indel.bcftools-norm.vcf";
 		vcfPrimitivesJob.setCommand(runBCFToolsNormCommand);
 		vcfPrimitivesJob.addParent(unzip);
 		
 		Job vcfCombineJob = this.getWorkflow().createBashJob("run VCF Combine on VCFs for workflow");
-		String runVCFCombineCommand = " docker run --rm "+
-									  " -v "+outDir+"/:/VCFs/"+
-									  " compbio/ngseasy-base:a1.0-002 vcfcombine /VCFs/*somatic.snv_mnv.vcf /VCFs/*somatic.indel.PRIMITIVES.vcf /VCFs/*somatic.sv.vcf" +
-								  " > "+outDir+"/snv_AND_indel_AND_sv.vcf";
+		String runVCFCombineCommand = " docker run --rm "
+					+ " -v "+outDir+"/:/VCFs/"
+					+ " compbio/ngseasy-base:a1.0-002 vcfcombine /VCFs/*somatic.snv_mnv.vcf /VCFs/*somatic.indel.PRIMITIVES.vcf /VCFs/*somatic.sv.vcf" 
+				+ " > "+outDir+"/snv_AND_indel_AND_sv.vcf";
 		vcfCombineJob.setCommand(runVCFCombineCommand);
 		vcfCombineJob.addParent(vcfPrimitivesJob);
 		
@@ -156,35 +144,29 @@ public class OxoGWrapperWorkflow extends AbstractWorkflowDataModel {
 		return vcfCombineJob;
 	}
 
-	private Job doOxoG(Collection<Job> parents) {
+	private Job doOxoG(Job parent) {
 		Job runOxoGWorkflow = this.getWorkflow().createBashJob("Run OxoG");
-		String oxogMounts = " -v /datastore/refdata/:/cga/fh/pcawg_pipeline/refdata/ "+
-          " -v /datastore/oncotator_db/:/cga/fh/pcawg_pipeline/refdata/public/oncotator_db/ " + 
-          " -v /datastore/oxog_workspace/:/cga/fh/pcawg_pipeline/jobResults_pipette/jobs/"+this.aliquotID+"/:rw " +
-          " -v /datastore/bam/:/datafiles/BAM/  -v /datastore/vcf/:/datafiles/VCF/ "+
-          " -v /datastore/oxog_results/:/cga/fh/pcawg_pipeline/jobResults_pipette/results:rw ";
+		String oxogMounts = " -v /datastore/refdata/:/cga/fh/pcawg_pipeline/refdata/ "
+				+ " -v /datastore/oncotator_db/:/cga/fh/pcawg_pipeline/refdata/public/oncotator_db/ "  
+				+ " -v /datastore/oxog_workspace/:/cga/fh/pcawg_pipeline/jobResults_pipette/jobs/"+this.aliquotID+"/:rw " 
+				+ " -v /datastore/bam/:/datafiles/BAM/  -v /datastore/vcf/:/datafiles/VCF/ "
+				+ " -v /datastore/oxog_results/:/cga/fh/pcawg_pipeline/jobResults_pipette/results:rw ";
 		String oxogCommand = "/cga/fh/pcawg_pipeline/pipelines/run_one_pipeline.bash pcawg /cga/fh/pcawg_pipeline/pipelines/oxog_pipeline.py "
 				+ this.aliquotID + " " + this.tumourBAM + " " + this.normalBAM + " " + this.oxoQScore + " "
 				+ this.sangerVCF + " " + this.dkfzEmblVCF + " " + this.broadVCF;
 		runOxoGWorkflow.setCommand(
 				"docker run --name=\"oxog_container\" "+oxogMounts+" oxog " + oxogCommand);
-		// Running OxoG has multiple parents. Each download-input-file job is a
-		// parent and this can only run when they are all done.
-		// Running all downloads in parallel could be useful if they don't all download at maximum speed.
-		// Also, the download-input jobs will do the PRIMITIVES and Combine processing on the VCFs and that
-		// can definitely be done in parallel (per workflow).
-		for (Job j : parents) {
-			runOxoGWorkflow.addParent(j);
-		}
-
+		
+		runOxoGWorkflow.addParent(parent);
+		
 		Job getLogs = this.getOxoGLogs(runOxoGWorkflow);
 
 		return getLogs;
 	}
 
 	private Job getOxoGLogs(Job parent) {
-		Job getLog = this.getWorkflow().createBashJob("cat OxoG docker logs");
-		// This will get the docker logs, but we may also want to get the logs
+		Job getLog = this.getWorkflow().createBashJob("get OxoG docker logs");
+		// This will get the docker logs and print them to stdout, but we may also want to get the logs
 		// in the mounted oxog_workspace dir...
 		getLog.setCommand("docker logs oxog_run");
 		getLog.addParent(parent);
@@ -262,9 +244,9 @@ public class OxoGWrapperWorkflow extends AbstractWorkflowDataModel {
 		Job move2download = gitMove(pullRepo, "queued-jobs", "downloading-jobs");
 		// These jobs will all reun parallel. The BAM jobs just download, but the VCF jobs also do some
 		// processing (bcftools norm and vcfcombine) on the downloaded files.
-		Job normalBamJob = this.getBAM(move2download,this.bamNormalObjectID,NormalOrTumour.normal);
+		Job normalBamJob = this.getBAM(move2download,this.bamNormalObjectID,BAMType.normal);
 		this.normalBAM = "/datastore/bam/normal/*.bam";
-		Job tumourBamJob = this.getBAM(move2download,this.bamTumourObjectID,NormalOrTumour.tumour);
+		Job tumourBamJob = this.getBAM(move2download,this.bamTumourObjectID,BAMType.tumour);
 		this.tumourBAM = "/datastore/bam/tumour/*.bam";
 		Job sangerVCFJob = this.getVCF(move2download, "Sanger", this.sangerVCFObjectID);
 		Job dkfzEmblVCFJob = this.getVCF(move2download, "DKFZ_EMBL", this.dkfzemblVCFObjectID);
@@ -277,7 +259,8 @@ public class OxoGWrapperWorkflow extends AbstractWorkflowDataModel {
 		for (Job j : Arrays.asList(tumourBamJob, sangerVCFJob, dkfzEmblVCFJob, broadVCFJob)) {
 			move2running.addParent(j);
 		}
-		Job oxoG = this.doOxoG(Arrays.asList(move2running));
+		// OxoG will run after move2running. Move2running will run after all the jobs that perform input file downloads have finished.  
+		Job oxoG = this.doOxoG(move2running);
 
 		// indicate job is in uploading stage.
 		Job move2uploading = gitMove(oxoG, "running-jobs", "uploading-jobs");
