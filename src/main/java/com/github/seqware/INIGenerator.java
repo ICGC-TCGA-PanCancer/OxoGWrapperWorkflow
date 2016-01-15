@@ -13,9 +13,9 @@ public class INIGenerator {
 					"JSONfolderName = oxog-collab-jobs-test\n"+
 					"JSONlocation = /home/seqware/gitroot/\n"+
 					//"JSONfileName = SomeDonor_1234.json\n"+ 
-					"GITemail = icgc-bot@users.noreply.github.com\n"+
-					"GITname = \"ICGC Automation\"\n"+
-					"GITPemFile = /home/ubuntu/.gnos/git.pem\n";
+					"GITemail = denis.yuen+icgc@gmail.com\n"+
+					"GITname = icgc-bot\n"+
+					"GITPemFile = /home/seqware/.gnos/git.pem\n";
 	
 	private static Map<String,String> getDataFromJSON(String pathToJSON) {
 		Map<String,String> inputsFromJSON = JSONUtils.processJSONFile(pathToJSON);
@@ -35,7 +35,8 @@ public class INIGenerator {
 			}
 			sb.append(ini);
 			String donorID = fromJSON.get(JSONUtils.SUBMITTER_DONOR_ID);
-			sb.append("JSONfileName = "+donorID+".json");
+			String projectCode = fromJSON.get(JSONUtils.PROJECT_CODE);
+			sb.append("JSONfileName = "+projectCode+"."+donorID+".json");
 			
 			
 			Files.write(Paths.get("./"+donorID+".INI"), sb.toString().getBytes());
