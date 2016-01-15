@@ -83,14 +83,14 @@ public class OxoGWrapperWorkflow extends AbstractWorkflowDataModel {
 	private Job getBAM(Job parentJob, String objectID, BAMType bamType) {
 		Job getBamFileJob = this.getWorkflow().createBashJob("get "+bamType.toString()+" BAM file");
 		getBamFileJob.addParent(parentJob);
-		String storageClientDockerCmdNormal ="docker run --rm"
+		String storageClientDockerCmdNormal ="sudo docker run --rm"
 				+ " -e STORAGE_PROFILE=collab "
 			    + " -v /datastore/bam/"+bamType.toString()+"/logs/:/icgc/icgc-storage-client/logs/:rw "
-				+ " -v /home/ubuntu/.gnos/collab.token:/icgc/icgc-storage-client/conf/application.properties:ro "
-			    + " -v /datastore/bam/"+bamType.toString()+":/downloads/:rw"
+				+ " -v /home/$(whoami)/.gnos/collab.token:/icgc/icgc-storage-client/conf/application.properties:ro "
+			    + " -v /datastore/bam/"+bamType.toString()+"/:/tmp/:rw"
 			    + " icgc/icgc-storage-client "
 				+ " /icgc/icgc-storage-client/bin/icgc-storage-client download --object-id "
-					+ objectID +" --output-dir /downloads/";
+					+ objectID +" --output-dir /tmp/";
 		getBamFileJob.setCommand(storageClientDockerCmdNormal);
 
 		return getBamFileJob;
@@ -102,13 +102,13 @@ public class OxoGWrapperWorkflow extends AbstractWorkflowDataModel {
 	private Job getVCF(Job parentJob, String workflowName, String objectID) {
 		Job getVCFJob = this.getWorkflow().createBashJob("get VCF for workflow " + workflowName);
 		String outDir = "/datastore/vcf/"+workflowName;
-		String getVCFCommand = "docker run --rm"
+		String getVCFCommand = "sudo docker run --rm"
 				+ " -e STORAGE_PROFILE=collab "
-			    + " -v /datastore/bam/tumour/logs/:/icgc/icgc-storage-client/logs/:rw "
-				+ " -v /home/ubuntu/.gnos/collab.token:/icgc/icgc-storage-client/conf/application.properties:ro "
-			    + " -v "+outDir+"/:/downloads/:rw"
+			    + " -v "+outDir+"/logs/:/icgc/icgc-storage-client/logs/:rw "
+				+ " -v /home/$(whoami)/.gnos/collab.token:/icgc/icgc-storage-client/conf/application.properties:ro "
+			    + " -v "+outDir+"/:/tmp/:rw"
 	    		+ " icgc/icgc-storage-client "
-				+ " /icgc/icgc-storage-client/bin/icgc-storage-client download --object-id " + objectID+" --output-dir /downloads/";
+				+ " /icgc/icgc-storage-client/bin/icgc-storage-client download --object-id " + objectID+" --output-dir /tmp/";
 		getVCFJob.setCommand(getVCFCommand);
 		getVCFJob.addParent(parentJob);
 
@@ -117,7 +117,7 @@ public class OxoGWrapperWorkflow extends AbstractWorkflowDataModel {
 		unzip.addParent(getVCFJob);
 		
 		Job vcfPrimitivesJob = this.getWorkflow().createBashJob("run VCF primitives on indel");
-		String runBCFToolsNormCommand = " docker run --rm "
+		String runBCFToolsNormCommand = "sudo docker run --rm "
 					+ " -v "+outDir+"/*.somatic.indel.vcf:/datastore/datafile.vcf "
 					+ " -v /datastore/refdata/public:/ref"
 					+ " compbio/ngseasy-base:a1.0-002 " 
@@ -127,7 +127,7 @@ public class OxoGWrapperWorkflow extends AbstractWorkflowDataModel {
 		vcfPrimitivesJob.addParent(unzip);
 		
 		Job vcfCombineJob = this.getWorkflow().createBashJob("run VCF Combine on VCFs for workflow");
-		String runVCFCombineCommand = " docker run --rm "
+		String runVCFCombineCommand = "sudo docker run --rm "
 					+ " -v "+outDir+"/:/VCFs/"
 					+ " compbio/ngseasy-base:a1.0-002 vcfcombine /VCFs/*somatic.snv_mnv.vcf /VCFs/*somatic.indel.PRIMITIVES.vcf /VCFs/*somatic.sv.vcf" 
 				+ " > "+outDir+"/snv_AND_indel_AND_sv.vcf";
@@ -155,7 +155,7 @@ public class OxoGWrapperWorkflow extends AbstractWorkflowDataModel {
 				+ this.aliquotID + " " + this.tumourBAM + " " + this.normalBAM + " " + this.oxoQScore + " "
 				+ this.sangerVCF + " " + this.dkfzEmblVCF + " " + this.broadVCF;
 		runOxoGWorkflow.setCommand(
-				"docker run --name=\"oxog_container\" "+oxogMounts+" oxog " + oxogCommand);
+				"sudo docker run --name=\"oxog_container\" "+oxogMounts+" oxog " + oxogCommand);
 		
 		runOxoGWorkflow.addParent(parent);
 		
@@ -168,7 +168,7 @@ public class OxoGWrapperWorkflow extends AbstractWorkflowDataModel {
 		Job getLog = this.getWorkflow().createBashJob("get OxoG docker logs");
 		// This will get the docker logs and print them to stdout, but we may also want to get the logs
 		// in the mounted oxog_workspace dir...
-		getLog.setCommand("docker logs oxog_run");
+		getLog.setCommand("sudo docker logs oxog_run");
 		getLog.addParent(parent);
 		return getLog;
 	}
