@@ -21,6 +21,7 @@ public abstract class JSONUtils {
 	static final String BAM_TUMOUR_OBJECT_ID = "bamTumourObjectID";
 	static final String ALIQUOT_ID = "aliquotID";
 	static final String SUBMITTER_DONOR_ID = "submitterDonorID";
+	static final String PROJECT_CODE = "projectCode";
 
 	public static Map<String, String> processJSONFile(String filePath) {
 
@@ -90,7 +91,7 @@ public abstract class JSONUtils {
 				}
 			}
 			// DFKZ-EMBL
-			Map<String, Object> dkfz = (Map<String, Object>) jsonContents.get("dkfz");
+			Map<String, Object> dkfz = (Map<String, Object>) jsonContents.get("dkfz_embl");
 			List<Map<String, String>> dkfzFiles = (List<Map<String, String>>) dkfz.get("files");
 			for (Map<String, String> fileDetails : dkfzFiles) {
 				String fileName = fileDetails.get("file_name");
@@ -127,6 +128,10 @@ public abstract class JSONUtils {
 			// Get donor ID
 			String submitterDonorID = (String) jsonContents.get("submitter_donor_id");
 			results.put(SUBMITTER_DONOR_ID, submitterDonorID);
+
+			// Get project code
+			String projectCode = (String) jsonContents.get("project_code");
+			results.put(PROJECT_CODE, projectCode);
 			
 		} catch (FileNotFoundException e) {
 			// TODO Auto-generated catch block
