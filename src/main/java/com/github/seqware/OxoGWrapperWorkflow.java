@@ -77,6 +77,13 @@ public class OxoGWrapperWorkflow extends AbstractWorkflowDataModel {
 		}
 	}
 
+	private Job copyCredentials(Job parentJob){
+		Job copy = this.getWorkflow().createBashJob("copy ~/.gnos");
+		copy.setCommand("sudo cp -r ~/.gnos /datastore/credentials && ls -l /datastore/credentials");
+		copy.addParent(parentJob);
+		return copy;
+	}
+	
 	enum BAMType{
 		normal,tumour
 	}
@@ -86,7 +93,7 @@ public class OxoGWrapperWorkflow extends AbstractWorkflowDataModel {
 		String storageClientDockerCmdNormal ="sudo docker run --rm"
 				+ " -e STORAGE_PROFILE=collab "
 			    + " -v /datastore/bam/"+bamType.toString()+"/logs/:/icgc/icgc-storage-client/logs/:rw "
-				+ " -v /home/$(whoami)/.gnos/collab.token:/icgc/icgc-storage-client/conf/application.properties:ro "
+				+ " -v /datastore/credentials/collab.token:/icgc/icgc-storage-client/conf/application.properties:ro "
 			    + " -v /datastore/bam/"+bamType.toString()+"/:/tmp/:rw"
 			    + " icgc/icgc-storage-client "
 				+ " /icgc/icgc-storage-client/bin/icgc-storage-client download --object-id "
@@ -105,43 +112,51 @@ public class OxoGWrapperWorkflow extends AbstractWorkflowDataModel {
 		String getVCFCommand = "sudo docker run --rm"
 				+ " -e STORAGE_PROFILE=collab "
 			    + " -v "+outDir+"/logs/:/icgc/icgc-storage-client/logs/:rw "
-				+ " -v /home/$(whoami)/.gnos/collab.token:/icgc/icgc-storage-client/conf/application.properties:ro "
+				+ " -v /datastore/credentials/collab.token:/icgc/icgc-storage-client/conf/application.properties:ro "
 			    + " -v "+outDir+"/:/tmp/:rw"
 	    		+ " icgc/icgc-storage-client "
 				+ " /icgc/icgc-storage-client/bin/icgc-storage-client download --object-id " + objectID+" --output-dir /tmp/";
 		getVCFJob.setCommand(getVCFCommand);
 		getVCFJob.addParent(parentJob);
 
-		Job unzip = this.getWorkflow().createBashJob("unzip VCFs");
-		unzip.setCommand("gunzip "+outDir+"/*.vcf.gz");
-		unzip.addParent(getVCFJob);
 		
-		Job vcfPrimitivesJob = this.getWorkflow().createBashJob("run VCF primitives on indel");
+		Job bcfToolsNormJob = this.getWorkflow().createBashJob("run VCF primitives on indel");
 		String runBCFToolsNormCommand = "sudo docker run --rm "
-					+ " -v "+outDir+"/*.somatic.indel.vcf:/datastore/datafile.vcf "
+					+ " -v "+outDir+"/*.somatic.indel.vcf.gz:/datastore/datafile.vcf.gz "
 					+ " -v /datastore/refdata/public:/ref"
 					+ " compbio/ngseasy-base:a1.0-002 " 
-					+ " bcftools norm -c w -m -any -O -z -f /ref/Homo_sapiens_assembly19.fasta  /datastore/datafile.vcf "  
-				+ " > "+outDir+"/somatic.indel.bcftools-norm.vcf";
-		vcfPrimitivesJob.setCommand(runBCFToolsNormCommand);
-		vcfPrimitivesJob.addParent(unzip);
+					+ " bcftools norm -c w -m -any -O -z -f /ref/Homo_sapiens_assembly19.fasta  /datastore/datafile.vcf.gz "  
+				+ " > "+outDir+"/somatic.indel.bcftools-norm.vcf.gz";
+		bcfToolsNormJob.setCommand(runBCFToolsNormCommand);
+		bcfToolsNormJob.addParent(getVCFJob);
 		
+		Job unzip = this.getWorkflow().createBashJob("unzip VCFs");
+		unzip.setCommand("gunzip "+outDir+"/*.vcf.gz");
+		unzip.addParent(bcfToolsNormJob);
+
+		//vcfcombine requries VCF files be unzipped.
 		Job vcfCombineJob = this.getWorkflow().createBashJob("run VCF Combine on VCFs for workflow");
 		String runVCFCombineCommand = "sudo docker run --rm "
 					+ " -v "+outDir+"/:/VCFs/"
 					+ " compbio/ngseasy-base:a1.0-002 vcfcombine /VCFs/*somatic.snv_mnv.vcf /VCFs/*somatic.indel.PRIMITIVES.vcf /VCFs/*somatic.sv.vcf" 
 				+ " > "+outDir+"/snv_AND_indel_AND_sv.vcf";
 		vcfCombineJob.setCommand(runVCFCombineCommand);
-		vcfCombineJob.addParent(vcfPrimitivesJob);
+		vcfCombineJob.addParent(unzip);
+		
+		//OxoG requires inputs be in BGZIP format.
+		Job bgZip = this.getWorkflow().createBashJob("bgzip combined vcf");
+		bgZip.setCommand("bgzip -f "+outDir+"/snv_AND_indel_AND_sv.vcf");
+		bgZip.addParent(vcfCombineJob);
+		
 		
 		if (workflowName.equals("Sanger"))
-			this.sangerVCF = outDir + "/snv_AND_indel_AND_sv.vcf";
+			this.sangerVCF = outDir + "/snv_AND_indel_AND_sv.vcf.gz";
 		else if (workflowName.equals("DKFZ_EMBL"))
-			this.dkfzEmblVCF = outDir + "/snv_AND_indel_AND_sv.vcf";
+			this.dkfzEmblVCF = outDir + "/snv_AND_indel_AND_sv.vcf.gz";
 		else if (workflowName.equals("Broad"))
-			this.broadVCF = outDir + "/snv_AND_indel_AND_sv.vcf";
+			this.broadVCF = outDir + "/snv_AND_indel_AND_sv.vcf.gz";
 
-		return vcfCombineJob;
+		return bgZip;
 	}
 
 	private Job doOxoG(Job parent) {
@@ -238,10 +253,15 @@ public class OxoGWrapperWorkflow extends AbstractWorkflowDataModel {
 	@Override
 	public void buildWorkflow() {
 		this.init();
+		
+		
 		// Pull the repo.
 		Job pullRepo = this.pullRepo();
+		
+		Job copy = this.copyCredentials(pullRepo);
+		
 		// indicate job is in downloading stage.
-		Job move2download = gitMove(pullRepo, "queued-jobs", "downloading-jobs");
+		Job move2download = gitMove(copy, "queued-jobs", "downloading-jobs");
 		// These jobs will all reun parallel. The BAM jobs just download, but the VCF jobs also do some
 		// processing (bcftools norm and vcfcombine) on the downloaded files.
 		Job normalBamJob = this.getBAM(move2download,this.bamNormalObjectID,BAMType.normal);
