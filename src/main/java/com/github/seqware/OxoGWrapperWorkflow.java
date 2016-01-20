@@ -103,10 +103,13 @@ public class OxoGWrapperWorkflow extends AbstractWorkflowDataModel {
 		return getBamFileJob;
 	}
 
+	enum Workflow {
+		sanger, dkfz_embl, broad
+	}
 	// This will download VCFs for a workflow, based on an object ID. It will also perform the VCF Primitives
 	// operation on the indel VCF and then do VCFCombine on
 	// the indel, sv, and snv VCFs.
-	private Job getVCF(Job parentJob, String workflowName, String objectID) {
+	private Job getVCF(Job parentJob, Workflow workflowName, String objectID) {
 		Job getVCFJob = this.getWorkflow().createBashJob("get VCF for workflow " + workflowName);
 		String outDir = "/datastore/vcf/"+workflowName;
 		String getVCFCommand = "sudo docker run --rm"
@@ -119,7 +122,8 @@ public class OxoGWrapperWorkflow extends AbstractWorkflowDataModel {
 		getVCFJob.setCommand(getVCFCommand);
 		getVCFJob.addParent(parentJob);
 
-		
+		// TODO: Many of these steps below could probably be combined into a single Job
+		// that makes runs a single docker container, but executes multiple commands.		
 		Job bcfToolsNormJob = this.getWorkflow().createBashJob("run VCF primitives on indel");
 		String runBCFToolsNormCommand = "sudo docker run --rm "
 					+ " -v "+outDir+"/*.somatic.indel.vcf.gz:/datastore/datafile.vcf.gz "
@@ -159,6 +163,31 @@ public class OxoGWrapperWorkflow extends AbstractWorkflowDataModel {
 		return bgZip;
 	}
 
+	enum VCFType{
+		sv, snv, indel
+	}
+	private Job combineVCFsByType(VCFType vcfType, Job ... parents)
+	{
+		Job vcfCombineJob = this.getWorkflow().createBashJob("vcfcombine for "+vcfType);
+		
+		String sharedDir = "/datastore/vcf/";
+		String runVCFCombineCommand = "sudo docker run --rm "
+				+ " -v "+sharedDir+"/:/VCFs/"
+				+ " compbio/ngseasy-base:a1.0-002 vcfcombine ";
+		
+		for (Workflow w : Workflow.values())
+		{
+			//this is naive - the file names will probably be more complicated than this. Need to get a complete download to see exactlty...
+			runVCFCombineCommand += " /VCFs/"+w+"/"+vcfType+".vcf ";
+		}
+		
+		runVCFCombineCommand += " > "+sharedDir+"/combined_"+vcfType+".vcf";
+		
+		vcfCombineJob.setCommand(runVCFCombineCommand);
+		
+		return vcfCombineJob;
+	}
+	
 	private Job doOxoG(Job parent) {
 		Job runOxoGWorkflow = this.getWorkflow().createBashJob("Run OxoG Filter");
 		String oxogMounts = " -v /datastore/refdata/:/cga/fh/pcawg_pipeline/refdata/ "
@@ -186,6 +215,7 @@ public class OxoGWrapperWorkflow extends AbstractWorkflowDataModel {
 				+ " -v /datastore/variantbam_workspace/:/cga/fh/pcawg_pipeline/jobResults_pipette/jobs/"+this.aliquotID+"/:rw " 
 				+ " -v /datastore/bam/:/datafiles/BAM/  -v /datastore/vcf/:/datafiles/VCF/ "
 				+ " -v /datastore/variantbam_results/:/cga/fh/pcawg_pipeline/jobResults_pipette/results:rw ";
+		// TODO: Update this to use the per-VCF-type combined VCFs instead of the per-workflow combined VCFs.
 		String oxogCommand = "/cga/fh/pcawg_pipeline/pipelines/run_one_pipeline.bash pcawg /cga/fh/pcawg_pipeline/pipelines/variantbam_pipeline.py "
 				+ this.aliquotID + " " + this.tumourBAM + " " + this.normalBAM + " " + this.oxoQScore + " "
 				+ this.sangerVCF + " " + this.dkfzEmblVCF + " " + this.broadVCF;
@@ -288,15 +318,22 @@ public class OxoGWrapperWorkflow extends AbstractWorkflowDataModel {
 		this.normalBAM = "/datastore/bam/normal/*.bam";
 		Job tumourBamJob = this.getBAM(move2download,this.bamTumourObjectID,BAMType.tumour);
 		this.tumourBAM = "/datastore/bam/tumour/*.bam";
-		Job sangerVCFJob = this.getVCF(move2download, "Sanger", this.sangerVCFObjectID);
-		Job dkfzEmblVCFJob = this.getVCF(move2download, "DKFZ_EMBL", this.dkfzemblVCFObjectID);
-		Job broadVCFJob = this.getVCF(move2download, "Broad", this.broadVCFObjectID);
-
+		Job sangerVCFJob = this.getVCF(move2download, Workflow.sanger, this.sangerVCFObjectID);
+		Job dkfzEmblVCFJob = this.getVCF(move2download, Workflow.dkfz_embl, this.dkfzemblVCFObjectID);
+		Job broadVCFJob = this.getVCF(move2download, Workflow.broad, this.broadVCFObjectID);
+		
+		// After we've processed all VCFs on a per-workflow basis, we also need to do a vcfcombine 
+		// on the *types* of VCFs, for the minibam generator. The per-workflow combined VCFs will
+		// be used by the OxoG filter.
+		Job combineAllSVs = this.combineVCFsByType(VCFType.sv, sangerVCFJob, dkfzEmblVCFJob, broadVCFJob, normalBamJob, tumourBamJob);
+		Job combineAllSNVs = this.combineVCFsByType(VCFType.snv, sangerVCFJob, dkfzEmblVCFJob, broadVCFJob, normalBamJob, tumourBamJob);
+		Job combineAllIndels = this.combineVCFsByType(VCFType.indel, sangerVCFJob, dkfzEmblVCFJob, broadVCFJob, normalBamJob, tumourBamJob);
+		
 		// indicate job is running.
 		//Note: because of the way that addParent works, we need to pass at least ONE parent
 		//object here, and then add the rest in a loop below.
-		Job move2running = gitMove(normalBamJob, "queued-jobs", "running-jobs");
-		for (Job j : Arrays.asList(tumourBamJob, sangerVCFJob, dkfzEmblVCFJob, broadVCFJob)) {
+		Job move2running = gitMove(combineAllSVs, "queued-jobs", "running-jobs");
+		for (Job j : Arrays.asList(combineAllSNVs, combineAllIndels)) {
 			move2running.addParent(j);
 		}
 		// OxoG will run after move2running. Move2running will run after all the jobs that perform input file downloads have finished.  
