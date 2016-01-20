@@ -160,7 +160,7 @@ public class OxoGWrapperWorkflow extends AbstractWorkflowDataModel {
 	}
 
 	private Job doOxoG(Job parent) {
-		Job runOxoGWorkflow = this.getWorkflow().createBashJob("Run OxoG");
+		Job runOxoGWorkflow = this.getWorkflow().createBashJob("Run OxoG Filter");
 		String oxogMounts = " -v /datastore/refdata/:/cga/fh/pcawg_pipeline/refdata/ "
 				+ " -v /datastore/oncotator_db/:/cga/fh/pcawg_pipeline/refdata/public/oncotator_db/ "  
 				+ " -v /datastore/oxog_workspace/:/cga/fh/pcawg_pipeline/jobResults_pipette/jobs/"+this.aliquotID+"/:rw " 
@@ -170,7 +170,7 @@ public class OxoGWrapperWorkflow extends AbstractWorkflowDataModel {
 				+ this.aliquotID + " " + this.tumourBAM + " " + this.normalBAM + " " + this.oxoQScore + " "
 				+ this.sangerVCF + " " + this.dkfzEmblVCF + " " + this.broadVCF;
 		runOxoGWorkflow.setCommand(
-				"sudo docker run --name=\"oxog_container\" "+oxogMounts+" oxog " + oxogCommand);
+				"sudo docker run --name=\"oxog_filter\" "+oxogMounts+" oxog " + oxogCommand);
 		
 		runOxoGWorkflow.addParent(parent);
 		
@@ -179,6 +179,26 @@ public class OxoGWrapperWorkflow extends AbstractWorkflowDataModel {
 		return getLogs;
 	}
 
+	private Job doVariantBam(Job parent) {
+		Job runOxoGWorkflow = this.getWorkflow().createBashJob("Run variantbam");
+		String oxogMounts = " -v /datastore/refdata/:/cga/fh/pcawg_pipeline/refdata/ "
+				+ " -v /datastore/oncotator_db/:/cga/fh/pcawg_pipeline/refdata/public/oncotator_db/ "  
+				+ " -v /datastore/variantbam_workspace/:/cga/fh/pcawg_pipeline/jobResults_pipette/jobs/"+this.aliquotID+"/:rw " 
+				+ " -v /datastore/bam/:/datafiles/BAM/  -v /datastore/vcf/:/datafiles/VCF/ "
+				+ " -v /datastore/variantbam_results/:/cga/fh/pcawg_pipeline/jobResults_pipette/results:rw ";
+		String oxogCommand = "/cga/fh/pcawg_pipeline/pipelines/run_one_pipeline.bash pcawg /cga/fh/pcawg_pipeline/pipelines/variantbam_pipeline.py "
+				+ this.aliquotID + " " + this.tumourBAM + " " + this.normalBAM + " " + this.oxoQScore + " "
+				+ this.sangerVCF + " " + this.dkfzEmblVCF + " " + this.broadVCF;
+		runOxoGWorkflow.setCommand(
+				"sudo docker run --name=\"variantbam\" "+oxogMounts+" oxog " + oxogCommand);
+		
+		runOxoGWorkflow.addParent(parent);
+		
+		Job getLogs = this.getOxoGLogs(runOxoGWorkflow);
+
+		return getLogs;
+	}
+	
 	private Job getOxoGLogs(Job parent) {
 		Job getLog = this.getWorkflow().createBashJob("get OxoG docker logs");
 		// This will get the docker logs and print them to stdout, but we may also want to get the logs
@@ -281,9 +301,13 @@ public class OxoGWrapperWorkflow extends AbstractWorkflowDataModel {
 		}
 		// OxoG will run after move2running. Move2running will run after all the jobs that perform input file downloads have finished.  
 		Job oxoG = this.doOxoG(move2running);
+		// variantbam will run parallel to oxog
+		Job variantBam = this.doVariantBam(move2running);
 
 		// indicate job is in uploading stage.
 		Job move2uploading = gitMove(oxoG, "running-jobs", "uploading-jobs");
+		// make sure that we don't move to uploading state until after both OxoG and variantbam are finished.
+		move2uploading.addParent(variantBam);
 		Job uploadResults = doUpload(move2uploading);
 
 		// indicate job is complete.
