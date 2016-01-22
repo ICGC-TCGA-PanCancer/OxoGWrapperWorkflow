@@ -10,17 +10,23 @@ SNV_FILE=$1
 INDEL_FILE=$2
 SV_FILE=$3
 
+WORKFLOW=$4
+
 echo "unzipping..."
 for f in $(ls $PATH_TO_VCFs/*.vcf.gz) ; do
         bgzip -f -d $f
 done;
 
+mkdir ~/vcflib
+wget https://raw.githubusercontent.com/vcftools/vcftools/v0.1.14/src/perl/Vcf.pm -O ~/vcflib/Vcf.pm
+
 sudo docker run --rm \
         -v $PATH_TO_VCFs/:/VCFs/ \
+        -v ~/vcflib/:/home/ngseasy/vcflib/ \
          -v /datastore/refdata/public:/ref \
          compbio/ngseasy-base:a1.0-002 /bin/bash -c "echo \"validating inputs...\" ; \
-                vcfcheck -f /ref/Homo_sapiens_assembly19.fasta /VCFs/$SNV_FILE.vcf > /VCFs/snv.validation.log ; \
-                vcfcheck -f /ref/Homo_sapiens_assembly19.fasta /VCFs/$INDEL_FILE.vcf > /VCFs/normalized_sorted_indel.validation.log ; \
+				( vcf-validator /VCFs/$SNV_FILE.vcf 2>&1 ) > /VCFs/snv.validation.log ; \
+				( vcf-validator /VCFs/$INDEL_FILE.vcf 2>&1 ) > /VCFs/indel.validation.log ; \
                 echo \"combining VCFs...\" ; \
                 vcfcombine /VCFs/$SNV_FILE.vcf \
                         /VCFs/$INDEL_FILE.vcf \
@@ -39,5 +45,19 @@ echo "padding combined vcf..."
 python3 pad_vcf.py $PATH_TO_VCFs/combined_sorted.vcf > $PATH_TO_VCFs/combined_sorted_padded.vcf
 bgzip -f $PATH_TO_VCFs/combined_sorted_padded.vcf
 tabix -p vcf $PATH_TO_VCFs/combined_sorted_padded.vcf.gz
+
+# ##INFO=<ID=SCTG,Number=1,Type=String,Description="SCTG - manually added to header">
+# ##INFO=<ID=INSERTION,Number=1,Type=String,Description="INSERTION - manually added to header">
+# ##INFO=<ID=EVDNC,Number=1,Type=String,Description="EVDNC - manually added to header">
+# ##INFO=<ID=NDISC,Number=1,Type=String,Description="NDISC - manually added to header">
+# ##INFO=<ID=PONCOUNT,Number=1,Type=String,Description="PONCOUNT - manually added to header">
+# ##INFO=<ID=TDISC,Number=1,Type=String,Description="TDISC - manually added to header">
+if [[ $WORKFLOW == "BROAD" ]] ; then
+	bgzip -c -d $PATH_TO_VCFs/combined_sorted_padded.vcf.gz > $PATH_TO_VCFs/combined_sorted_padded.vcf
+	# TODO: Inject extra headers.
+	bgzip -f $PATH_TO_VCFs/combined_sorted_padded.vcf
+	tabix -p vcf $PATH_TO_VCFs/combined_sorted_padded.vcf.gz
+fi
+
 
 echo "done!" 
