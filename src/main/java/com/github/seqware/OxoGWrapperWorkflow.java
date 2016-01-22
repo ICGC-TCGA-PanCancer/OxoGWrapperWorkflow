@@ -34,6 +34,8 @@ public class OxoGWrapperWorkflow extends AbstractWorkflowDataModel {
 	private String dkfzEmblVCF;
 	private String broadVCF;
 	
+	private String storageSource = "collab";
+	
 	private boolean gitMoveTestMode = false;
 
 	private String getMandatoryProperty(String propName) throws Exception
@@ -72,6 +74,11 @@ public class OxoGWrapperWorkflow extends AbstractWorkflowDataModel {
 				this.gitMoveTestMode = Boolean.valueOf(getProperty("gitMoveTestMode"));
 			}
 			
+			if (hasPropertyAndNotNull("storageSource")) {
+				//storageSource is not mandatory - it should default to "collab"
+				this.storageSource = getProperty("storageSource");
+			}
+			
 		} catch (Exception e) {
 			throw new RuntimeException("Exception encountered during workflow init: "+e.getMessage(),e);
 		}
@@ -91,7 +98,7 @@ public class OxoGWrapperWorkflow extends AbstractWorkflowDataModel {
 		Job getBamFileJob = this.getWorkflow().createBashJob("get "+bamType.toString()+" BAM file");
 		getBamFileJob.addParent(parentJob);
 		String storageClientDockerCmdNormal ="sudo docker run --rm"
-				+ " -e STORAGE_PROFILE=collab "
+				+ " -e STORAGE_PROFILE="+this.storageSource+" " 
 			    + " -v /datastore/bam/"+bamType.toString()+"/logs/:/icgc/icgc-storage-client/logs/:rw "
 				+ " -v /datastore/credentials/collab.token:/icgc/icgc-storage-client/conf/application.properties:ro "
 			    + " -v /datastore/bam/"+bamType.toString()+"/:/tmp/:rw"
@@ -113,7 +120,7 @@ public class OxoGWrapperWorkflow extends AbstractWorkflowDataModel {
 		Job getVCFJob = this.getWorkflow().createBashJob("get VCF for workflow " + workflowName);
 		String outDir = "/datastore/vcf/"+workflowName;
 		String getVCFCommand = "sudo docker run --rm"
-				+ " -e STORAGE_PROFILE=collab "
+				+ " -e STORAGE_PROFILE="+this.storageSource+" " 
 			    + " -v "+outDir+"/logs/:/icgc/icgc-storage-client/logs/:rw "
 				+ " -v /datastore/credentials/collab.token:/icgc/icgc-storage-client/conf/application.properties:ro "
 			    + " -v "+outDir+"/:/tmp/:rw"
