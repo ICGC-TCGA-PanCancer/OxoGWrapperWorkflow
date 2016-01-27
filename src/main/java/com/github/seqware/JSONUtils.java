@@ -19,6 +19,7 @@ public abstract class JSONUtils {
 	static final String SANGER_VCF_OBJECT_ID = "sangerVCFObjectID";
 	static final String BAM_NORMAL_OBJECT_ID = "bamNormalObjectID";
 	static final String BAM_TUMOUR_OBJECT_ID = "bamTumourObjectID";
+	static final String MUSE_TUMOUR_OBJECT_ID = "museVCFObjectID";
 	static final String ALIQUOT_ID = "aliquotID";
 	static final String SUBMITTER_DONOR_ID = "submitterDonorID";
 	static final String PROJECT_CODE = "projectCode";
@@ -32,8 +33,7 @@ public abstract class JSONUtils {
 
 		Reader json;
 		try {
-			// TODO: Investigate using JsonPath
-			// (https://github.com/jayway/JsonPath) to make this simpler.
+			// TODO: Investigate using JsonPath (https://github.com/jayway/JsonPath) to make this simpler to read/understand.
 			json = new FileReader(filePath);
 			Map<String, Object> jsonContents = gson.fromJson(json, simpleMapType);
 			
@@ -121,6 +121,8 @@ public abstract class JSONUtils {
 				}
 			}
 
+			//TODO: Get MuSE file and info.
+			
 			// Get OxoQ Score
 			String oxoqScore = String.valueOf((Double) jsonContents.get("OxoQ_score"));
 			results.put(OXOQ_SCORE, oxoqScore);
