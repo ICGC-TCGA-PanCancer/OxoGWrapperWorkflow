@@ -4,6 +4,18 @@ This workflow is a wrapper around the OxoG component. It will download VCFs (fro
 
 The VCF input files will be processed using `bcftools norm` on the indel VCF, and then `vcfcombine` will be used to combine them all into a single VCF.
 
+## Building
+
+This will build both the Docker image *and* the workflow inside.
+
+    docker build -t pancancer/pcawg-oxog-merge-workflow:1.0 .
+
+## Building Just the Workflow
+
+This will just build the Java portion of the workflow and not the Docker image.
+
+    mvn clean install
+
 ## Usage
 
 1. Ensure that you have a valid Collaboratory token in `~/.gnos`.
@@ -19,3 +31,25 @@ sudo docker run --rm -v /datastore:/datastore \
 		pancancer/seqware_whitestar_pancancer:1.1.2 \
 	seqware bundle launch --dir /workflow --ini /ini --no-metadata --engine whitestar-parallel
 ```
+
+### Flow Control
+
+It uses git to note state in the workflow... more details TBD.
+
+### Downloads
+
+The inputs are 1) all the variant calling workflow outputs (Sanger, DKFZ/EMBL, EMBL, Muse) and
+2) the BAM files for normal and tumour(s).
+
+These are downloaded from either AWS S3 or the Collaboratory using the ICGC Storage Client.
+
+See TODO for more information.
+
+### Uploads
+
+Uploads are 1) the merged/normalized/OxoG filtered variant calls, specifics depend on the
+variant type. 2) the mini-bams for normal and tumour(s).
+
+## TODO
+
+* need support for inputs from (tentatively) 1) local file paths and 2) GNOS directly (specifically CGHub for TCGA donors that aren't on S3 or Collaboratory)
