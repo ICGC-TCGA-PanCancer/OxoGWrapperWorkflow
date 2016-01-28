@@ -55,6 +55,12 @@ public class OxoGWrapperWorkflow extends AbstractWorkflowDataModel {
 	private String svVCF;
 	private String indelVCF;
 
+	/**
+	 * Get a property name that is mandatory
+	 * @param propName The name of the property
+	 * @return The property, as a String. Convert to other types if you need to.
+	 * @throws Exception An Exception with the message "Property with key <i>propName</i> cannot be null" will be thrown if property is not found.
+	 */
 	private String getMandatoryProperty(String propName) throws Exception
 	{
 		if (hasPropertyAndNotNull(propName)) {
@@ -65,7 +71,9 @@ public class OxoGWrapperWorkflow extends AbstractWorkflowDataModel {
 		}
 	}
 
-	
+	/**
+	 * Initial setup.
+	 */
 	private void init() {
 		try {
 			
@@ -119,6 +127,11 @@ public class OxoGWrapperWorkflow extends AbstractWorkflowDataModel {
 		}
 	}
 
+	/**
+	 * Generates a rules file that is used for the variant program that produces minibams.
+	 * @throws URISyntaxException
+	 * @throws IOException
+	 */
 	private void generateRulesFile() throws URISyntaxException, IOException
 	{
 		Path pathToPaddingRules = Paths.get(new URI("/datastore/padding_rules.txt"));
@@ -129,6 +142,11 @@ public class OxoGWrapperWorkflow extends AbstractWorkflowDataModel {
 		Files.write(pathToPaddingRules, paddingFileString.getBytes(), StandardOpenOption.CREATE);
 	}
 	
+	/**
+	 * Copy the credentials files from ~/.gnos to /datastore/credentials
+	 * @param parentJob
+	 * @return
+	 */
 	private Job copyCredentials(Job parentJob){
 		Job copy = this.getWorkflow().createBashJob("copy ~/.gnos");
 		copy.setCommand("sudo cp -r ~/.gnos /datastore/credentials && ls -l /datastore/credentials");
@@ -136,9 +154,22 @@ public class OxoGWrapperWorkflow extends AbstractWorkflowDataModel {
 		return copy;
 	}
 	
+	/**
+	 * Defines what BAM types there are:
+	 * <ul><li>normal</li><li>tumour</li></ul>
+	 * @author sshorser
+	 *
+	 */
 	enum BAMType{
 		normal,tumour
 	}
+	/**
+	 * Download a BAM file.
+	 * @param parentJob
+	 * @param objectID - the object ID of the BAM file
+	 * @param bamType - is it normal or tumour? This used to determine the name of the directory that the file ends up in.
+	 * @return
+	 */
 	private Job getBAM(Job parentJob, String objectID, BAMType bamType) {
 		Job getBamFileJob = this.getWorkflow().createBashJob("get "+bamType.toString()+" BAM file");
 		getBamFileJob.addParent(parentJob);
@@ -155,15 +186,37 @@ public class OxoGWrapperWorkflow extends AbstractWorkflowDataModel {
 		return getBamFileJob;
 	}
 
+	/**
+	 * Defines the different pipelines:
+	 * <ul>
+	 * <li>sanger</li>
+	 * <li>dkfz_embl</li>
+	 * <li>broad</li>
+	 * <li>muse</li>
+	 * </ul>
+	 * @author sshorser
+	 *
+	 */
 	enum Pipeline {
 		sanger, dkfz_embl, broad, muse
 	}
-	// This will download VCFs for a workflow, based on an object ID. It will also perform the VCF Primitives
-	// operation on the indel VCF and then do VCFCombine on
-	// the indel, sv, and snv VCFs.
+	/**
+	 This will download VCFs for a workflow, based on an object ID(s).
+	 It will perform these operations:
+	 <ol>
+	 <li>download VCFs</li>
+	 <li>normalize INDEL VCF</li>
+	 <li>extract SNVs from INDEL into a separate VCF</li>
+	 </ol>
+	 * @param parentJob
+	 * @param workflowName The pipeline (AKA workflow) that the VCFs come from. This will determine the name of the output directory where the downloaded files will be stored.
+	 * @param objectID
+	 * @return
+	 */
 	private Job getVCF(Job parentJob, Pipeline workflowName, String objectID) {
 		Job getVCFJob = this.getWorkflow().createBashJob("get VCF for workflow " + workflowName);
 		String outDir = "/datastore/vcf/"+workflowName;
+		//TODO: Will need multiple downloads if the object-id will only download one but we need three (SV, SNV, INDEL)
 		String getVCFCommand = "sudo docker run --rm"
 				+ " -e STORAGE_PROFILE="+this.storageSource+" " 
 			    + " -v "+outDir+"/logs/:/icgc/icgc-storage-client/logs/:rw "
@@ -175,34 +228,43 @@ public class OxoGWrapperWorkflow extends AbstractWorkflowDataModel {
 		getVCFJob.addParent(parentJob);
 
 		// TODO: Many of these steps below could probably be combined into a single Job
-		// that makes runs a single docker container, but executes multiple commands.		
+		// that makes runs a single docker container, but executes multiple commands.
 		Job bcfToolsNormJob = this.getWorkflow().createBashJob("run VCF primitives on indel");
 		String runBCFToolsNormCommand = "sudo docker run --rm "
 					+ " -v "+outDir+"/*.somatic.indel.vcf.gz:/datastore/datafile.vcf.gz "
 					+ " -v /datastore/refdata/public:/ref"
 					+ " compbio/ngseasy-base:a1.0-002 " 
 					+ " bcftools norm -c w -m -any -O -z -f /ref/Homo_sapiens_assembly19.fasta  /datastore/datafile.vcf.gz "  
-				+ " > "+outDir+"/somatic.indel.bcftools-norm.vcf.gz";
+				+ " > "+outDir+"/somatic.indel.bcftools-norm.vcf.gz "
+				+ " && tabix -f -p vcf "+outDir+"/somatic.indel.bcftools-norm.vcf.gz ";
 		bcfToolsNormJob.setCommand(runBCFToolsNormCommand);
 		bcfToolsNormJob.addParent(getVCFJob);
 		
-		Job unzip = this.getWorkflow().createBashJob("unzip VCFs");
-		unzip.setCommand("gunzip "+outDir+"/*.vcf.gz");
-		unzip.addParent(bcfToolsNormJob);
+		Job extractSNVFromIndel = this.getWorkflow().createBashJob("extracting SNVs from INDEL");
+		extractSNVFromIndel.setCommand("bgzip -d -c "+outDir+"/somatic.indel.bcftools-norm.vcf.gz > "+outDir+"/somatic.indel.bcftools-norm.vcf && grep -e '^#' -i -e '^[^#].*[[:space:]][ACTG][[:space:]][ACTG][[:space:]]' "+outDir+"/somatic.indel.bcftools-norm.vcf "
+										+ "> "+outDir+"/somatic.indel.bcftools-norm.extracted-snvs.vcf "
+												+ " && bgzip "+outDir+"/somatic.indel.bcftools-norm.extracted-snvs.vcf "
+												+ " && tabix -f -p vcf "+outDir+"/somatic.indel.bcftools-norm.extracted-snvs.vcf ");
+		extractSNVFromIndel.addParent(bcfToolsNormJob);
+		
+//		Job unzip = this.getWorkflow().createBashJob("unzip VCFs");
+//		unzip.setCommand("gunzip "+outDir+"/*.vcf.gz");
+//		unzip.addParent(bcfToolsNormJob);
 
-		//vcfcombine requries VCF files be unzipped.
-		Job vcfCombineJob = this.getWorkflow().createBashJob("run VCF Combine on VCFs for workflow");
-		String runVCFCombineCommand = "sudo docker run --rm "
-					+ " -v "+outDir+"/:/VCFs/"
-					+ " compbio/ngseasy-base:a1.0-002 vcfcombine /VCFs/*somatic.snv_mnv.vcf /VCFs/*somatic.indel.PRIMITIVES.vcf /VCFs/*somatic.sv.vcf" 
-				+ " > "+outDir+"/snv_AND_indel_AND_sv.vcf";
-		vcfCombineJob.setCommand(runVCFCombineCommand);
-		vcfCombineJob.addParent(unzip);
+		//vcfcombine requries VCF files be unzipped. TODO: Switch to use Brian's script!!
+//		Job vcfCombineJob = this.getWorkflow().createBashJob("run VCF Combine on VCFs for workflow");
+//		String runVCFCombineCommand = "sudo docker run --rm "
+//					+ " -v "+outDir+"/:/VCFs/"
+//					+ " compbio/ngseasy-base:a1.0-002 vcfcombine /VCFs/*somatic.snv_mnv.vcf /VCFs/*somatic.indel.PRIMITIVES.vcf /VCFs/*somatic.sv.vcf" 
+//				+ " > "+outDir+"/snv_AND_indel_AND_sv.vcf";
+//		vcfCombineJob.setCommand(runVCFCombineCommand);
+//		vcfCombineJob.addParent(unzip);
+//		vcfCombineJob.addParent(extractSNVFromIndel);
 		
 		//OxoG requires inputs be in BGZIP format.
-		Job bgZip = this.getWorkflow().createBashJob("bgzip combined vcf");
-		bgZip.setCommand("bgzip -f "+outDir+"/snv_AND_indel_AND_sv.vcf");
-		bgZip.addParent(vcfCombineJob);
+//		Job bgZip = this.getWorkflow().createBashJob("bgzip VCFs");
+//		bgZip.setCommand("bgzip -f "+outDir+"/snv_AND_indel_AND_sv.vcf");
+//		bgZip.addParent(extractSNVFromIndel);
 		
 		
 		if (workflowName.equals("Sanger"))
@@ -212,35 +274,65 @@ public class OxoGWrapperWorkflow extends AbstractWorkflowDataModel {
 		else if (workflowName.equals("Broad"))
 			this.broadVCF = outDir + "/snv_AND_indel_AND_sv.vcf.gz";
 
-		return bgZip;
+		return extractSNVFromIndel;
 	}
 
+	/**
+	 * The types of VCF files there are:
+	 * <ul>
+	 * <li>sv</li>
+	 * <li>snv</li>
+	 * <li>indel</li>
+	 * </ul>
+	 * @author sshorser
+	 *
+	 */
 	enum VCFType{
 		sv, snv, indel
 	}
-	private Job combineVCFsByType(VCFType vcfType, Job ... parents)
+	/**
+	 * This will combine VCFs from different workflows by the same type. All INDELs will be combined into a new output file,
+	 * all SVs will be combined into a new file, all SNVs will be combined into a new file. 
+	 * @param parents
+	 * @return
+	 */
+	private Job combineVCFsByType(Job ... parents)
 	{
-		Job vcfCombineJob = this.getWorkflow().createBashJob("vcfcombine for "+vcfType);
+		Job vcfCombineJob = this.getWorkflow().createBashJob("Combining VCFs by type");
 		
-		//TODO: Maybe use Brian's script for combining by type.
-		String sharedDir = "/datastore/vcf/";
-		String runVCFCombineCommand = "sudo docker run --rm "
-				+ " -v "+sharedDir+"/:/VCFs/"
-				+ " compbio/ngseasy-base:a1.0-002 vcfcombine ";
+		vcfCombineJob.setCommand("perl "+this.getWorkflowBaseDir()+"/scripts/vcf_merge_by_type.pl "
+				+ " broad_snv.vcf sanger_snv.vcf de_snv.vcf "
+				+ " broad_indel.vcf sanger_indel.vcf de_indel.vcf"
+				+ " broad_sv.vcf sanger_sv.vcf de_sv.vcf /datastore/vcf/ /datastore/vcf/");
 		
-		for (Pipeline w : Pipeline.values())
+//		//TODO: Maybe use Brian's script for combining by type.
+//		String sharedDir = "/datastore/vcf/";
+//		String runVCFCombineCommand = "sudo docker run --rm "
+//				+ " -v "+sharedDir+"/:/VCFs/"
+//				+ " compbio/ngseasy-base:a1.0-002 vcfcombine ";
+//		
+//		for (Pipeline w : Pipeline.values())
+//		{
+//			//this is naive - the file names will probably be more complicated than this. Need to get a complete download to see exactlty...
+//			runVCFCombineCommand += " /VCFs/"+w+"/"+vcfType+".vcf ";
+//		}
+//		
+//		runVCFCombineCommand += " > "+sharedDir+"/combined_"+vcfType+".vcf";
+		
+//		vcfCombineJob.setCommand(runVCFCombineCommand);
+		for (Job parent : parents)
 		{
-			//this is naive - the file names will probably be more complicated than this. Need to get a complete download to see exactlty...
-			runVCFCombineCommand += " /VCFs/"+w+"/"+vcfType+".vcf ";
+			vcfCombineJob.addParent(parent);
 		}
-		
-		runVCFCombineCommand += " > "+sharedDir+"/combined_"+vcfType+".vcf";
-		
-		vcfCombineJob.setCommand(runVCFCombineCommand);
-		
 		return vcfCombineJob;
 	}
 	
+	/**
+	 * Runs the OxoG filtering program inside the Broad's OxoG docker container. Output file(s) will be in /datastore/oxog_results/ and the working files will 
+	 * be in /datastore/oxog_workspace
+	 * @param parent
+	 * @return
+	 */
 	private Job doOxoG(Job parent) {
 		Job runOxoGWorkflow = this.getWorkflow().createBashJob("Run OxoG Filter");
 		String oxogMounts = " -v /datastore/refdata/:/cga/fh/pcawg_pipeline/refdata/ "
@@ -256,11 +348,41 @@ public class OxoGWrapperWorkflow extends AbstractWorkflowDataModel {
 		
 		runOxoGWorkflow.addParent(parent);
 		
-		Job getLogs = this.getOxoGLogs(runOxoGWorkflow);
+		//Job getLogs = this.getOxoGLogs(runOxoGWorkflow);
 
-		return getLogs;
+		return runOxoGWorkflow;
 	}
 
+	/**
+	 * This will run the OxoG Filter program on the SNVs that were extracted from the INDELs, if there were any. It's possible that no SNVs will be extracted from any
+	 * INDEL files (in fact, I've been told this is the most likely scenario for most donors) in which case nothing will run. See the script scripts/run_oxog_extracted_SNVs.sh
+	 * for more details on this.
+	 * @param parent
+	 * @return
+	 */
+	private Job doOxoGSnvsFromIndels(Job parent) {
+		Job oxoGOnSnvsFromIndels = this.getWorkflow().createBashJob("Running OxoG on SNVs from INDELs");
+		String vcfBaseDir = "/datastore/vcf/";
+		String vcf1 = vcfBaseDir+Pipeline.broad.toString()+"/somatic.indel.bcftools-norm.extracted-snvs.vcf ";
+		String vcf2 = vcfBaseDir+Pipeline.sanger.toString()+"/somatic.indel.bcftools-norm.extracted-snvs.vcf ";
+		String vcf3 = vcfBaseDir+Pipeline.dkfz_embl.toString()+"/somatic.indel.bcftools-norm.extracted-snvs.vcf ";
+		String vcf4 = vcfBaseDir+Pipeline.muse.toString()+"/somatic.indel.bcftools-norm.extracted-snvs.vcf ";
+		oxoGOnSnvsFromIndels.setCommand(this.getWorkflowBaseDir()+"/scripts/run_oxog_extracted_SNVs.sh "+
+																vcf1+" "+vcf2+" "+vcf3+" "+vcf4+" "+
+																this.normalBAM+" "+this.tumourBAM+" "+
+																this.aliquotID+" "+
+																this.oxoQScore);
+		oxoGOnSnvsFromIndels.addParent(parent);
+		return oxoGOnSnvsFromIndels;
+	}
+	
+	/**
+	 * Runs the variant program inside the Broad's OxoG container to produce a mini-BAM for a given BAM. 
+	 * @param parent
+	 * @param bamType - The type of BAM file to use. Determines the name of the output file.
+	 * @param bamPath - The path to the input BAM file.
+	 * @return
+	 */
 	private Job doVariantBam(Job parent, BAMType bamType, String bamPath) {
 		Job runOxoGWorkflow = this.getWorkflow().createBashJob("Run variantbam");
 		String oxogMounts = " -v "+bamPath+":/input.bam "
@@ -284,12 +406,20 @@ public class OxoGWrapperWorkflow extends AbstractWorkflowDataModel {
 		
 		runOxoGWorkflow.addParent(parent);
 		
-		Job getLogs = this.getOxoGLogs(runOxoGWorkflow);
+		//Job getLogs = this.getOxoGLogs(runOxoGWorkflow);
 
-		return getLogs;
+		return runOxoGWorkflow;
 	}
 	
+	/**
+	 * Gets logs from the container named oxog_run
+	 * @param parent
+	 * @return
+	 * 
+	 */
+	@Deprecated
 	private Job getOxoGLogs(Job parent) {
+		//TODO: Either update this to make it more relevant or remove it.
 		Job getLog = this.getWorkflow().createBashJob("get OxoG docker logs");
 		// This will get the docker logs and print them to stdout, but we may also want to get the logs
 		// in the mounted oxog_workspace dir...
@@ -298,6 +428,11 @@ public class OxoGWrapperWorkflow extends AbstractWorkflowDataModel {
 		return getLog;
 	}
 
+	/**
+	 * Uploads files... TBC...
+	 * @param parentJob
+	 * @return
+	 */
 	private Job doUpload(Job parentJob) {
 		// Might need to run gtupload to generate the analysis.xml and manifest files (but not actually upload). 
 		// The tar file contains all results.
@@ -308,76 +443,22 @@ public class OxoGWrapperWorkflow extends AbstractWorkflowDataModel {
 		return uploadResults;
 	}
 	
-	private Job pullRepo() {
-		Job pullRepoJob = this.getWorkflow().createBashJob("pull_git_repo");
-		pullRepoJob.getCommand().addArgument("if [[ ! -d ~/.ssh/ ]]; then  mkdir ~/.ssh; fi \n");
-		pullRepoJob.getCommand().addArgument("cp " + this.GITPemFile + " ~/.ssh/id_rsa \n");
-		pullRepoJob.getCommand().addArgument("chmod 600 ~/.ssh/id_rsa \n");
-		pullRepoJob.getCommand().addArgument("echo 'StrictHostKeyChecking no' > ~/.ssh/config \n");
-		pullRepoJob.getCommand().addArgument("[ -d "+this.JSONlocation+" ] || mkdir -p "+this.JSONlocation+" \n");
-		pullRepoJob.getCommand().addArgument("cd " + this.JSONlocation + " \n");
-		pullRepoJob.getCommand().addArgument("git config --global user.name " + this.GITname + " \n");
-		pullRepoJob.getCommand().addArgument("git config --global user.email " + this.GITemail + " \n");
-		pullRepoJob.getCommand().addArgument("[ -d "+this.JSONlocation+"/"+this.JSONrepoName+" ] || git clone " + this.JSONrepo + " \n");
-		//pullRepoJob.getCommand().addArgument("echo $? \n");
-		pullRepoJob.getCommand().addArgument("echo \"contents: \"\n");
-		pullRepoJob.getCommand().addArgument("ls -la  \n");
-		return pullRepoJob;
-	}
 
-	private Job gitMove(String src, String dst, Job ...parents) throws Exception {
-		if (parents == null || parents.length == 0)
-		{
-			throw new Exception("You must provide at least one parent job!");
-		}
-		Job manageGit = this.getWorkflow().createBashJob("git_manage_" + src + "_" + dst);
-		String path = this.JSONlocation + "/" + this.JSONrepoName + "/" + this.JSONfolderName;
-		// It shouldn't be necessary to do this config again if it was already done in pullRepo, but probably safer this way.
-		manageGit.getCommand().addArgument("git config --global user.name " + this.GITname + " \n");
-		manageGit.getCommand().addArgument("git config --global user.email " + this.GITemail + " \n");
-		// I think maybe it should be an error if the *repo* doesn't exist.
-		manageGit.getCommand().addArgument("cd "+this.JSONlocation +"/" + this.JSONrepoName + " \n");
-		manageGit.getCommand().addArgument("[ -d "+path+" ] || mkdir -p "+path+" \n");
-		manageGit.getCommand().addArgument("cd " + path + " \n");
-		manageGit.getCommand().addArgument("# This is not idempotent: git pull \n");
 
-		// If gitMoveTestMode is true, then the file moves will only happen locally, but will not be checked into git. 
-		if (!gitMoveTestMode) {
-			manageGit.getCommand().addArgument("git checkout master \n");
-			manageGit.getCommand().addArgument("git reset --hard origin/master \n");
-			manageGit.getCommand().addArgument("git fetch --all \n");
-		}
-		manageGit.getCommand().addArgument("[ -d "+dst+" ] || mkdir -p "+dst+" \n");
-		
-		if (!gitMoveTestMode) {
-			manageGit.getCommand().addArgument("if [[ -d " + src + " ]]; then git mv " + path + "/" + src + "/"
-					+ this.JSONfileName + " " + path + "/" + dst + "; fi \n");
-			manageGit.getCommand().addArgument("git stage . \n");
-			manageGit.getCommand().addArgument("git commit -m '" + dst + ": " + this.JSONfileName + "' \n");
-			manageGit.getCommand().addArgument("git push \n");
-		}
-		else {
-			manageGit.getCommand().addArgument("if [[ -d " + src + " ]]; then mv " + path + "/" + src + "/"
-					+ this.JSONfileName + " " + path + "/" + dst + "; fi \n");
-		}
-
-		for(Job p : parents) {
-			manageGit.addParent(p);
-		}
-		return manageGit;
-	}
-
+	/**
+	 * Build the workflow!!
+	 */
 	@Override
 	public void buildWorkflow() {
 		try {
 			this.init();
 			// Pull the repo.
-			Job pullRepo = this.pullRepo();
+			Job pullRepo = GitUtils.pullRepo(this.getWorkflow(), this.GITPemFile, this.GITname, this.JSONrepo, this.JSONrepoName, this.JSONlocation, this.GITemail  );
 			
 			Job copy = this.copyCredentials(pullRepo);
 			
 			// indicate job is in downloading stage.
-			Job move2download = gitMove("queued-jobs", "downloading-jobs",copy);
+			Job move2download = GitUtils.gitMove("queued-jobs", "downloading-jobs", this.getWorkflow(), this.JSONlocation, this.JSONrepoName, this.JSONfolderName, this.GITname, this.GITemail, this.gitMoveTestMode, this.JSONfileName ,copy);
 			// These jobs will all reun parallel. The BAM jobs just download, but the VCF jobs also do some
 			// processing (bcftools norm and vcfcombine) on the downloaded files.
 			Job normalBamJob = this.getBAM(move2download,this.bamNormalObjectID,BAMType.normal);
@@ -392,30 +473,31 @@ public class OxoGWrapperWorkflow extends AbstractWorkflowDataModel {
 			// on the *types* of VCFs, for the minibam generator. The per-workflow combined VCFs will
 			// be used by the OxoG filter. These three can be done in parallel because they all require the same inputs, 
 			// but none require the inputs of the other and they are not very intense jobs.
-			Job combineAllSVs = this.combineVCFsByType(VCFType.sv, sangerVCFJob, dkfzEmblVCFJob, broadVCFJob, normalBamJob, tumourBamJob);
-			Job combineAllSNVs = this.combineVCFsByType(VCFType.snv, sangerVCFJob, dkfzEmblVCFJob, broadVCFJob, normalBamJob, tumourBamJob);
-			Job combineAllIndels = this.combineVCFsByType(VCFType.indel, sangerVCFJob, dkfzEmblVCFJob, broadVCFJob, normalBamJob, tumourBamJob);
+			
+			//Only need one call now because Brian's perl script does them all at once. 
+			Job combineAllSVs = this.combineVCFsByType( sangerVCFJob, dkfzEmblVCFJob, broadVCFJob, normalBamJob, tumourBamJob);
+
+			//Job combineAllSNVs = this.combineVCFsByType(VCFType.snv, sangerVCFJob, dkfzEmblVCFJob, broadVCFJob, normalBamJob, tumourBamJob);
+			//Job combineAllIndels = this.combineVCFsByType(VCFType.indel, sangerVCFJob, dkfzEmblVCFJob, broadVCFJob, normalBamJob, tumourBamJob);
 			
 			// indicate job is running.
-			Job move2running = gitMove( "queued-jobs", "running-jobs", combineAllSVs, combineAllSNVs, combineAllIndels);
+			Job move2running = GitUtils.gitMove( "queued-jobs", "running-jobs", this.getWorkflow(), this.JSONlocation, this.JSONrepoName, this.JSONfolderName, this.GITname, this.GITemail, this.gitMoveTestMode, this.JSONfileName , combineAllSVs);
 			// OxoG will run after move2running. Move2running will run after all the jobs that perform input file downloads and file preprocessing have finished.  
 			Job oxoG = this.doOxoG(move2running);
-			// variantbam jobs will run parallel to oxog. variant seems to only use a *single* core, but runs long ( >60 min on OpenStack);
+			Job oxoGSnvsFromIndels = this.doOxoGSnvsFromIndels(oxoG);
+			// variantbam jobs will run parallel to oxog. variant seems to only use a *single* core, but runs long ( 60 - 120 min on OpenStack);
 			// OxoG uses a few cores (sometimes), but runs shorter (~20 min, on OpenStack).
 			Job normalVariantBam = this.doVariantBam(move2running,BAMType.normal,this.normalBAM);
 			Job tumourVariantBam = this.doVariantBam(move2running,BAMType.tumour,this.tumourBAM);
 	
 			// indicate job is in uploading stage.
-			Job move2uploading = gitMove("running-jobs", "uploading-jobs", oxoG);
-			// make sure that we don't move to uploading state until after both OxoG and variantbam are finished.
-			move2uploading.addParent(normalVariantBam);
-			move2uploading.addParent(tumourVariantBam);
+			Job move2uploading = GitUtils.gitMove("running-jobs", "uploading-jobs", this.getWorkflow(), this.JSONlocation, this.JSONrepoName, this.JSONfolderName, this.GITname, this.GITemail, this.gitMoveTestMode, this.JSONfileName , oxoGSnvsFromIndels, normalVariantBam, tumourVariantBam);
 			
 			//Now do the Upload
 			Job uploadResults = doUpload(move2uploading);
 	
 			// indicate job is complete.
-			/*Job move2finished = */gitMove( "uploading-jobs", "completed-jobs", uploadResults);
+			/*Job move2finished = */GitUtils.gitMove( "uploading-jobs", "completed-jobs", this.getWorkflow(), this.JSONlocation, this.JSONrepoName, this.JSONfolderName, this.GITname, this.GITemail, this.gitMoveTestMode, this.JSONfileName , uploadResults);
 		}
 		catch (Exception e)
 		{
