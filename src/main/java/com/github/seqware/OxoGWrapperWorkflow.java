@@ -35,6 +35,10 @@ public class OxoGWrapperWorkflow extends AbstractWorkflowDataModel {
 	private String GITname = "ICGC AUTOMATION";
 	private String GITPemFile = "";
 
+	//These will be needed so that vcf-uploader can generate the analysis.xml and manifest.xml files
+	private String tumourMetdataURL;
+	private String normalMetdataURL;
+	
 	private String tumourBAM;
 	private String normalBAM;
 	private String sangerVCF;
@@ -401,6 +405,9 @@ public class OxoGWrapperWorkflow extends AbstractWorkflowDataModel {
 	private Job doUpload(Job parentJob) {
 		// Might need to run gtupload to generate the analysis.xml and manifest files (but not actually upload). 
 		// The tar file contains all results.
+		//Job generateAnalysisFiles = this.getWorkflow().createBashJob("generate_analysis_files_for_upload");
+		//generateAnalysisFiles.setCommand("docker run pancancer/pancancer_upload_download");
+		
 		Job uploadResults = this.getWorkflow().createBashJob("upload results");
 		uploadResults.setCommand("rsync /cga/fh/pcawg_pipeline/jobResults_pipette/results/" + this.aliquotID
 				+ ".oxoG.somatic.snv_mnv.vcf.gz.tar  " + this.uploadURL);
