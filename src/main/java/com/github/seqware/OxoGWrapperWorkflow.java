@@ -454,8 +454,11 @@ public class OxoGWrapperWorkflow extends AbstractWorkflowDataModel {
 		//other intermediate files?
 		
 		//first thing to do is generate MD5 sums for all uploadable files.
-		
-		generateAnalysisFiles.getCommand().addArgument("");
+		for (String file : this.filesToUpload)
+		{
+			//md5sum test_files/tumour_minibam.bam.bai | cut -d ' ' -f 1 > test_files/tumour_minibam.bai.md5
+			generateAnalysisFiles.getCommand().addArgument(" md5sum "+file+" | cut -d ' ' -f 1 > "+file+".md5 \n");
+		}
 		
 		
 		Job uploadResults = this.getWorkflow().createBashJob("upload results");
