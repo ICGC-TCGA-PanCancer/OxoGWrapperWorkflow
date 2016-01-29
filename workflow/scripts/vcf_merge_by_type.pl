@@ -23,33 +23,32 @@ my $d = {};
 # the filenames for SVs for Broad, Sanger, DKFZ/EMBL;
 # the path to the root directory where all the files are;
 # the path to the output directory.
- 
+
 # Call this script like this:
 # perl vcf_cleaner.pl 35a74e53-16ff-4764-8397-6a9b02dfe733.broad-mutect.20151216.somatic.snv_mnv.vcf.gz \
-#						35a74e53-16ff-4764-8397-6a9b02dfe733.svcp_1-0-5.20150707.somatic.snv_mnv.vcf.gz \
-#						35a74e53-16ff-4764-8397-6a9b02dfe733.dkfz-snvCalling_1-0-132-1.20150731.somatic.snv_mnv.vcf.gz \
-#						35a74e53-16ff-4764-8397-6a9b02dfe733.broad-snowman.20151216.somatic.indel.vcf.gz \
-#						35a74e53-16ff-4764-8397-6a9b02dfe733.svcp_1-0-5.20150707.somatic.indel.vcf.gz \
-#						35a74e53-16ff-4764-8397-6a9b02dfe733.dkfz-indelCalling_1-0-132-1.20150731.somatic.indel.vcf.gz \
-#						35a74e53-16ff-4764-8397-6a9b02dfe733.broad-dRanger_snowman.20151216.somatic.sv.vcf.gz \
-#						35a74e53-16ff-4764-8397-6a9b02dfe733.svcp_1-0-5.20150707.somatic.sv.vcf.gz \
-#						35a74e53-16ff-4764-8397-6a9b02dfe733.embl-delly_1-3-0-preFilter.20150731.somatic.sv.vcf.gz \
-#						/datastore/path_to_above_VCFs/ \
-#						/datastore/output_directory 
+#                                               35a74e53-16ff-4764-8397-6a9b02dfe733.svcp_1-0-5.20150707.somatic.snv_mnv.vcf.gz \
+#                                               35a74e53-16ff-4764-8397-6a9b02dfe733.dkfz-snvCalling_1-0-132-1.20150731.somatic.snv_mnv.vcf.gz \
+#                                               35a74e53-16ff-4764-8397-6a9b02dfe733.broad-snowman.20151216.somatic.indel.vcf.gz \
+#                                               35a74e53-16ff-4764-8397-6a9b02dfe733.svcp_1-0-5.20150707.somatic.indel.vcf.gz \
+#                                               35a74e53-16ff-4764-8397-6a9b02dfe733.dkfz-indelCalling_1-0-132-1.20150731.somatic.indel.vcf.gz \
+#                                               35a74e53-16ff-4764-8397-6a9b02dfe733.broad-dRanger_snowman.20151216.somatic.sv.vcf.gz \
+#                                               35a74e53-16ff-4764-8397-6a9b02dfe733.svcp_1-0-5.20150707.somatic.sv.vcf.gz \
+#                                               35a74e53-16ff-4764-8397-6a9b02dfe733.embl-delly_1-3-0-preFilter.20150731.somatic.sv.vcf.gz \
+#                                               /datastore/path_to_above_VCFs/ \
+#                                               /datastore/output_directory 
 
 my ($broad_snv, $sanger_snv, $de_snv,
-	$broad_indel, $sanger_indel, $de_indel,
-	$broad_sv, $sanger_sv, $de_sv,
-	$in_dir, $out_dir) = @ARGV;
+        $broad_indel, $sanger_indel, $de_indel,
+        $broad_sv, $sanger_sv, $de_sv,
+        $in_dir, $out_dir) = @ARGV;
 
 my @snv = ($broad_snv, $sanger_snv, $de_snv);
 my @indel = ($broad_indel, $sanger_indel, $de_indel);
 my @sv = ($broad_sv, $sanger_sv, $de_sv);
 
-process("snv.clean", @snv);
-process("indel.clean", @indel);
-process("sv.clean", @sv);
-
+process($out_dir."/snv.clean", @snv);
+process($out_dir."/indel.clean", @indel);
+process($out_dir."/sv.clean", @sv);
 
 sub process {
 
@@ -72,7 +71,7 @@ EOS
   # process file into hash
   foreach my $i (@files) {
     print "processing file $i\n";
-    process_file($i, $OUT);
+    process_file($in_dir."/".$i, $OUT);
   }
 
   # write hash
@@ -90,17 +89,18 @@ EOS
 sub sort_and_index {
 
   my ($file) = @_;
-
+  my @parts = split /\//, $file;
+  my $filename = $parts[-1];
   my $cmd = "sudo docker run --rm \\
-        -v $in_dir/$file.vcf:/input.vcf:rw \\
+        -v $file.vcf:/input.vcf:rw \\
         -v /datastore/refdata/public:/ref \\
         -v ~/vcflib/:/home/ngseasy/vcflib/ \\
         -v $out_dir:/outdir/:rw \\
         compbio/ngseasy-base:a1.0-002 /bin/bash -c \\
-        \"vcf-sort /input.vcf > /outdir/$file.sorted.vcf; \\
-        echo indexing; \\
-        bgzip -f $in_dir/$file.sorted.vcf ; \\
-        tabix -p vcf $in_dir/$file.sorted.vcf.gz\"
+        \"vcf-sort /input.vcf > /outdir/$filename.sorted.vcf; \\
+        echo \"zipping and indexing...\" \\
+        bgzip -f /outdir/$filename.sorted.vcf ; \\
+        tabix -p vcf /outdir/$filename.sorted.vcf.gz\"
    ";
 
   print "$cmd\n";
@@ -137,3 +137,4 @@ sub process_file {
   }
   close IN;
 }
+
