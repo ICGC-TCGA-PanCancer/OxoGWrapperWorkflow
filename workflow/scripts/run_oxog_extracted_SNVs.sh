@@ -11,11 +11,11 @@ ALIQUOTID=$6
 
 OXOQSCORE=$7
 
-NUMINDELS1=$(grep "^[^#]" $VCF1  | wc -l)
+NUMINDELS1=$(zcat $VCF1 | grep "^[^#]" | wc -l)
 echo "$VCF1 has $NUMINDELS1 INDELS"
-NUMINDELS2=$(grep "^[^#]" $VCF2  | wc -l)
+NUMINDELS2=$(zcat $VCF2 | grep "^[^#]" | wc -l)
 echo "$VCF2 has $NUMINDELS2 INDELS"
-NUMINDELS3=$(grep "^[^#]" $VCF3  | wc -l)
+NUMINDELS3=$(zcat $VCF3 | grep "^[^#]" | wc -l)
 echo "$VCF3 has $NUMINDELS3 INDELS"
 
 VCFFORDOCKER=""
