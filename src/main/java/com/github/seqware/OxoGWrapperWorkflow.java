@@ -155,7 +155,7 @@ public class OxoGWrapperWorkflow extends AbstractWorkflowDataModel {
 	 */
 	private void generateRulesFile() throws URISyntaxException, IOException
 	{
-		Path pathToPaddingRules = Paths.get(new URI("/datastore/padding_rules.txt"));
+		Path pathToPaddingRules = Paths.get(new URI("file:////datastore/padding_rules.txt"));
 		String paddingFileString = "pad["+this.svPadding+"];mlregion@/sv.vcf\n"+
 									"pad["+this.snvPadding+"];mlregion@/snv.vcf\n"+
 									"pad["+this.indelPadding+"];mlregion@/indel.vcf\n";
@@ -280,12 +280,22 @@ public class OxoGWrapperWorkflow extends AbstractWorkflowDataModel {
 												+ " && tabix -f -p vcf "+outDir+"/somatic.indel.bcftools-norm.extracted-snvs.vcf ");
 		extractSNVFromIndel.addParent(bcfToolsNormJob);
 		
-		if (workflowName.equals("Sanger"))
-			this.sangerVCF = outDir + "/snv_AND_indel_AND_sv.vcf.gz";
-		else if (workflowName.equals("DKFZ_EMBL"))
-			this.dkfzEmblVCF = outDir + "/snv_AND_indel_AND_sv.vcf.gz";
-		else if (workflowName.equals("Broad"))
-			this.broadVCF = outDir + "/snv_AND_indel_AND_sv.vcf.gz";
+		switch (workflowName) {
+			case sanger:
+				this.sangerVCF = outDir + "/snv_AND_indel_AND_sv.vcf.gz";
+				break;
+			case broad:
+				this.broadVCF = outDir + "/snv_AND_indel_AND_sv.vcf.gz";
+				break;
+			case dkfz_embl:
+				this.dkfzEmblVCF = outDir + "/snv_AND_indel_AND_sv.vcf.gz"; 
+				break;
+			case muse:
+				this.museVCF = outDir + "/snv_AND_indel_AND_sv.vcf.gz";
+				break;
+			default:
+				throw new RuntimeException("Unknown pipeline: "+workflowName);
+		}
 	
 		return extractSNVFromIndel;
 	}
@@ -473,14 +483,14 @@ public class OxoGWrapperWorkflow extends AbstractWorkflowDataModel {
 			//md5sum test_files/tumour_minibam.bam.bai | cut -d ' ' -f 1 > test_files/tumour_minibam.bai.md5
 			generateAnalysisFiles.getCommand().addArgument(" md5sum "+file+" | cut -d ' ' -f 1 > "+file+".md5 \n");
 		}
-		
+		generateAnalysisFiles.addParent(parentJob);
 		
 		//Note: It was decided there should be two uploads: one for minibams and one for VCFs (for people who want VCFs but not minibams).
-		
+
 		Job uploadResults = this.getWorkflow().createBashJob("upload results");
 		uploadResults.setCommand("rsync /cga/fh/pcawg_pipeline/jobResults_pipette/results/" + this.aliquotID
 				+ ".oxoG.somatic.snv_mnv.vcf.gz.tar  " + this.uploadURL);
-		uploadResults.addParent(parentJob);
+		uploadResults.addParent(generateAnalysisFiles);
 		return uploadResults;
 	}
 	
@@ -511,6 +521,7 @@ public class OxoGWrapperWorkflow extends AbstractWorkflowDataModel {
 			Job downloadSangerVCFs = this.getVCF(move2download, Pipeline.sanger, this.sangerVCFObjectID);
 			Job downloadDkfzEmblVCFs = this.getVCF(move2download, Pipeline.dkfz_embl, this.dkfzemblVCFObjectID);
 			Job downloadBroadVCFs = this.getVCF(move2download, Pipeline.broad, this.broadVCFObjectID);
+			Job downloadMuseVCFs = this.getVCF(move2download, Pipeline.muse, this.museVCFObjectID);
 			
 			// After we've downloaded all VCFs on a per-workflow basis, we also need to do a vcfcombine 
 			// on the *types* of VCFs, for the minibam generator. The per-workflow combined VCFs will
@@ -520,7 +531,7 @@ public class OxoGWrapperWorkflow extends AbstractWorkflowDataModel {
 			// indicate job is running.
 			Job move2running = GitUtils.gitMove( "queued-jobs", "running-jobs", this.getWorkflow(),
 					this.JSONlocation, this.JSONrepoName, this.JSONfolderName, this.GITname, this.GITemail, this.gitMoveTestMode, this.JSONfileName
-					, downloadSangerVCFs, downloadDkfzEmblVCFs, downloadBroadVCFs, downloadNormalBam, downloadTumourBam);
+					, downloadSangerVCFs, downloadDkfzEmblVCFs, downloadBroadVCFs, downloadMuseVCFs, downloadNormalBam, downloadTumourBam);
 
 			// OxoG will run after move2running. Move2running will run after all the jobs that perform input file downloads and file preprocessing have finished.  
 			Job sangerPreprocessVCF = this.preProcessVCF(move2running, Pipeline.sanger);
