@@ -18,7 +18,9 @@ public abstract class JSONUtils {
 	static final String DKFZEMBL_VCF_OBJECT_ID = "dkfzemblVCFObjectID";
 	static final String SANGER_VCF_OBJECT_ID = "sangerVCFObjectID";
 	static final String BAM_NORMAL_OBJECT_ID = "bamNormalObjectID";
+	static final String BAM_NORMAL_METADATA_URL = "bamNormalMetadataURL";
 	static final String BAM_TUMOUR_OBJECT_ID = "bamTumourObjectID";
+	static final String BAM_TUMOUR_METADATA_URL = "bamTumourMetadataURL";
 	static final String MUSE_VCF_OBJECT_ID = "museVCFObjectID";
 	static final String ALIQUOT_ID = "aliquotID";
 	static final String SUBMITTER_DONOR_ID = "submitterDonorID";
@@ -43,8 +45,10 @@ public abstract class JSONUtils {
 			for (Map<String, String> fileDetails : normalFiles) {
 				String fileName = fileDetails.get("file_name");
 				if (fileName.endsWith(".bam")) {
-					// this.bamNormalObjectID = fileDetails.get("object_id");
 					results.put(BAM_NORMAL_OBJECT_ID, fileDetails.get("object_id"));
+					List<Map<String,Object>> repos = ( (List<Map<String,Object>>) normal.get("available_repos")) ;
+					String repo_id = (String) repos.get(0).keySet().toArray()[0];
+					results.put(BAM_NORMAL_METADATA_URL, repo_id+"cghub/metadata/analysisFull/"+normal.get("gnos_id"));
 					// break the for-loop, no need to keep going through other
 					// file details.
 					break;
@@ -59,10 +63,11 @@ public abstract class JSONUtils {
 			for (Map<String, String> fileDetails : tumourFiles) {
 				String fileName = fileDetails.get("file_name");
 				if (fileName.endsWith(".bam")) {
-					// this.bamTumourObjectID = fileDetails.get("object_id");
 					results.put(BAM_TUMOUR_OBJECT_ID, fileDetails.get("object_id"));
-					// break the for-loop, no need to keep going through other
-					// file details.
+					//TODO: This will need to be updated for multi-tumour samples.
+					List<Map<String,Object>> repos = ( (List<Map<String,Object>>) tumours.get(0).get("available_repos")) ;
+					String repo_id = (String) repos.get(0).keySet().toArray()[0];
+					results.put(BAM_TUMOUR_METADATA_URL, repo_id+"cghub/metadata/analysisFull/"+normal.get("gnos_id"));
 					break;
 				}
 			}

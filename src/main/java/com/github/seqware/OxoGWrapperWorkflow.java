@@ -413,28 +413,11 @@ public class OxoGWrapperWorkflow extends AbstractWorkflowDataModel {
 	 */
 	private Job doVariantBam(Job parent, BAMType bamType, String bamPath) {
 		Job runOxoGWorkflow = this.getWorkflow().createBashJob("Run variantbam");
-//		String oxogMounts = " -v "+bamPath+":/input.bam "
-//				+ " -v "+this.snvVCF+":/snv.vcf "
-//				+ " -v "+this.svVCF+":/sv.vcf "
-//				+ " -v "+this.indelVCF+":/indel.vcf "
-//				+ " -v /datastore/padding_rules.txt:/rules.txt "
-//				+ " -v /datastore/variantbam_results/:/outdir/:rw ";
-//		// TODO: Update this to use the per-VCF-type combined VCFs instead of the per-workflow combined VCFs.
-//		String oxogCommand = " /bin/bash -c \" /cga/fh/pcawg_pipeline/modules/VariantBam/variant "
-//				+ " -o /outdir/minibam_"+bamType+".bam"
-//				+ " -i /input.bam "
-//				+ " -r /rules.txt "
-//				+ " -l /snv.vcf "
-//				+ " -l /sv.vcf "
-//				+ " -l /indel.vcf \" ";
-//				
-//		runOxoGWorkflow.setCommand(
-//				"sudo docker run --name=\"variantbam_"+bamType+"\" "+oxogMounts+" oxog " + oxogCommand);
 
 		String command = DockerCommandCreator.createVariantBamCommand(bamType, bamPath, this.snvVCF, this.svVCF, this.indelVCF);
 		runOxoGWorkflow.setCommand(command);
 		//The bam file will need to be indexed!
-		runOxoGWorkflow.getCommand().addArgument("\nsamtools index /datastore/variantbam_results/minibam_"+bamType+".bam");
+		runOxoGWorkflow.getCommand().addArgument("\nsamtools index /datastore/variantbam_results/minibam_"+bamType+".bam ; \n");
 		
 		this.filesToUpload.add("/datastore/variantbam_results/minibam_"+bamType+".bam");
 		this.filesToUpload.add("/datastore/variantbam_results/minibam_"+bamType+".bai");
