@@ -313,15 +313,27 @@ public class OxoGWrapperWorkflow extends AbstractWorkflowDataModel {
 	{
 		Job vcfCombineJob = this.getWorkflow().createBashJob("Combining VCFs by type");
 		
+		//run the merge script, then bgzip and index them all.
 		vcfCombineJob.setCommand("perl "+this.getWorkflowBaseDir()+"/scripts/vcf_merge_by_type.pl "
 				+ " broad_snv.vcf sanger_snv.vcf de_snv.vcf "
 				+ " broad_indel.vcf sanger_indel.vcf de_indel.vcf"
-				+ " broad_sv.vcf sanger_sv.vcf de_sv.vcf /datastore/vcf/ /datastore/vcf/");
+				+ " broad_sv.vcf sanger_sv.vcf de_sv.vcf /datastore/vcf/ /datastore/merged_vcfs/ ; \n"
+				+ " bgzip -c /datastore/merged_vcfs/snv.clean.sorted.vcf > /datastore/merged_vcfs/snv.clean.sorted.vcf.gz ; \n"
+				+ " bgzip -c /datastore/merged_vcfs/sv.clean.sorted.vcf > /datastore/merged_vcfs/sv.clean.sorted.vcf.gz ; \n"
+				+ " bgzip -c /datastore/merged_vcfs/indel.clean.sorted.vcf > /datastore/merged_vcfs/indel.clean.sorted.vcf.gz ; \n"
+				+ " tabix -f /datastore/merged_vcfs/snv.clean.sorted.vcf.gz ; \n"
+				+ " tabix -f /datastore/merged_vcfs/sv.clean.sorted.vcf.gz ; \n"
+				+ " tabix -f /datastore/merged_vcfs/indel.clean.sorted.vcf.gz ; \n");
 		
 		for (Job parent : parents)
 		{
 			vcfCombineJob.addParent(parent);
 		}
+		
+		this.snvVCF = "/datastore/merged_vcfs/snv.clean.sorted.vcf";
+		this.svVCF = "/datastore/merged_vcfs/sv.clean.sorted.vcf";
+		this.indelVCF = "/datastore/merged_vcfs/indel.clean.sorted.vcf";
+		
 		return vcfCombineJob;
 	}
 	
@@ -391,24 +403,26 @@ public class OxoGWrapperWorkflow extends AbstractWorkflowDataModel {
 	 */
 	private Job doVariantBam(Job parent, BAMType bamType, String bamPath) {
 		Job runOxoGWorkflow = this.getWorkflow().createBashJob("Run variantbam");
-		String oxogMounts = " -v "+bamPath+":/input.bam "
-				+ " -v "+this.snvVCF+":/snv.vcf "
-				+ " -v "+this.svVCF+":/sv.vcf "
-				+ " -v "+this.indelVCF+":/indel.vcf "
-				+ " -v /datastore/padding_rules.txt:/rules.txt "
-				+ " -v /datastore/variantbam_results/:/outdir/:rw ";
-		// TODO: Update this to use the per-VCF-type combined VCFs instead of the per-workflow combined VCFs.
-		String oxogCommand = " /bin/bash -c \" /cga/fh/pcawg_pipeline/modules/VariantBam/variant "
-				+ " -o /outdir/minibam_"+bamType+".bam"
-				+ " -i /input.bam "
-				+ " -r /rules.txt "
-				+ " -l /snv.vcf "
-				+ " -l /sv.vcf "
-				+ " -l /indel.vcf \" ";
-				
-		runOxoGWorkflow.setCommand(
-				"sudo docker run --name=\"variantbam_"+bamType+"\" "+oxogMounts+" oxog " + oxogCommand);
-		
+//		String oxogMounts = " -v "+bamPath+":/input.bam "
+//				+ " -v "+this.snvVCF+":/snv.vcf "
+//				+ " -v "+this.svVCF+":/sv.vcf "
+//				+ " -v "+this.indelVCF+":/indel.vcf "
+//				+ " -v /datastore/padding_rules.txt:/rules.txt "
+//				+ " -v /datastore/variantbam_results/:/outdir/:rw ";
+//		// TODO: Update this to use the per-VCF-type combined VCFs instead of the per-workflow combined VCFs.
+//		String oxogCommand = " /bin/bash -c \" /cga/fh/pcawg_pipeline/modules/VariantBam/variant "
+//				+ " -o /outdir/minibam_"+bamType+".bam"
+//				+ " -i /input.bam "
+//				+ " -r /rules.txt "
+//				+ " -l /snv.vcf "
+//				+ " -l /sv.vcf "
+//				+ " -l /indel.vcf \" ";
+//				
+//		runOxoGWorkflow.setCommand(
+//				"sudo docker run --name=\"variantbam_"+bamType+"\" "+oxogMounts+" oxog " + oxogCommand);
+
+		String command = DockerCommandCreator.createVariantBamCommand(bamType, bamPath, this.snvVCF, this.svVCF, this.indelVCF);
+		runOxoGWorkflow.setCommand(command);
 		//The bam file will need to be indexed!
 		runOxoGWorkflow.getCommand().addArgument("\nsamtools index /datastore/variantbam_results/minibam_"+bamType+".bam");
 		
@@ -444,7 +458,7 @@ public class OxoGWrapperWorkflow extends AbstractWorkflowDataModel {
 	 * @return
 	 */
 	private Job doUpload(Job parentJob) {
-		// Might need to run gtupload to generate the analysis.xml and manifest files (but not actually upload). 
+		// Will need to run gtupload to generate the analysis.xml and manifest files (but not actually upload). 
 		// The tar file contains all results.
 		Job generateAnalysisFiles = this.getWorkflow().createBashJob("generate_analysis_files_for_upload");
 		
@@ -460,6 +474,8 @@ public class OxoGWrapperWorkflow extends AbstractWorkflowDataModel {
 			generateAnalysisFiles.getCommand().addArgument(" md5sum "+file+" | cut -d ' ' -f 1 > "+file+".md5 \n");
 		}
 		
+		
+		//Note: It was decided there should be two uploads: one for minibams and one for VCFs (for people who want VCFs but not minibams).
 		
 		Job uploadResults = this.getWorkflow().createBashJob("upload results");
 		uploadResults.setCommand("rsync /cga/fh/pcawg_pipeline/jobResults_pipette/results/" + this.aliquotID
