@@ -1,0 +1,1 @@
+alias icgc-storage-client=/home/seqware/downloads/icgc-storage-client-1.0.5/bin/icgc-storage-client
