@@ -40,6 +40,7 @@ public class INIGenerator {
 			
 			
 			Files.write(Paths.get("./"+donorID+".INI"), sb.toString().getBytes());
+			System.out.println("Writing file: "+"./"+donorID+".INI");
 		}
 		else
 		{

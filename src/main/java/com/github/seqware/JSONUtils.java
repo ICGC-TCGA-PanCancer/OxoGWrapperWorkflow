@@ -19,7 +19,7 @@ public abstract class JSONUtils {
 	static final String SANGER_VCF_OBJECT_ID = "sangerVCFObjectID";
 	static final String BAM_NORMAL_OBJECT_ID = "bamNormalObjectID";
 	static final String BAM_TUMOUR_OBJECT_ID = "bamTumourObjectID";
-	static final String MUSE_TUMOUR_OBJECT_ID = "museVCFObjectID";
+	static final String MUSE_VCF_OBJECT_ID = "museVCFObjectID";
 	static final String ALIQUOT_ID = "aliquotID";
 	static final String SUBMITTER_DONOR_ID = "submitterDonorID";
 	static final String PROJECT_CODE = "projectCode";
@@ -99,32 +99,32 @@ public abstract class JSONUtils {
 				// filtered to not use the "embl-delly" files.
 				if (fileName.contains("dkfz-snvCalling") && fileName.endsWith(".somatic.snv_mnv.vcf.gz")) {
 					results.put(DKFZEMBL_VCF_OBJECT_ID, fileDetails.get("object_id"));
-					// this.dkfzemblVCFObjectID = fileDetails.get("object_id");
-					// break the for-loop, no need to keep going through other
-					// file details.
 					break;
 				}
 			}
 			// Broad
-			Map<String, Object> broad = (Map<String, Object>) jsonContents.get("sanger");
+			Map<String, Object> broad = (Map<String, Object>) jsonContents.get("broad");
 			List<Map<String, String>> broadFiles = (List<Map<String, String>>) broad.get("files");
 			for (Map<String, String> fileDetails : broadFiles) {
 				String fileName = fileDetails.get("file_name");
-				// TODO: Broad produces a number of VCFs, need to find out
-				// exactly which ones to download.
 				if (fileName.contains("broad-mutect") && fileName.endsWith(".somatic.snv_mnv.vcf.gz")) {
 					results.put(BROAD_VCF_OBJECT_ID, fileDetails.get("object_id"));
-					// this.broadVCFObjectID = fileDetails.get("object_id");
-					// break the for-loop, no need to keep going through other
-					// file details.
 					break;
 				}
 			}
-
-			//TODO: Get MuSE file and info.
+			// Muse
+			Map<String, Object> muse = (Map<String, Object>) jsonContents.get("muse");
+			List<Map<String, String>> museFiles = (List<Map<String, String>>) muse.get("files");
+			for (Map<String, String> fileDetails : museFiles) {
+				String fileName = fileDetails.get("file_name");
+				if (fileName.contains("MUSE_1-0rc-vcf") && fileName.endsWith(".somatic.snv_mnv.vcf.gz")) {
+					results.put(MUSE_VCF_OBJECT_ID, fileDetails.get("object_id"));
+					break;
+				}
+			}
 			
 			// Get OxoQ Score
-			String oxoqScore = String.valueOf((Double) jsonContents.get("OxoQ_score"));
+			String oxoqScore = (String) tumours.get(0).get("oxog_score");
 			results.put(OXOQ_SCORE, oxoqScore);
 			
 			// Get donor ID
