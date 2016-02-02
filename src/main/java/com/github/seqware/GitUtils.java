@@ -28,8 +28,9 @@ class GitUtils {
 		pullRepoJob.getCommand()
 				.addArgument("[ -d " + JSONlocation + "/" + JSONrepoName + " ] || git clone " + JSONrepo + " \n");
 		// pullRepoJob.getCommand().addArgument("echo $? \n");
+
 		pullRepoJob.getCommand().addArgument("echo \"contents: \"\n");
-		pullRepoJob.getCommand().addArgument("ls -la  \n");
+		pullRepoJob.getCommand().addArgument("ls -lRA  \n");
 		return pullRepoJob;
 	}
 
