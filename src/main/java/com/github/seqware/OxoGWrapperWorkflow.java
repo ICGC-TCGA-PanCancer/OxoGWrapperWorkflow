@@ -107,7 +107,9 @@ public class OxoGWrapperWorkflow extends AbstractWorkflowDataModel {
 			this.GITname = this.getMandatoryProperty("GITname");
 			
 			this.bamNormalObjectID = this.getMandatoryProperty(JSONUtils.BAM_NORMAL_OBJECT_ID);
+			this.normalMetdataURL = this.getMandatoryProperty(JSONUtils.BAM_NORMAL_METADATA_URL);
 			this.bamTumourObjectID = this.getMandatoryProperty(JSONUtils.BAM_TUMOUR_OBJECT_ID);
+			this.tumourMetdataURL = this.getMandatoryProperty(JSONUtils.BAM_TUMOUR_METADATA_URL);
 			this.sangerVCFObjectID = this.getMandatoryProperty(JSONUtils.SANGER_VCF_OBJECT_ID);
 			this.dkfzemblVCFObjectID = this.getMandatoryProperty(JSONUtils.DKFZEMBL_VCF_OBJECT_ID);
 			this.broadVCFObjectID = this.getMandatoryProperty(JSONUtils.BROAD_VCF_OBJECT_ID);
@@ -242,9 +244,11 @@ public class OxoGWrapperWorkflow extends AbstractWorkflowDataModel {
 				+ " -e STORAGE_PROFILE="+this.storageSource+" " 
 			    + " -v "+outDir+"/logs/:/icgc/icgc-storage-client/logs/:rw "
 				+ " -v /datastore/credentials/collab.token:/icgc/icgc-storage-client/conf/application.properties:ro "
-			    + " -v "+outDir+"/:/tmp/:rw"
-	    		+ " icgc/icgc-storage-client "
-				+ " /icgc/icgc-storage-client/bin/icgc-storage-client download --object-id " + objectID+" --output-dir /tmp/";
+			    + " -v "+outDir+"/:/downloads/:rw"
+	    		+ " icgc/icgc-storage-client /bin/bash -c "
+			    // resovle underlying URL of object ID to print if object will be downloaded from S3 or Collab.
+	    		+ " \"/icgc/icgc-storage-client/bin/icgc-storage-client url --object-id "+objectID+" ;\n" 
+				+ " /icgc/icgc-storage-client/bin/icgc-storage-client download --object-id " + objectID+" --output-dir /downloads/ \" ";
 		getVCFJob.setCommand(getVCFCommand);
 		getVCFJob.addParent(parentJob);
 
@@ -294,6 +298,7 @@ public class OxoGWrapperWorkflow extends AbstractWorkflowDataModel {
 				this.museVCF = outDir + "/snv_AND_indel_AND_sv.vcf.gz";
 				break;
 			default:
+				// Just in case someone adds a new pipeline and then doesn't write code to handle it.
 				throw new RuntimeException("Unknown pipeline: "+workflowName);
 		}
 	
