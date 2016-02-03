@@ -175,6 +175,8 @@ public class OxoGWrapperWorkflow extends AbstractWorkflowDataModel {
 		//Might need to set transport.parallel to some fraction of available cores for icgc-storage-client. Use this command to get # CPUs.
 		//The include it in the collab.token file since that's what gets mounted to /icgc/icgc-storage-client/conf/application.properties
 		//lscpu | grep "^CPU(s):" | grep -o "[^ ]$"
+		//Andy says transport.parallel is not yet supported, but transport.memory may improve performance.
+		//Also set transport.memory: either "4" or "6" (GB - implied). 
 		Job copy = this.getWorkflow().createBashJob("copy ~/.gnos");
 		copy.setCommand("sudo cp -r ~/.gnos /datastore/credentials && ls -l /datastore/credentials");
 		copy.addParent(parentJob);
@@ -200,14 +202,14 @@ public class OxoGWrapperWorkflow extends AbstractWorkflowDataModel {
 	private Job getBAM(Job parentJob, String objectID, BAMType bamType) {
 		Job getBamFileJob = this.getWorkflow().createBashJob("get "+bamType.toString()+" BAM file");
 		getBamFileJob.addParent(parentJob);
-		String storageClientDockerCmdNormal ="sudo docker run --rm"
+		String storageClientDockerCmdNormal ="sudo docker run --rm --name get_bam_"+bamType+" "
 				+ " -e STORAGE_PROFILE="+this.storageSource+" " 
 			    + " -v /datastore/bam/"+bamType.toString()+"/logs/:/icgc/icgc-storage-client/logs/:rw "
 				+ " -v /datastore/credentials/collab.token:/icgc/icgc-storage-client/conf/application.properties:ro "
-			    + " -v /datastore/bam/"+bamType.toString()+"/:/tmp/:rw"
+			    + " -v /datastore/bam/"+bamType.toString()+"/:/downloads/:rw"
 	    		+ " icgc/icgc-storage-client /bin/bash -c "
 			    // resovle underlying URL of object ID to print if object will be downloaded from S3 or Collab.
-	    		+ " \" sudo mkdir /downloads ; /icgc/icgc-storage-client/bin/icgc-storage-client url --object-id "+objectID+" ;\n" 
+	    		+ " \" /icgc/icgc-storage-client/bin/icgc-storage-client url --object-id "+objectID+" ;\n" 
 				+ " /icgc/icgc-storage-client/bin/icgc-storage-client download --object-id "
 					+ objectID +" --output-dir /downloads/ \"";
 		getBamFileJob.setCommand(storageClientDockerCmdNormal);
@@ -246,14 +248,14 @@ public class OxoGWrapperWorkflow extends AbstractWorkflowDataModel {
 		Job getVCFJob = this.getWorkflow().createBashJob("get VCF for workflow " + workflowName);
 		String outDir = "/datastore/vcf/"+workflowName;
 		//TODO: Will need multiple downloads if the object-id will only download one but we need three (SV, SNV, INDEL)
-		String getVCFCommand = "sudo docker run --rm"
+		String getVCFCommand = "sudo docker run --rm --name get_vcf_"+workflowName+" "
 				+ " -e STORAGE_PROFILE="+this.storageSource+" " 
 			    + " -v "+outDir+"/logs/:/icgc/icgc-storage-client/logs/:rw "
 				+ " -v /datastore/credentials/collab.token:/icgc/icgc-storage-client/conf/application.properties:ro "
 			    + " -v "+outDir+"/:/downloads/:rw"
 	    		+ " icgc/icgc-storage-client /bin/bash -c "
 			    // resovle underlying URL of object ID to print if object will be downloaded from S3 or Collab.
-	    		+ " \" sudo mkdir /downloads ; /icgc/icgc-storage-client/bin/icgc-storage-client url --object-id "+objectID+" ;\n" 
+	    		+ " \" /icgc/icgc-storage-client/bin/icgc-storage-client url --object-id "+objectID+" ;\n" 
 				+ " /icgc/icgc-storage-client/bin/icgc-storage-client download --object-id " + objectID+" --output-dir /downloads/ \" ";
 		getVCFJob.setCommand(getVCFCommand);
 		getVCFJob.addParent(parentJob);
@@ -512,7 +514,7 @@ public class OxoGWrapperWorkflow extends AbstractWorkflowDataModel {
 			Job downloadBroadVCFs = this.getVCF(downloadDkfzEmblVCFs, Pipeline.broad, this.broadVCFObjectID);
 			Job downloadMuseVCFs = this.getVCF(downloadBroadVCFs, Pipeline.muse, this.museVCFObjectID);
 			// Once VCFs are downloaded, download the BAMs.
-			Job downloadNormalBam = this.getBAM(downloadBroadVCFs,this.bamNormalObjectID,BAMType.normal);
+			Job downloadNormalBam = this.getBAM(downloadMuseVCFs,this.bamNormalObjectID,BAMType.normal);
 			this.normalBAM = "/datastore/bam/normal/*.bam";
 			Job downloadTumourBam = this.getBAM(downloadNormalBam,this.bamTumourObjectID,BAMType.tumour);
 			this.tumourBAM = "/datastore/bam/tumour/*.bam";
