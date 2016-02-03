@@ -504,18 +504,18 @@ public class OxoGWrapperWorkflow extends AbstractWorkflowDataModel {
 			
 			// indicate job is in downloading stage.
 			Job move2download = GitUtils.gitMove("queued-jobs", "downloading-jobs", this.getWorkflow(), this.JSONlocation, this.JSONrepoName, this.JSONfolderName, this.GITname, this.GITemail, this.gitMoveTestMode, this.JSONfileName ,copy);
-			// These jobs will all reun parallel. The BAM jobs just download, but the VCF jobs also do some
-			// processing (bcftools norm and vcfcombine) on the downloaded files.
-			Job downloadNormalBam = this.getBAM(move2download,this.bamNormalObjectID,BAMType.normal);
-			this.normalBAM = "/datastore/bam/normal/*.bam";
-			Job downloadTumourBam = this.getBAM(move2download,this.bamTumourObjectID,BAMType.tumour);
-			this.tumourBAM = "/datastore/bam/tumour/*.bam";
-			
-			//Download jobs. VCFs downloading serial. Trying to download all in parallel seems to put too great a strain on the system. 
+
+			//Download jobs. VCFs downloading serial. Trying to download all in parallel seems to put too great a strain on the system 
+			//since the icgc-storage-client can make full use of all cores on a multi-core system. 
 			Job downloadSangerVCFs = this.getVCF(move2download, Pipeline.sanger, this.sangerVCFObjectID);
 			Job downloadDkfzEmblVCFs = this.getVCF(downloadSangerVCFs, Pipeline.dkfz_embl, this.dkfzemblVCFObjectID);
 			Job downloadBroadVCFs = this.getVCF(downloadDkfzEmblVCFs, Pipeline.broad, this.broadVCFObjectID);
 			Job downloadMuseVCFs = this.getVCF(downloadBroadVCFs, Pipeline.muse, this.museVCFObjectID);
+			// Once VCFs are downloaded, download the BAMs.
+			Job downloadNormalBam = this.getBAM(downloadBroadVCFs,this.bamNormalObjectID,BAMType.normal);
+			this.normalBAM = "/datastore/bam/normal/*.bam";
+			Job downloadTumourBam = this.getBAM(downloadNormalBam,this.bamTumourObjectID,BAMType.tumour);
+			this.tumourBAM = "/datastore/bam/tumour/*.bam";
 			
 			// After we've downloaded all VCFs on a per-workflow basis, we also need to do a vcfcombine 
 			// on the *types* of VCFs, for the minibam generator. The per-workflow combined VCFs will
