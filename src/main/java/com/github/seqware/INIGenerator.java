@@ -17,8 +17,8 @@ public class INIGenerator {
 					"GITname = icgc-bot\n"+
 					"GITPemFile = /home/seqware/.gnos/git.pem\n";
 	
-	private static Map<String,String> getDataFromJSON(String pathToJSON) {
-		Map<String,String> inputsFromJSON = JSONUtils.processJSONFile(pathToJSON);
+	private static Map<String, Object> getDataFromJSON(String pathToJSON) {
+		Map<String, Object> inputsFromJSON = JSONUtils.processJSONFile(pathToJSON);
 		return inputsFromJSON;
 	}
 	
@@ -26,7 +26,7 @@ public class INIGenerator {
 		// Path to the JSON file will be args[0]
 		if (args.length > 0)
 		{
-			Map<String,String> fromJSON = getDataFromJSON(args[0]);
+			Map<String, Object> fromJSON = getDataFromJSON(args[0]);
 			
 			StringBuilder sb = new StringBuilder();
 			for (String k : fromJSON.keySet())
@@ -34,8 +34,8 @@ public class INIGenerator {
 				sb.append(k).append(" = ").append(fromJSON.get(k)).append("\n");
 			}
 			sb.append(ini);
-			String donorID = fromJSON.get(JSONUtils.SUBMITTER_DONOR_ID);
-			String projectCode = fromJSON.get(JSONUtils.PROJECT_CODE);
+			String donorID = (String) fromJSON.get(JSONUtils.SUBMITTER_DONOR_ID);
+			String projectCode = (String) fromJSON.get(JSONUtils.PROJECT_CODE);
 			sb.append("JSONfileName = "+projectCode+"."+donorID+".json");
 			
 			
