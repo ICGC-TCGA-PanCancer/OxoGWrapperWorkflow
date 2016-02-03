@@ -113,6 +113,7 @@ public class OxoGWrapperWorkflow extends AbstractWorkflowDataModel {
 			this.sangerVCFObjectID = this.getMandatoryProperty(JSONUtils.SANGER_VCF_OBJECT_ID);
 			this.dkfzemblVCFObjectID = this.getMandatoryProperty(JSONUtils.DKFZEMBL_VCF_OBJECT_ID);
 			this.broadVCFObjectID = this.getMandatoryProperty(JSONUtils.BROAD_VCF_OBJECT_ID);
+			this.museVCFObjectID = this.getMandatoryProperty(JSONUtils.MUSE_VCF_OBJECT_ID);
 			this.uploadURL = this.getMandatoryProperty("uploadURL");
 			this.aliquotID = this.getMandatoryProperty(JSONUtils.ALIQUOT_ID);
 			
@@ -171,6 +172,9 @@ public class OxoGWrapperWorkflow extends AbstractWorkflowDataModel {
 	 * @return
 	 */
 	private Job copyCredentials(Job parentJob){
+		//Might need to set transport.parallel to some fraction of available cores for icgc-storage-client. Use this command to get # CPUs.
+		//The include it in the collab.token file since that's what gets mounted to /icgc/icgc-storage-client/conf/application.properties
+		//lscpu | grep "^CPU(s):" | grep -o "[^ ]$"
 		Job copy = this.getWorkflow().createBashJob("copy ~/.gnos");
 		copy.setCommand("sudo cp -r ~/.gnos /datastore/credentials && ls -l /datastore/credentials");
 		copy.addParent(parentJob);
@@ -201,9 +205,11 @@ public class OxoGWrapperWorkflow extends AbstractWorkflowDataModel {
 			    + " -v /datastore/bam/"+bamType.toString()+"/logs/:/icgc/icgc-storage-client/logs/:rw "
 				+ " -v /datastore/credentials/collab.token:/icgc/icgc-storage-client/conf/application.properties:ro "
 			    + " -v /datastore/bam/"+bamType.toString()+"/:/tmp/:rw"
-			    + " icgc/icgc-storage-client "
+	    		+ " icgc/icgc-storage-client /bin/bash -c "
+			    // resovle underlying URL of object ID to print if object will be downloaded from S3 or Collab.
+	    		+ " \" sudo mkdir /downloads ; /icgc/icgc-storage-client/bin/icgc-storage-client url --object-id "+objectID+" ;\n" 
 				+ " /icgc/icgc-storage-client/bin/icgc-storage-client download --object-id "
-					+ objectID +" --output-dir /tmp/";
+					+ objectID +" --output-dir /downloads/ \"";
 		getBamFileJob.setCommand(storageClientDockerCmdNormal);
 
 		return getBamFileJob;
@@ -247,7 +253,7 @@ public class OxoGWrapperWorkflow extends AbstractWorkflowDataModel {
 			    + " -v "+outDir+"/:/downloads/:rw"
 	    		+ " icgc/icgc-storage-client /bin/bash -c "
 			    // resovle underlying URL of object ID to print if object will be downloaded from S3 or Collab.
-	    		+ " \"/icgc/icgc-storage-client/bin/icgc-storage-client url --object-id "+objectID+" ;\n" 
+	    		+ " \" sudo mkdir /downloads ; /icgc/icgc-storage-client/bin/icgc-storage-client url --object-id "+objectID+" ;\n" 
 				+ " /icgc/icgc-storage-client/bin/icgc-storage-client download --object-id " + objectID+" --output-dir /downloads/ \" ";
 		getVCFJob.setCommand(getVCFCommand);
 		getVCFJob.addParent(parentJob);
@@ -505,17 +511,16 @@ public class OxoGWrapperWorkflow extends AbstractWorkflowDataModel {
 			Job downloadTumourBam = this.getBAM(move2download,this.bamTumourObjectID,BAMType.tumour);
 			this.tumourBAM = "/datastore/bam/tumour/*.bam";
 			
-			//Download jobs
+			//Download jobs. VCFs downloading serial. Trying to download all in parallel seems to put too great a strain on the system. 
 			Job downloadSangerVCFs = this.getVCF(move2download, Pipeline.sanger, this.sangerVCFObjectID);
-			Job downloadDkfzEmblVCFs = this.getVCF(move2download, Pipeline.dkfz_embl, this.dkfzemblVCFObjectID);
-			Job downloadBroadVCFs = this.getVCF(move2download, Pipeline.broad, this.broadVCFObjectID);
-			Job downloadMuseVCFs = this.getVCF(move2download, Pipeline.muse, this.museVCFObjectID);
+			Job downloadDkfzEmblVCFs = this.getVCF(downloadSangerVCFs, Pipeline.dkfz_embl, this.dkfzemblVCFObjectID);
+			Job downloadBroadVCFs = this.getVCF(downloadDkfzEmblVCFs, Pipeline.broad, this.broadVCFObjectID);
+			Job downloadMuseVCFs = this.getVCF(downloadBroadVCFs, Pipeline.muse, this.museVCFObjectID);
 			
 			// After we've downloaded all VCFs on a per-workflow basis, we also need to do a vcfcombine 
 			// on the *types* of VCFs, for the minibam generator. The per-workflow combined VCFs will
 			// be used by the OxoG filter. These three can be done in parallel because they all require the same inputs, 
 			// but none require the inputs of the other and they are not very intense jobs.
-			
 			// indicate job is running.
 			Job move2running = GitUtils.gitMove( "queued-jobs", "running-jobs", this.getWorkflow(),
 					this.JSONlocation, this.JSONrepoName, this.JSONfolderName, this.GITname, this.GITemail, this.gitMoveTestMode, this.JSONfileName
