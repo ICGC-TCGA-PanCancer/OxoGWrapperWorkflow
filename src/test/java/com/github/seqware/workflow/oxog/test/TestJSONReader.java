@@ -13,7 +13,7 @@ public class TestJSONReader {
 	public static void main(String[] args) {
 		// TODO Auto-generated method stub
 
-		Map<String,String> results = JSONUtils.processJSONFile("src/test/resources/testinput.json");
+		Map<String, Object> results = JSONUtils.processJSONFile("src/test/resources/testinput.json");
 		System.out.println(results);
 	}
 
