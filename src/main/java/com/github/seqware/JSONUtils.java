@@ -56,10 +56,11 @@ public abstract class JSONUtils {
 	static final String BAM_NORMAL_OBJECT_ID = "normal_data_object_id";
 	static final String BAM_NORMAL_FILE_NAME = "normal_data_file_name";
 	static final String BAM_NORMAL_INDEX_OBJECT_ID = "normal_index_object_id";
-	static final String BAM_TUMOUR_INDEX_OBJECT_ID = "bamTumourBaiObjectID";
-	static final String BAM_NORMAL_METADATA_URL = "tumour_index_object_id";
+	static final String BAM_NORMAL_METADATA_URL = "bamNormalMetadataURL";
+	
 	static final String BAM_TUMOUR_OBJECT_ID = "tumour_data_object_id";
 	static final String BAM_TUMOUR_FILE_NAME = "tumour_data_file_name";
+	static final String BAM_TUMOUR_INDEX_OBJECT_ID = "tumour_index_object_id";
 	static final String BAM_TUMOUR_METADATA_URL = "bamTumourMetadataURL";
 
 	static final String ALIQUOT_ID = "aliquotID";
