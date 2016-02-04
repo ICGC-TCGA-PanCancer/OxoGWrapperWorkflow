@@ -16,15 +16,22 @@ public abstract class JSONUtils {
 
 	static final String OXOQ_SCORE = "OxoQScore";
 	static final String BROAD_VCF_OBJECT_ID = "broad_data_object_id";
+	static final String BROAD_VCF_NAME = "broad_data_file_name";
 	static final String DKFZEMBL_VCF_OBJECT_ID = "dkfz_embl_data_object_id";
+	static final String DFKZEMBL_VCF_NAME = "dkfz_embl_data_file_name";
 	static final String SANGER_VCF_OBJECT_ID = "sanger_data_object_id";
+	static final String SANGER_VCF_NAME = "sanger_data_file_name";
+	static final String MUSE_VCF_OBJECT_ID = "muse_data_object_id";
+	static final String MUSE_VCF_NAME = "muse_data_file_name";
 	static final String BAM_NORMAL_OBJECT_ID = "normal_data_object_id";
+	static final String BAM_NORMAL_FILE_NAME = "normal_data_file_name";
 	static final String BAM_NORMAL_INDEX_OBJECT_ID = "normal_index_object_id";
 	static final String BAM_TUMOUR_INDEX_OBJECT_ID = "bamTumourBaiObjectID";
 	static final String BAM_NORMAL_METADATA_URL = "tumour_index_object_id";
 	static final String BAM_TUMOUR_OBJECT_ID = "tumour_data_object_id";
+	static final String BAM_TUMOUR_FILE_NAME = "tumour_data_file_name";
 	static final String BAM_TUMOUR_METADATA_URL = "bamTumourMetadataURL";
-	static final String MUSE_VCF_OBJECT_ID = "muse_data_object_id";
+	
 	static final String ALIQUOT_ID = "aliquotID";
 	static final String SUBMITTER_DONOR_ID = "submitterDonorID";
 	static final String PROJECT_CODE = "projectCode";
