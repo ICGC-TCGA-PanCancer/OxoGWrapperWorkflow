@@ -5,6 +5,8 @@ import java.nio.file.Files;
 import java.nio.file.Paths;
 import java.util.Map;
 
+import com.github.seqware.OxoGWrapperWorkflow.VCFType;
+
 public class INIGenerator {
 
 	private static String ini = "uploadURL = http://some.rsync.server.com/oxogUpload/\n"
@@ -40,9 +42,18 @@ public class INIGenerator {
 				if (((Map<String, Object>) m.get(k)).containsKey(JSONUtils.TAG)) {
 					newPrefix = (String) ((Map<String, Object>) m.get(k)).get(JSONUtils.TAG);
 				} else if (k.equals(JSONUtils.DATA)) {
-					newPrefix += "_" + JSONUtils.DATA;
+					newPrefix += "_" + k;
 				} else if (k.equals(JSONUtils.INDEX)) {
-					newPrefix += "_" + JSONUtils.INDEX;
+					newPrefix += "_" + k;
+				}
+				else if (k.equals(VCFType.sv.toString())) {
+					newPrefix += "_" + k;
+				}
+				else if (k.equals(VCFType.indel.toString())) {
+					newPrefix += "_" + k;
+				}
+				else if (k.equals(VCFType.snv.toString())) {
+					newPrefix += "_" + k;
 				}
 				sb.append(mapToINI((Map<String, Object>) m.get(k), newPrefix));
 			}
