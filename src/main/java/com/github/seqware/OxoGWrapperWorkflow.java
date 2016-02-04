@@ -167,15 +167,15 @@ public class OxoGWrapperWorkflow extends AbstractWorkflowDataModel {
 			
 			this.sangerSNVName = this.getMandatoryProperty(JSONUtils.SANGER_SNV_VCF_NAME);
 			this.broadSNVName = this.getMandatoryProperty(JSONUtils.BROAD_SNV_VCF_NAME);
-			this.dkfzEmblSNVName = this.getMandatoryProperty(JSONUtils.DFKZEMBL_SNV_VCF_NAME);
+			this.dkfzEmblSNVName = this.getMandatoryProperty(JSONUtils.DKFZEMBL_SNV_VCF_NAME);
 			this.museSNVName = this.getMandatoryProperty(JSONUtils.MUSE_VCF_NAME);
 			
 			this.sangerIndelName = this.getMandatoryProperty(JSONUtils.SANGER_INDEL_VCF_NAME);
-			this.dkfzEmblIndelName = this.getMandatoryProperty(JSONUtils.DFKZEMBL_INDEL_VCF_NAME);
+			this.dkfzEmblIndelName = this.getMandatoryProperty(JSONUtils.DKFZEMBL_INDEL_VCF_NAME);
 			this.broadIndelName = this.getMandatoryProperty(JSONUtils.BROAD_INDEL_VCF_NAME);
 
 			this.sangerSVName = this.getMandatoryProperty(JSONUtils.SANGER_SV_VCF_NAME);
-			this.dkfzEmblSVName = this.getMandatoryProperty(JSONUtils.DFKZEMBL_SV_VCF_NAME);
+			this.dkfzEmblSVName = this.getMandatoryProperty(JSONUtils.DKFZEMBL_SV_VCF_NAME);
 			this.broadSVName = this.getMandatoryProperty(JSONUtils.BROAD_SV_VCF_NAME);
 			
 			this.sangerSNVIndexObjectID = this.getMandatoryProperty(JSONUtils.SANGER_SNV_INDEX_OBJECT_ID);
