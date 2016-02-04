@@ -524,7 +524,7 @@ public class OxoGWrapperWorkflow extends AbstractWorkflowDataModel {
 			// be used by the OxoG filter. These three can be done in parallel because they all require the same inputs, 
 			// but none require the inputs of the other and they are not very intense jobs.
 			// indicate job is running.
-			Job move2running = GitUtils.gitMove( "queued-jobs", "running-jobs", this.getWorkflow(),
+			Job move2running = GitUtils.gitMove( "downloading-jobs", "running-jobs", this.getWorkflow(),
 					this.JSONlocation, this.JSONrepoName, this.JSONfolderName, this.GITname, this.GITemail, this.gitMoveTestMode, this.JSONfileName
 					, downloadSangerVCFs, downloadDkfzEmblVCFs, downloadBroadVCFs, downloadMuseVCFs, downloadNormalBam, downloadTumourBam);
 
