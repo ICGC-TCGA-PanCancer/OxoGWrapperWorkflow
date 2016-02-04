@@ -21,6 +21,45 @@ public class INIGenerator {
 		Map<String, Object> inputsFromJSON = JSONUtils.processJSONFile(pathToJSON);
 		return inputsFromJSON;
 	}
+
+	private static String mapToINI(Map<String,Object> m,String prefix)
+	{
+		StringBuilder sb = new StringBuilder();
+		
+		for (String k : m.keySet())
+		{
+			if (m.get(k) instanceof String)
+			{
+				System.out.println(prefix + " " +m.get(k));
+				//Some things *don't* need to be printed
+				if (! (k.equals(JSONUtils.TAG)  ))
+				{
+					sb.append(prefix.equals("") ? "" : prefix+"_").append(k).append(" = ").append(m.get(k)).append("\n");
+				}
+			}
+			else if(m.get(k) instanceof Map)
+			{
+				System.out.println(prefix + " " +m.get(k));
+				String newPrefix = prefix.equals("") ? "" : prefix;
+				 
+				if ( ((Map<String,Object>)m.get(k)).containsKey(JSONUtils.TAG) )
+				{
+					newPrefix = (String) ((Map<String,Object>)m.get(k)).get(JSONUtils.TAG); 
+				}
+				else if( k.equals(JSONUtils.DATA))
+				{
+					newPrefix += "_" + JSONUtils.DATA;	
+				}
+				else if( k.equals(JSONUtils.INDEX) )
+				{
+					newPrefix += "_" + JSONUtils.INDEX;
+				}
+				sb.append(mapToINI((Map<String,Object>)m.get(k),newPrefix));
+			}
+		}
+		return sb.toString();
+	}
+	
 	
 	public static void main(String[] args) throws Exception {
 		// Path to the JSON file will be args[0]
@@ -29,11 +68,20 @@ public class INIGenerator {
 			Map<String, Object> fromJSON = getDataFromJSON(args[0]);
 			
 			StringBuilder sb = new StringBuilder();
-			for (String k : fromJSON.keySet())
-			{
-				sb.append(k).append(" = ").append(fromJSON.get(k)).append("\n");
-			}
+//			for (String k : fromJSON.keySet())
+//			{
+//				if (fromJSON.get(k) instanceof String)
+//				{
+//					sb.append(k).append(" = ").append(fromJSON.get(k)).append("\n");
+//				}
+//				else if(fromJSON.get(k) instanceof Map)
+//				{
+//					
+//				}
+//			}
+			String iniFromJSON = mapToINI(fromJSON,"");
 			sb.append(ini);
+			sb.append(iniFromJSON);
 			String donorID = (String) fromJSON.get(JSONUtils.SUBMITTER_DONOR_ID);
 			String projectCode = (String) fromJSON.get(JSONUtils.PROJECT_CODE);
 			sb.append("JSONfileName = "+projectCode+"."+donorID+".json");

@@ -19,22 +19,23 @@ import com.jayway.jsonpath.ReadContext;
 public abstract class JSONUtils {
 
 	static final String OXOQ_SCORE = "OxoQScore";
-	static final String BROAD_VCF_OBJECT_ID = "broadVCFObjectID";
-	static final String DKFZEMBL_VCF_OBJECT_ID = "dkfzemblVCFObjectID";
-	static final String SANGER_VCF_OBJECT_ID = "sangerVCFObjectID";
-	static final String BAM_NORMAL_OBJECT_ID = "bamNormalObjectID";
-	static final String BAM_NORMAL_INDEX_OBJECT_ID = "bamNormalBaiObjectID";
+	static final String BROAD_VCF_OBJECT_ID = "broad_data_object_id";
+	static final String DKFZEMBL_VCF_OBJECT_ID = "dkfz_embl_data_object_id";
+	static final String SANGER_VCF_OBJECT_ID = "sanger_data_object_id";
+	static final String BAM_NORMAL_OBJECT_ID = "normal_data_object_id";
+	static final String BAM_NORMAL_INDEX_OBJECT_ID = "normal_index_object_id";
 	static final String BAM_TUMOUR_INDEX_OBJECT_ID = "bamTumourBaiObjectID";
-	static final String BAM_NORMAL_METADATA_URL = "bamNormalMetadataURL";
-	static final String BAM_TUMOUR_OBJECT_ID = "bamTumourObjectID";
+	static final String BAM_NORMAL_METADATA_URL = "tumour_index_object_id";
+	static final String BAM_TUMOUR_OBJECT_ID = "tumour_data_object_id";
 	static final String BAM_TUMOUR_METADATA_URL = "bamTumourMetadataURL";
-	static final String MUSE_VCF_OBJECT_ID = "museVCFObjectID";
+	static final String MUSE_VCF_OBJECT_ID = "muse_data_object_id";
 	static final String ALIQUOT_ID = "aliquotID";
 	static final String SUBMITTER_DONOR_ID = "submitterDonorID";
 	static final String PROJECT_CODE = "projectCode";
 
-	static final String FILE = "file";
+	static final String DATA = "data";
 	static final String INDEX = "index";
+	static final String TAG = "tag";	
 	
 	static final String NORMAL_BAM_INFO = "normalBamInfo";
 	static final String TUMOUR_BAM_INFO = "tumourBamInfo";
@@ -78,9 +79,10 @@ public abstract class JSONUtils {
 			String normalGnosID = (String) (JsonPath.using(jsonPathConfig).parse(new File(filePath)).read("$.normal.gnos_id",String.class));
 			normalBamMetadataURL += "cghub/metadata/analysisFull/" + normalGnosID;
 			Map<String,Object> normalInfo = new HashMap<String, Object>(4);
-			normalInfo.put(FILE, normalBamInfo);
+			normalInfo.put(DATA, normalBamInfo);
 			normalInfo.put(INDEX, normalBaiInfo);
-			normalInfo.put(BAM_NORMAL_METADATA_URL, normalBamMetadataURL);
+			results.put(BAM_NORMAL_METADATA_URL, normalBamMetadataURL);
+			normalInfo.put(TAG, "normal");
 			results.put(NORMAL_BAM_INFO, normalInfo);
 			
 			//String pathToNormalBai= "$.normal.files[file_name=~/.*\\.bai/i].object_id";
@@ -106,9 +108,10 @@ public abstract class JSONUtils {
 			String tumourGnosID = (String) (JsonPath.using(jsonPathConfig).parse(new File(filePath)).read("$.tumors[0].gnos_id",String.class));
 			tumourBamMetadataURL += "cghub/metadata/analysisFull/" + tumourGnosID;
 			Map<String,Object> tumourInfo = new HashMap<String, Object>(4);
-			tumourInfo.put(FILE, tumourBamInfo);
+			tumourInfo.put(DATA, tumourBamInfo);
 			tumourInfo.put(INDEX, tumourBaiInfo);
-			tumourInfo.put(BAM_TUMOUR_METADATA_URL, tumourBamMetadataURL);
+			results.put(BAM_TUMOUR_METADATA_URL, tumourBamMetadataURL);
+			tumourInfo.put(TAG, "tumour");
 			results.put(TUMOUR_BAM_INFO, tumourInfo);
 //			List<Map<String, Object>> tumours = (List<Map<String, Object>>) jsonContents.get("tumors");
 //			// Eventually, we will have to deal with multi-tumour sitautions
@@ -136,10 +139,12 @@ public abstract class JSONUtils {
 			Map<String,String> sangerVCFInfo = (Map<String, String>) (JsonPath.using(jsonPathConfig).parse(new File(filePath)).read("$.sanger.files[?(@.file_name=~/.*\\.somatic\\.snv_mnv\\.vcf\\.gz/)]",List.class)).get(0);
 			Map<String,String> sangerVCFIndexInfo = (Map<String, String>) (JsonPath.using(jsonPathConfig).parse(new File(filePath)).read("$.sanger.files[?(@.file_name=~/(.*\\.somatic\\.snv_mnv\\.vcf\\.gz)(\\.tbi|\\.idx)/)]",List.class)).get(0);
 			Map<String,Object> sangerInfo = new HashMap<String, Object>(2);
-			sangerInfo.put(FILE, sangerVCFInfo);
+			sangerInfo.put(DATA, sangerVCFInfo);
 			sangerInfo.put(INDEX, sangerVCFIndexInfo);
+			sangerInfo.put(TAG, "sanger");
 			//String sangerVCFIndexObjectID = (String) (JsonPath.using(jsonPathConfig).parse(new File(filePath)).read("$.sanger.files[?(@.file_name=~/(.*\\.somatic\\.snv_mnv\\.vcf\\.gz)(\\.tbi|\\.idx)/)].object_id",List.class)).get(0);
 			results.put(SANGER_VCF_INFO, sangerInfo);
+			
 //			Map<String, Object> sanger = (Map<String, Object>) jsonContents.get("sanger");
 //			List<Map<String, String>> sangerFiles = (List<Map<String, String>>) sanger.get("files");
 //			for (Map<String, String> fileDetails : sangerFiles) {
@@ -157,37 +162,58 @@ public abstract class JSONUtils {
 //				}
 //			}
 			// DFKZ-EMBL
-			Map<String, Object> dkfz = (Map<String, Object>) jsonContents.get("dkfz_embl");
-			List<Map<String, String>> dkfzFiles = (List<Map<String, String>>) dkfz.get("files");
-			for (Map<String, String> fileDetails : dkfzFiles) {
-				String fileName = fileDetails.get("file_name");
-				// TODO: Get the other VCF files. Also, DKFZ needs to be
-				// filtered to not use the "embl-delly" files.
-				if (fileName.contains("dkfz-snvCalling") && fileName.endsWith(".somatic.snv_mnv.vcf.gz")) {
-					results.put(DKFZEMBL_VCF_OBJECT_ID, fileDetails.get("object_id"));
-					break;
-				}
-			}
+			Map<String,String> dkfzemblVCFInfo = (Map<String, String>) (JsonPath.using(jsonPathConfig).parse(new File(filePath)).read("$.dkfz_embl.files[?(@.file_name=~/.*\\.somatic\\.snv_mnv\\.vcf\\.gz/)]",List.class)).get(0);
+			Map<String,String> dkfzemblVCFIndexInfo = (Map<String, String>) (JsonPath.using(jsonPathConfig).parse(new File(filePath)).read("$.dkfz_embl.files[?(@.file_name=~/(.*\\.somatic\\.snv_mnv\\.vcf\\.gz)(\\.tbi|\\.idx)/)]",List.class)).get(0);
+			Map<String,Object> dkfzemblInfo = new HashMap<String, Object>(2);
+			dkfzemblInfo.put(DATA, dkfzemblVCFInfo);
+			dkfzemblInfo.put(INDEX, dkfzemblVCFIndexInfo);
+			dkfzemblInfo.put(TAG, "dkfz_embl");
+			results.put(DKFZEMBL_VCF_INFO, dkfzemblInfo);
+//			Map<String, Object> dkfz = (Map<String, Object>) jsonContents.get("dkfz_embl");
+//			List<Map<String, String>> dkfzFiles = (List<Map<String, String>>) dkfz.get("files");
+//			for (Map<String, String> fileDetails : dkfzFiles) {
+//				String fileName = fileDetails.get("file_name");
+//				// TODO: Get the other VCF files. Also, DKFZ needs to be
+//				// filtered to not use the "embl-delly" files.
+//				if (fileName.contains("dkfz-snvCalling") && fileName.endsWith(".somatic.snv_mnv.vcf.gz")) {
+//					results.put(DKFZEMBL_VCF_OBJECT_ID, fileDetails.get("object_id"));
+//					break;
+//				}
+//			}
 			// Broad
-			Map<String, Object> broad = (Map<String, Object>) jsonContents.get("broad");
-			List<Map<String, String>> broadFiles = (List<Map<String, String>>) broad.get("files");
-			for (Map<String, String> fileDetails : broadFiles) {
-				String fileName = fileDetails.get("file_name");
-				if (fileName.contains("broad-mutect") && fileName.endsWith(".somatic.snv_mnv.vcf.gz")) {
-					results.put(BROAD_VCF_OBJECT_ID, fileDetails.get("object_id"));
-					break;
-				}
-			}
+			Map<String,String> broadVCFInfo = (Map<String, String>) (JsonPath.using(jsonPathConfig).parse(new File(filePath)).read("$.broad.files[?(@.file_name=~/.*\\.somatic\\.snv_mnv\\.vcf\\.gz/)]",List.class)).get(0);
+			Map<String,String> broadVCFIndexInfo = (Map<String, String>) (JsonPath.using(jsonPathConfig).parse(new File(filePath)).read("$.broad.files[?(@.file_name=~/(.*\\.somatic\\.snv_mnv\\.vcf\\.gz)(\\.tbi|\\.idx)/)]",List.class)).get(0);
+			Map<String,Object> broadInfo = new HashMap<String, Object>(2);
+			broadInfo.put(DATA, broadVCFInfo);
+			broadInfo.put(INDEX, broadVCFIndexInfo);
+			broadInfo.put(TAG, "broad");
+			results.put(BROAD_VCF_INFO, broadInfo);
+//			Map<String, Object> broad = (Map<String, Object>) jsonContents.get("broad");
+//			List<Map<String, String>> broadFiles = (List<Map<String, String>>) broad.get("files");
+//			for (Map<String, String> fileDetails : broadFiles) {
+//				String fileName = fileDetails.get("file_name");
+//				if (fileName.contains("broad-mutect") && fileName.endsWith(".somatic.snv_mnv.vcf.gz")) {
+//					results.put(BROAD_VCF_OBJECT_ID, fileDetails.get("object_id"));
+//					break;
+//				}
+//			}
 			// Muse
-			Map<String, Object> muse = (Map<String, Object>) jsonContents.get("muse");
-			List<Map<String, String>> museFiles = (List<Map<String, String>>) muse.get("files");
-			for (Map<String, String> fileDetails : museFiles) {
-				String fileName = fileDetails.get("file_name");
-				if (fileName.contains("MUSE_1-0rc-vcf") && fileName.endsWith(".somatic.snv_mnv.vcf.gz")) {
-					results.put(MUSE_VCF_OBJECT_ID, fileDetails.get("object_id"));
-					break;
-				}
-			}
+			Map<String,String> museVCFInfo = (Map<String, String>) (JsonPath.using(jsonPathConfig).parse(new File(filePath)).read("$.muse.files[?(@.file_name=~/.*\\.somatic\\.snv_mnv\\.vcf\\.gz/)]",List.class)).get(0);
+			Map<String,String> museVCFIndexInfo = (Map<String, String>) (JsonPath.using(jsonPathConfig).parse(new File(filePath)).read("$.muse.files[?(@.file_name=~/(.*\\.somatic\\.snv_mnv\\.vcf\\.gz)(\\.tbi|\\.idx)/)]",List.class)).get(0);
+			Map<String,Object> museInfo = new HashMap<String, Object>(2);
+			museInfo.put(DATA, museVCFInfo);
+			museInfo.put(INDEX, museVCFIndexInfo);
+			museInfo.put(TAG, "muse");
+			results.put(MUSE_VCF_INFO, museInfo);
+//			Map<String, Object> muse = (Map<String, Object>) jsonContents.get("muse");
+//			List<Map<String, String>> museFiles = (List<Map<String, String>>) muse.get("files");
+//			for (Map<String, String> fileDetails : museFiles) {
+//				String fileName = fileDetails.get("file_name");
+//				if (fileName.contains("MUSE_1-0rc-vcf") && fileName.endsWith(".somatic.snv_mnv.vcf.gz")) {
+//					results.put(MUSE_VCF_OBJECT_ID, fileDetails.get("object_id"));
+//					break;
+//				}
+//			}
 			
 			// Get OxoQ Score
 			//String oxoqScore = (String) tumours.get(0).get("oxog_score");
@@ -195,11 +221,13 @@ public abstract class JSONUtils {
 			results.put(OXOQ_SCORE, oxoqScore);
 			
 			// Get donor ID
-			String submitterDonorID = (String) jsonContents.get("submitter_donor_id");
+			//String submitterDonorID = (String) jsonContents.get("submitter_donor_id");
+			String submitterDonorID = (String) (JsonPath.using(jsonPathConfig).parse(new File(filePath)).read("$.submitter_donor_id",String.class));
 			results.put(SUBMITTER_DONOR_ID, submitterDonorID);
 
 			// Get project code
-			String projectCode = (String) jsonContents.get("project_code");
+			//String projectCode = (String) jsonContents.get("project_code");
+			String projectCode = (String) (JsonPath.using(jsonPathConfig).parse(new File(filePath)).read("$.project_code",String.class));
 			results.put(PROJECT_CODE, projectCode);
 			
 		} catch (FileNotFoundException e) {
