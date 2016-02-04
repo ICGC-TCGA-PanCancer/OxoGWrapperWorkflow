@@ -40,6 +40,19 @@ public abstract class JSONUtils {
 	static final String SANGER_INDEL_VCF_OBJECT_ID = "sanger_indel_data_object_id";
 	static final String SANGER_INDEL_VCF_NAME = "sanger_indel_data_file_name";
 	
+	static final String SANGER_SNV_INDEX_OBJECT_ID = "sanger_snv_index_object_id";
+	static final String BROAD_SNV_INDEX_OBJECT_ID = "broad_snv_index_object_id";
+	static final String DKFZEMBL_SNV_INDEX_OBJECT_ID = "dfkz_embl_snv_index_object_id";
+	static final String MUSE_SNV_INDEX_OBJECT_ID = "muse_snv_index_object_id";
+
+	static final String SANGER_SV_INDEX_OBJECT_ID = "sanger_sv_index_object_id";
+	static final String BROAD_SV_INDEX_OBJECT_ID = "broad_sv_index_object_id";
+	static final String DKFZEMBL_SV_INDEX_OBJECT_ID = "dfkz_embl_sv_index_object_id";
+	
+	static final String SANGER_INDEL_INDEX_OBJECT_ID = "sanger_indel_index_object_id";
+	static final String BROAD_INDEL_INDEX_OBJECT_ID = "broad_indel_index_object_id";
+	static final String DKFZEMBL_INDEL_INDEX_OBJECT_ID = "dfkz_embl_indel_index_object_id";
+	
 	static final String BAM_NORMAL_OBJECT_ID = "normal_data_object_id";
 	static final String BAM_NORMAL_FILE_NAME = "normal_data_file_name";
 	static final String BAM_NORMAL_INDEX_OBJECT_ID = "normal_index_object_id";
@@ -65,9 +78,6 @@ public abstract class JSONUtils {
 	static final String BROAD_VCF_INFO = "broadVcfInfo";
 	static final String MUSE_VCF_INFO = "museVcfInfo";
 	
-	public static final String SANGER_INDEL_NAME = null;
-	public static final String DKFZEMBL_INDEL_NAME = null;
-	public static final String BROAD_INDEL_NAME = null;
 
 	@SuppressWarnings("unchecked")
 	private static Map<String,Object> extractFileInfo(File jsonFile, Configuration jsonPathConfig, String workflowNameInJson) throws IOException
@@ -179,79 +189,14 @@ public abstract class JSONUtils {
 			results.put(ALIQUOT_ID, aliquotID);
 
 			// Sanger
-			// SNV
-/*
-			Map<String, String> sangerSNVVCFInfo = (Map<String, String>) (JsonPath.using(jsonPathConfig)
-					.parse(new File(filePath))
-					.read("$.sanger.files[?(@.file_name=~/.*\\.somatic\\.snv_mnv\\.vcf\\.gz/)]", List.class)).get(0);
-			Map<String, String> sangerSNVVCFIndexInfo = (Map<String, String>) (JsonPath.using(jsonPathConfig)
-					.parse(new File(filePath))
-					.read("$.sanger.files[?(@.file_name=~/(.*\\.somatic\\.snv_mnv\\.vcf\\.gz)(\\.tbi|\\.idx)/)]",
-							List.class)).get(0);
-			// INDEL
-			Map<String, String> sangerIndelVCFInfo = (Map<String, String>) (JsonPath.using(jsonPathConfig)
-					.parse(new File(filePath))
-					.read("$.sanger.files[?(@.file_name=~/.*\\.somatic\\.indel\\.vcf\\.gz/)]", List.class)).get(0);
-			Map<String, String> sangerIndelVCFIndexInfo = (Map<String, String>) (JsonPath.using(jsonPathConfig)
-					.parse(new File(filePath))
-					.read("$.sanger.files[?(@.file_name=~/(.*\\.somatic\\.indel\\.vcf\\.gz)(\\.tbi|\\.idx)/)]",
-							List.class)).get(0);
-			// SV
-			Map<String, String> sangerSVVCFInfo = (Map<String, String>) (JsonPath.using(jsonPathConfig)
-					.parse(new File(filePath))
-					.read("$.sanger.files[?(@.file_name=~/.*\\.somatic\\.sv\\.vcf\\.gz/)]", List.class)).get(0);
-			Map<String, String> sangerSVVCFIndexInfo = (Map<String, String>) (JsonPath.using(jsonPathConfig)
-					.parse(new File(filePath))
-					.read("$.sanger.files[?(@.file_name=~/(.*\\.somatic\\.sv\\.vcf\\.gz)(\\.tbi|\\.idx)/)]",
-							List.class)).get(0);
-			
-			Map<String, Object> sangerInfo = new HashMap<String, Object>(4);
-			Map<String, Object> sangerSNVInfo = new HashMap<String, Object>(2);
-			sangerSNVInfo.put(DATA, sangerSNVVCFInfo);
-			sangerSNVInfo.put(INDEX, sangerSNVVCFIndexInfo);
-			sangerInfo.put(VCFType.snv.toString(), sangerSNVInfo);
-			Map<String, Object> sangerIndelInfo = new HashMap<String, Object>(2);
-			sangerIndelInfo.put(DATA, sangerIndelVCFInfo);
-			sangerIndelInfo.put(INDEX, sangerIndelVCFIndexInfo);
-			sangerInfo.put(VCFType.indel.toString(), sangerIndelInfo);
-			Map<String, Object> sangerSVInfo = new HashMap<String, Object>(2);
-			sangerSVInfo.put(DATA, sangerSVVCFInfo);
-			sangerSVInfo.put(INDEX, sangerSVVCFIndexInfo);
-			sangerInfo.put(VCFType.sv.toString(), sangerSVInfo);
-			sangerInfo.put(TAG, "sanger");
-*/
 			Map<String,Object> sangerInfo = extractFileInfo(jsonFile, jsonPathConfig, "sanger");
 			results.put(SANGER_VCF_INFO, sangerInfo);
 
 			// DFKZ-EMBL
-/*			Map<String, String> dkfzemblVCFInfo = (Map<String, String>) (JsonPath.using(jsonPathConfig)
-					.parse(jsonFile)
-					.read("$.dkfz_embl.files[?(@.file_name=~/.*\\.somatic\\.snv_mnv\\.vcf\\.gz/)]", List.class)).get(0);
-			Map<String, String> dkfzemblVCFIndexInfo = (Map<String, String>) (JsonPath.using(jsonPathConfig)
-					.parse(jsonFile)
-					.read("$.dkfz_embl.files[?(@.file_name=~/(.*\\.somatic\\.snv_mnv\\.vcf\\.gz)(\\.tbi|\\.idx)/)]",
-							List.class)).get(0);
-			Map<String, Object> dkfzemblInfo = new HashMap<String, Object>(2);
-			dkfzemblInfo.put(DATA, dkfzemblVCFInfo);
-			dkfzemblInfo.put(INDEX, dkfzemblVCFIndexInfo);
-			dkfzemblInfo.put(TAG, "dkfz_embl");*/
 			Map<String, Object> dkfzemblInfo = extractFileInfo(jsonFile, jsonPathConfig, "dkfz_embl");
 			results.put(DKFZEMBL_VCF_INFO, dkfzemblInfo);
 
 			// Broad
-/*
-			Map<String, String> broadVCFInfo = (Map<String, String>) (JsonPath.using(jsonPathConfig)
-					.parse(jsonFile)
-					.read("$.broad.files[?(@.file_name=~/.*\\.somatic\\.snv_mnv\\.vcf\\.gz/)]", List.class)).get(0);
-			Map<String, String> broadVCFIndexInfo = (Map<String, String>) (JsonPath.using(jsonPathConfig)
-					.parse(jsonFile)
-					.read("$.broad.files[?(@.file_name=~/(.*\\.somatic\\.snv_mnv\\.vcf\\.gz)(\\.tbi|\\.idx)/)]",
-							List.class)).get(0);
-			Map<String, Object> broadInfo = new HashMap<String, Object>(2);
-			broadInfo.put(DATA, broadVCFInfo);
-			broadInfo.put(INDEX, broadVCFIndexInfo);
-			broadInfo.put(TAG, "broad");
-*/
 			Map<String, Object> broadInfo = extractFileInfo(jsonFile, jsonPathConfig, "broad");
 			results.put(BROAD_VCF_INFO, broadInfo);
 
