@@ -58,11 +58,13 @@ public abstract class JSONUtils {
 	static final String BAM_NORMAL_FILE_NAME = "normal_data_file_name";
 	static final String BAM_NORMAL_INDEX_OBJECT_ID = "normal_index_object_id";
 	static final String BAM_NORMAL_METADATA_URL = "bamNormalMetadataURL";
+	static final String BAM_NORMAL_GNOS_ID = "normal_gnos_id";
 
 	static final String BAM_TUMOUR_OBJECT_ID = "tumour_data_object_id";
 	static final String BAM_TUMOUR_FILE_NAME = "tumour_data_file_name";
 	static final String BAM_TUMOUR_INDEX_OBJECT_ID = "tumour_index_object_id";
 	static final String BAM_TUMOUR_METADATA_URL = "bamTumourMetadataURL";
+	static final String BAM_TUMOUR_GNOS_ID = "tumour_gnos_id";
 
 	static final String BROAD_GNOS_ID = "broad_gnosID";
 	static final String SANGER_GNOS_ID = "sanger_gnosID";
@@ -167,6 +169,7 @@ public abstract class JSONUtils {
 			results.put(BAM_NORMAL_METADATA_URL, normalBamMetadataURL);
 			normalInfo.put(TAG, "normal");
 			results.put(NORMAL_BAM_INFO, normalInfo);
+			results.put(BAM_NORMAL_GNOS_ID, normalGnosID);
 
 			// Get Tumour BAM object ID
 			Map<String, String> tumourBamInfo = (Map<String, String>) parsedJSON
@@ -183,6 +186,7 @@ public abstract class JSONUtils {
 			results.put(BAM_TUMOUR_METADATA_URL, tumourBamMetadataURL);
 			tumourInfo.put(TAG, "tumour");
 			results.put(TUMOUR_BAM_INFO, tumourInfo);
+			results.put(BAM_TUMOUR_GNOS_ID, tumourGnosID);
 
 			// Get the aliquot ID from the tumour. This may get more complicated
 			// in multi-tumour scenarios.
