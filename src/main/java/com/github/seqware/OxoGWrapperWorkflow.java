@@ -115,6 +115,8 @@ public class OxoGWrapperWorkflow extends AbstractWorkflowDataModel {
 	
 	//Path to reference file usd for normalization, *relative* to /datastore/refdata
 	private String refFile = "pcawg/genome.fa";
+	private String tumourBamGnosID;
+	private String normalBamGnosID;
 	
 	/**
 	 * Get a property name that is mandatory
@@ -203,6 +205,9 @@ public class OxoGWrapperWorkflow extends AbstractWorkflowDataModel {
 			this.broadGnosID = this.getMandatoryProperty(JSONUtils.BROAD_GNOS_ID);
 			this.dkfzemblGnosID = this.getMandatoryProperty(JSONUtils.DKFZEMBL_GNOS_ID);
 			this.museGnosID = this.getMandatoryProperty(JSONUtils.MUSE_GNOS_ID);
+			
+			this.normalBamGnosID= this.getMandatoryProperty(JSONUtils.BAM_NORMAL_GNOS_ID);
+			this.tumourBamGnosID= this.getMandatoryProperty(JSONUtils.BAM_TUMOUR_GNOS_ID);
 			
 			if (hasPropertyAndNotNull("gitMoveTestMode")) {
 				//gitMoveTestMode is not mandatory - it should default to false.
@@ -469,9 +474,9 @@ public class OxoGWrapperWorkflow extends AbstractWorkflowDataModel {
 		prepVCFs.getCommand().addArgument(" ln -s /datastore/vcf/"+Pipeline.dkfz_embl+"/"+this.dkfzemblGnosID+"/"+this.dkfzEmblSNVName+" /datastore/vcf/"+Pipeline.dkfz_embl+"_snv.vcf ; \n");
 		prepVCFs.getCommand().addArgument(" ln -s /datastore/vcf/"+Pipeline.muse+"/"+this.museGnosID+"/"+this.museSNVName+" /datastore/vcf/"+Pipeline.muse+"_snv.vcf ; \n");
 
-		prepVCFs.getCommand().addArgument(" ln -s /datastore/vcf/"+Pipeline.sanger+"/"+this.sangerNormalizedIndelVCFName+" /datastore/vcf/"+Pipeline.sanger+"_indel.vcf ; \n");
-		prepVCFs.getCommand().addArgument(" ln -s /datastore/vcf/"+Pipeline.broad+"/"+this.broadNormalizedIndelVCFName+" /datastore/vcf/"+Pipeline.broad+"_indel.vcf ; \n");
-		prepVCFs.getCommand().addArgument(" ln -s /datastore/vcf/"+Pipeline.dkfz_embl+"/"+this.dkfzEmblNormalizedIndelVCFName+" /datastore/vcf/"+Pipeline.dkfz_embl+"_indel.vcf ; \n");
+		prepVCFs.getCommand().addArgument(" ln -s "+this.sangerNormalizedIndelVCFName+" /datastore/vcf/"+Pipeline.sanger+"_indel.vcf ; \n");
+		prepVCFs.getCommand().addArgument(" ln -s "+this.broadNormalizedIndelVCFName+" /datastore/vcf/"+Pipeline.broad+"_indel.vcf ; \n");
+		prepVCFs.getCommand().addArgument(" ln -s "+this.dkfzEmblNormalizedIndelVCFName+" /datastore/vcf/"+Pipeline.dkfz_embl+"_indel.vcf ; \n");
 
 		prepVCFs.getCommand().addArgument(" ln -s /datastore/vcf/"+Pipeline.sanger+"/"+this.sangerGnosID+"/"+this.sangerSVName+" /datastore/vcf/"+Pipeline.sanger+"_sv.vcf ; \n");
 		prepVCFs.getCommand().addArgument(" ln -s /datastore/vcf/"+Pipeline.broad+"/"+this.broadGnosID+"/"+this.broadSVName+" /datastore/vcf/"+Pipeline.broad+"_sv.vcf ; \n");
@@ -486,22 +491,26 @@ public class OxoGWrapperWorkflow extends AbstractWorkflowDataModel {
 		
 		//run the merge script, then bgzip and index them all.
 		vcfCombineJob.setCommand("perl "+this.getWorkflowBaseDir()+"/scripts/vcf_merge_by_type.pl "
-				+ Pipeline.broad+"_snv.vcf "+Pipeline.sanger+"_snv.vcf "+Pipeline.dkfz_embl+"_snv.vcf "+Pipeline.muse+"_snv.vcf "
-				+ Pipeline.broad+"_indel.vcf "+Pipeline.sanger+"_indel.vcf "+Pipeline.dkfz_embl+"_indel.vcf" 
-				+ Pipeline.broad+"_sv.vcf "+Pipeline.sanger+"_sv.vcf "+Pipeline.dkfz_embl+"_sv.vcf"
-				+ " /datastore/vcf/ /datastore/merged_vcfs/ ; \n"
-				+ " bgzip -c /datastore/merged_vcfs/snv.clean.sorted.vcf > /datastore/merged_vcfs/snv.clean.sorted.vcf.gz ; \n"
-				+ " bgzip -c /datastore/merged_vcfs/sv.clean.sorted.vcf > /datastore/merged_vcfs/sv.clean.sorted.vcf.gz ; \n"
-				+ " bgzip -c /datastore/merged_vcfs/indel.clean.sorted.vcf > /datastore/merged_vcfs/indel.clean.sorted.vcf.gz ; \n"
-				+ " tabix -f /datastore/merged_vcfs/snv.clean.sorted.vcf.gz ; \n"
-				+ " tabix -f /datastore/merged_vcfs/sv.clean.sorted.vcf.gz ; \n"
-				+ " tabix -f /datastore/merged_vcfs/indel.clean.sorted.vcf.gz ; \n");
+				+ Pipeline.broad+"_snv.vcf "+Pipeline.sanger+"_snv.vcf "+Pipeline.dkfz_embl+"_snv.vcf "
+				+ Pipeline.broad+"_indel.vcf "+Pipeline.sanger+"_indel.vcf "+Pipeline.dkfz_embl+"_indel.vcf " 
+				+ Pipeline.broad+"_sv.vcf "+Pipeline.sanger+"_sv.vcf "+Pipeline.dkfz_embl+"_sv.vcf "
+				+ " /datastore/vcf/ /datastore/merged_vcfs/ && \n"
+				+ " sudo docker run --rm --name=zip_and_index "
+				+ " -v /datastore/merged_vcfs/:/workdir/:rw \n"
+				+ " compbio/ngseasy-base:a1.0-002"
+				+ " /bin/bash -c \" "
+				+ " bgzip -f /workdir/snv.clean.sorted.vcf ; \n"
+				+ " bgzip -f /workdir/sv.clean.sorted.vcf ; \n"
+				+ " bgzip -f /workdir/indel.clean.sorted.vcf ; \n"
+				+ " tabix -f /workdir/snv.clean.sorted.vcf.gz ; \n"
+				+ " tabix -f /workdir/sv.clean.sorted.vcf.gz ; \n"
+				+ " tabix -f /workdir/indel.clean.sorted.vcf.gz ; \n \"");
 		
 		
 		vcfCombineJob.addParent(prepVCFs);
-		this.snvVCF = "/datastore/merged_vcfs/snv.clean.sorted.vcf";
-		this.svVCF = "/datastore/merged_vcfs/sv.clean.sorted.vcf";
-		this.indelVCF = "/datastore/merged_vcfs/indel.clean.sorted.vcf";
+		this.snvVCF = "/datastore/merged_vcfs/snv.clean.sorted.vcf.gz";
+		this.svVCF = "/datastore/merged_vcfs/sv.clean.sorted.vcf.gz";
+		this.indelVCF = "/datastore/merged_vcfs/indel.clean.sorted.vcf.gz";
 		
 		return vcfCombineJob;
 	}
@@ -514,16 +523,26 @@ public class OxoGWrapperWorkflow extends AbstractWorkflowDataModel {
 	 */
 	private Job doOxoG(Job parent) {
 		Job runOxoGWorkflow = this.getWorkflow().createBashJob("Run OxoG Filter");
-		String oxogMounts = " -v /datastore/refdata/:/cga/fh/pcawg_pipeline/refdata/ "
-				+ " -v /datastore/oncotator_db/:/cga/fh/pcawg_pipeline/refdata/public/oncotator_db/ "  
-				+ " -v /datastore/oxog_workspace/:/cga/fh/pcawg_pipeline/jobResults_pipette/jobs/"+this.aliquotID+"/:rw " 
-				+ " -v /datastore/bam/:/datafiles/BAM/  -v /datastore/vcf/:/datafiles/VCF/ "
-				+ " -v /datastore/oxog_results/:/cga/fh/pcawg_pipeline/jobResults_pipette/results:rw ";
+		String oxogMounts = " -v /datastore/refdata/:/cga/fh/pcawg_pipeline/refdata/ \\\n"
+				+ " -v /datastore/oncotator_db/:/cga/fh/pcawg_pipeline/refdata/public/oncotator_db/ \\\n"  
+				+ " -v /datastore/oxog_workspace/:/cga/fh/pcawg_pipeline/jobResults_pipette/jobs/"+this.aliquotID+"/:rw \\\n" 
+				+ " -v /datastore/bam/:/datafiles/BAM/ \\\n"
+				+ " -v /datastore/vcf/"+Pipeline.broad+"/"+this.broadGnosID+"/"+"/:/datafiles/VCF/"+Pipeline.broad+"/ \\\n"
+				+ " -v /datastore/vcf/"+Pipeline.sanger+"/"+this.sangerGnosID+"/"+"/:/datafiles/VCF/"+Pipeline.sanger+"/ \\\n"
+				+ " -v /datastore/vcf/"+Pipeline.dkfz_embl+"/"+this.dkfzemblGnosID+"/"+"/:/datafiles/VCF/"+Pipeline.dkfz_embl+"/ \\\n"
+				+ " -v /datastore/vcf/"+Pipeline.muse+"/"+this.museGnosID+"/"+"/:/datafiles/VCF/"+Pipeline.muse+"/ \\\n"
+				+ " -v /datastore/oxog_results/:/cga/fh/pcawg_pipeline/jobResults_pipette/results:rw \\\n";
 		String oxogCommand = "/cga/fh/pcawg_pipeline/pipelines/run_one_pipeline.bash pcawg /cga/fh/pcawg_pipeline/pipelines/oxog_pipeline.py "
-				+ this.aliquotID + " " + this.tumourBAMFileName + " " + this.normalBAMFileName + " " + this.oxoQScore + " "
-				+ this.sangerSNVName + " " + this.dkfzEmblSNVName + " " + this.broadSNVName;
+				+ this.aliquotID
+				+ " /datafiles/BAM/tumour/" + this.tumourBamGnosID + "/" + this.tumourBAMFileName 
+				+ " /datafiles/BAM/normal/" +this.normalBamGnosID + "/" +  this.normalBAMFileName 
+				+ " " + this.oxoQScore + " "
+				+ " /datafiles/VCF/"+Pipeline.sanger+"/" + this.sangerSNVName
+				+ " /datafiles/VCF/"+Pipeline.dkfz_embl+"/" + this.dkfzEmblSNVName 
+				+ " /datafiles/VCF/"+Pipeline.muse+"/" + this.museSNVName
+				+ " /datafiles/VCF/"+Pipeline.broad+"/" + this.broadSNVName;
 		runOxoGWorkflow.setCommand(
-				" docker run --name=\"oxog_filter\" "+oxogMounts+" oxog " + oxogCommand);
+				" docker run --rm --name=\"oxog_filter\" "+oxogMounts+" oxog " + oxogCommand);
 		
 		runOxoGWorkflow.addParent(parent);
 		//Job getLogs = this.getOxoGLogs(runOxoGWorkflow);
@@ -547,9 +566,9 @@ public class OxoGWrapperWorkflow extends AbstractWorkflowDataModel {
 		String vcf1 = this.sangerExtractedSNVVCFName; //vcfBaseDir+Pipeline.broad.toString()+"/somatic.indel.bcftools-norm.extracted-snvs.vcf ";
 		String vcf2 = this.broadExtractedSNVVCFName; //vcfBaseDir+Pipeline.sanger.toString()+"/somatic.indel.bcftools-norm.extracted-snvs.vcf ";
 		String vcf3 = this.dkfzEmblExtractedSNVVCFName; //vcfBaseDir+Pipeline.dkfz_embl.toString()+"/somatic.indel.bcftools-norm.extracted-snvs.vcf ";
-		String vcf4 = this.museExtractedSNVVCFName; //vcfBaseDir+Pipeline.muse.toString()+"/somatic.indel.bcftools-norm.extracted-snvs.vcf ";
+		//String vcf4 = this.museExtractedSNVVCFName; //vcfBaseDir+Pipeline.muse.toString()+"/somatic.iindel.bcftools-norm.extracted-snvs.vcf ";
 		oxoGOnSnvsFromIndels.setCommand(this.getWorkflowBaseDir()+"/scripts/run_oxog_extracted_SNVs.sh "+
-																vcf1+" "+vcf2+" "+vcf3+" "+vcf4+" "+
+																vcf1+" "+vcf2+" "+vcf3+" "+
 																this.normalBAMFileName+" "+this.tumourBAMFileName+" "+
 																this.aliquotID+" "+
 																this.oxoQScore);
@@ -571,12 +590,12 @@ public class OxoGWrapperWorkflow extends AbstractWorkflowDataModel {
 	 * @return
 	 */
 	private Job doVariantBam(Job parent, BAMType bamType, String bamPath) {
-		Job runOxoGWorkflow = this.getWorkflow().createBashJob("Run variantbam");
+		Job runOxoGWorkflow = this.getWorkflow().createBashJob("Run "+bamType+" variantbam");
 
 		String command = DockerCommandCreator.createVariantBamCommand(bamType, bamPath, this.snvVCF, this.svVCF, this.indelVCF);
 		runOxoGWorkflow.setCommand(command);
 		//The bam file will need to be indexed!
-		runOxoGWorkflow.getCommand().addArgument("\nsamtools index /datastore/variantbam_results/minibam_"+bamType+".bam ; \n");
+		//runOxoGWorkflow.getCommand().addArgument("\nsamtools index /datastore/variantbam_results/minibam_"+bamType+".bam ; \n");
 		
 		this.filesToUpload.add("/datastore/variantbam_results/minibam_"+bamType+".bam");
 		this.filesToUpload.add("/datastore/variantbam_results/minibam_"+bamType+".bai");
@@ -701,8 +720,8 @@ public class OxoGWrapperWorkflow extends AbstractWorkflowDataModel {
 			Job oxoG = this.doOxoG(combineVCFsByType);
 			Job oxoGSnvsFromIndels = this.doOxoGSnvsFromIndels(oxoG);
 			// variantbam jobs will run parallel to each other. variant seems to only use a *single* core, but runs long ( 60 - 120 min on OpenStack);
-			Job normalVariantBam = this.doVariantBam(combineVCFsByType,BAMType.normal,"/datastore/bam/"+this.bamNormalObjectID+"/"+this.normalBAMFileName);
-			Job tumourVariantBam = this.doVariantBam(combineVCFsByType,BAMType.tumour,"/datastore/bam/"+this.bamTumourObjectID+"/"+this.tumourBAMFileName);
+			Job normalVariantBam = this.doVariantBam(combineVCFsByType,BAMType.normal,"/datastore/bam/normal/"+this.normalBamGnosID+"/"+this.bamNormalObjectID+"/"+this.normalBAMFileName);
+			Job tumourVariantBam = this.doVariantBam(combineVCFsByType,BAMType.tumour,"/datastore/bam/tumour/"+this.tumourBamGnosID+"/"+this.bamTumourObjectID+"/"+this.tumourBAMFileName);
 	
 			// indicate job is in uploading stage.
 			Job move2uploading = GitUtils.gitMove("running-jobs", "uploading-jobs", this.getWorkflow(), this.JSONlocation, this.JSONrepoName, this.JSONfolderName, this.GITname, this.GITemail, this.gitMoveTestMode, this.JSONfileName , oxoGSnvsFromIndels, normalVariantBam, tumourVariantBam);

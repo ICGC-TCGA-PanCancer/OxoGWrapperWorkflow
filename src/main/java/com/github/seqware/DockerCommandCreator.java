@@ -53,9 +53,29 @@ public class DockerCommandCreator {
 		containerCommandArgs.add("-l /sv.vcf");
 		containerCommandArgs.add("-l /indel.vcf");
 
-		DockerCommandCreator.createDockerRunCommand("oxog", mountedObjects, runOpts,
-				"/cga/fh/pcawg_pipeline/modules/VariantBam/variant", containerCommandArgs);
+		command = DockerCommandCreator.createDockerRunCommand("oxog", mountedObjects, runOpts,
+				" bgzip -f -d /snv.vcf.gz ; bgzip -f -d /sv.vcf.gz ; bgzip -f -d /indel.vcf.gz ; /cga/fh/pcawg_pipeline/modules/VariantBam/variant", containerCommandArgs);
 
+		return command;
+	}
+	
+	static String createGetVCFCommand(String workflowName, String storageSource, String outDir, String downloadObjects)
+	{
+		String command = "";
+		Map<String,String> mountedObjects = new HashMap<String,String>(3);
+		mountedObjects.put(outDir+"/logs/", "/icgc/icgc-storage-client/logs/");
+		mountedObjects.put("/datastore/credentials/collab.token", "/icgc/icgc-storage-client/conf/application.properties");
+		mountedObjects.put(outDir+"/", "/downloads/");
+		
+		List<String> runOpts = new ArrayList<String>(2);
+		runOpts.add("--rm");
+		runOpts.add("--name get_vcf_"+workflowName);
+		runOpts.add("-e STORAGE_PROFILE="+storageSource);
+		
+		List<String> containerArgs = new ArrayList<String>();
+		containerArgs.add(downloadObjects);
+
+		command = DockerCommandCreator.createDockerRunCommand("icgc-storage-client", mountedObjects, runOpts, "",containerArgs);
 		return command;
 	}
 	

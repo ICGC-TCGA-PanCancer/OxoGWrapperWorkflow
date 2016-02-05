@@ -75,6 +75,7 @@ class GitUtils {
 
 		// If gitMoveTestMode is true, then the file moves will only happen
 		// locally, but will not be checked into git.
+		//TODO: Add a retry mechanism here. Git operations may fail but that doesn't mean the whole workflow should fail immediately. Retrying should be possible.
 		if (!gitMoveTestMode) {
 			manageGit.getCommand().addArgument("git checkout master \n");
 			manageGit.getCommand().addArgument("git reset --hard origin/master \n");
@@ -96,6 +97,7 @@ class GitUtils {
 		for (Job p : parents) {
 			manageGit.addParent(p);
 		}
+
 		return manageGit;
 	}
 }
