@@ -11,6 +11,7 @@ import java.util.Map;
 
 import com.github.seqware.OxoGWrapperWorkflow.VCFType;
 import com.jayway.jsonpath.Configuration;
+import com.jayway.jsonpath.DocumentContext;
 import com.jayway.jsonpath.JsonPath;
 
 public abstract class JSONUtils {
@@ -57,16 +58,22 @@ public abstract class JSONUtils {
 	static final String BAM_NORMAL_FILE_NAME = "normal_data_file_name";
 	static final String BAM_NORMAL_INDEX_OBJECT_ID = "normal_index_object_id";
 	static final String BAM_NORMAL_METADATA_URL = "bamNormalMetadataURL";
-	
+
 	static final String BAM_TUMOUR_OBJECT_ID = "tumour_data_object_id";
 	static final String BAM_TUMOUR_FILE_NAME = "tumour_data_file_name";
 	static final String BAM_TUMOUR_INDEX_OBJECT_ID = "tumour_index_object_id";
 	static final String BAM_TUMOUR_METADATA_URL = "bamTumourMetadataURL";
 
+	static final String BROAD_GNOS_ID = "broad_gnosID";
+	static final String SANGER_GNOS_ID = "sanger_gnosID";
+	static final String DKFZEMBL_GNOS_ID = "dkfzembl_gnosID";
+	static final String MUSE_GNOS_ID = "muse_gnosID";
+
 	static final String ALIQUOT_ID = "aliquotID";
 	static final String SUBMITTER_DONOR_ID = "submitterDonorID";
 	static final String PROJECT_CODE = "projectCode";
 
+	static final String GNOS_ID = "gnosID";
 	static final String DATA = "data";
 	static final String INDEX = "index";
 	static final String TAG = "tag";
@@ -82,35 +89,33 @@ public abstract class JSONUtils {
 	@SuppressWarnings("unchecked")
 	private static Map<String, Object> extractFileInfo(File jsonFile, Configuration jsonPathConfig,
 			String workflowNameInJson) throws IOException {
-		// Map<String,Object> results = new HashMap<String,Object>();
+
+		DocumentContext parsedJSON = JsonPath.using(jsonPathConfig).parse(jsonFile);
 		Map<String, Object> info = new HashMap<String, Object>(4);
 		// SNV
-		Map<String, String> snvVCFInfo = (Map<String, String>) (JsonPath.using(jsonPathConfig).parse(jsonFile).read(
+
+		Map<String, String> snvVCFInfo = (Map<String, String>) (parsedJSON.read(
 				"$." + workflowNameInJson + ".files[?(@.file_name=~/.*\\.somatic\\.snv_mnv\\.vcf\\.gz/)]", List.class))
 						.get(0);
-		Map<String, String> snvVCFIndexInfo = (Map<String, String>) (JsonPath.using(jsonPathConfig).parse(jsonFile)
-				.read("$." + workflowNameInJson
-						+ ".files[?(@.file_name=~/(.*\\.somatic\\.snv_mnv\\.vcf\\.gz)(\\.tbi|\\.idx)/)]", List.class))
-								.get(0);
+		Map<String, String> snvVCFIndexInfo = (Map<String, String>) (parsedJSON.read("$." + workflowNameInJson
+				+ ".files[?(@.file_name=~/(.*\\.somatic\\.snv_mnv\\.vcf\\.gz)(\\.tbi|\\.idx)/)]", List.class)).get(0);
+
+		// get GNOS ID
+		String gnosID = (String) (parsedJSON.read("$." + workflowNameInJson + ".gnos_id", String.class));
 
 		if (!workflowNameInJson.equals("muse")) {
 			// INDEL
-			Map<String, String> indelVCFInfo = (Map<String, String>) (JsonPath.using(jsonPathConfig).parse(jsonFile)
-					.read("$." + workflowNameInJson + ".files[?(@.file_name=~/.*\\.somatic\\.indel\\.vcf\\.gz/)]",
-							List.class)).get(0);
-			Map<String, String> indelVCFIndexInfo = (Map<String, String>) (JsonPath.using(jsonPathConfig)
-					.parse(jsonFile)
-					.read("$." + workflowNameInJson
-							+ ".files[?(@.file_name=~/(.*\\.somatic\\.indel\\.vcf\\.gz)(\\.tbi|\\.idx)/)]", List.class))
-									.get(0);
+			Map<String, String> indelVCFInfo = (Map<String, String>) (parsedJSON.read(
+					"$." + workflowNameInJson + ".files[?(@.file_name=~/.*\\.somatic\\.indel\\.vcf\\.gz/)]",
+					List.class)).get(0);
+			Map<String, String> indelVCFIndexInfo = (Map<String, String>) (parsedJSON.read("$." + workflowNameInJson
+					+ ".files[?(@.file_name=~/(.*\\.somatic\\.indel\\.vcf\\.gz)(\\.tbi|\\.idx)/)]", List.class)).get(0);
 			// SV
-			Map<String, String> svVCFInfo = (Map<String, String>) (JsonPath.using(jsonPathConfig).parse(jsonFile).read(
+			Map<String, String> svVCFInfo = (Map<String, String>) (parsedJSON.read(
 					"$." + workflowNameInJson + ".files[?(@.file_name=~/.*\\.somatic\\.sv\\.vcf\\.gz/)]", List.class))
 							.get(0);
-			Map<String, String> svVCFIndexInfo = (Map<String, String>) (JsonPath.using(jsonPathConfig).parse(jsonFile)
-					.read("$." + workflowNameInJson
-							+ ".files[?(@.file_name=~/(.*\\.somatic\\.sv\\.vcf\\.gz)(\\.tbi|\\.idx)/)]", List.class))
-									.get(0);
+			Map<String, String> svVCFIndexInfo = (Map<String, String>) (parsedJSON.read("$." + workflowNameInJson
+					+ ".files[?(@.file_name=~/(.*\\.somatic\\.sv\\.vcf\\.gz)(\\.tbi|\\.idx)/)]", List.class)).get(0);
 
 			Map<String, Object> indelInfo = new HashMap<String, Object>(2);
 			indelInfo.put(DATA, indelVCFInfo);
@@ -122,11 +127,12 @@ public abstract class JSONUtils {
 			info.put(VCFType.sv.toString(), svInfo);
 
 		}
-		Map<String, Object> snvInfo = new HashMap<String, Object>(2);
-		snvInfo.put(DATA, snvVCFInfo);
-		snvInfo.put(INDEX, snvVCFIndexInfo);
-		info.put(VCFType.snv.toString(), snvInfo);
+		Map<String, Object> fileInfo = new HashMap<String, Object>(2);
+		fileInfo.put(DATA, snvVCFInfo);
+		fileInfo.put(INDEX, snvVCFIndexInfo);
+		info.put(VCFType.snv.toString(), fileInfo);
 		info.put(TAG, workflowNameInJson);
+		info.put(GNOS_ID, gnosID);
 
 		return info;
 	}
@@ -136,30 +142,24 @@ public abstract class JSONUtils {
 
 		Map<String, Object> results = new HashMap<String, Object>(8);
 
-		// Type simpleMapType = new TypeToken<Map<String, Object>>()
-		// {}.getType();
-		// Gson gson = new Gson();
-
-		Reader json;
 		try {
-			// TODO: Investigate using JsonPath
+			// Now using JsonPath
 			// (https://github.com/jayway/JsonPath) to make this simpler to
 			// read/understand.
 			// To test JsonPaths, go to http://jsonpath.herokuapp.com/
-			json = new FileReader(filePath);
 
 			Configuration jsonPathConfig = Configuration.defaultConfiguration();
 
 			// Get normal BAM object ID
 			File jsonFile = new File(filePath);
-			Map<String, String> normalBamInfo = (Map<String, String>) JsonPath.using(jsonPathConfig).parse(jsonFile)
+			DocumentContext parsedJSON = JsonPath.using(jsonPathConfig).parse(jsonFile);
+			Map<String, String> normalBamInfo = (Map<String, String>) parsedJSON
 					.read("$.normal.files[?(@.file_name=~/.*\\.bam/)]", List.class).get(0);
-			Map<String, String> normalBaiInfo = (Map<String, String>) JsonPath.using(jsonPathConfig).parse(jsonFile)
+			Map<String, String> normalBaiInfo = (Map<String, String>) parsedJSON
 					.read("$.normal.files[?(@.file_name=~/.*\\.bai/)]", List.class).get(0);
-			String normalBamMetadataURL = (String) (JsonPath.using(jsonPathConfig).parse(jsonFile)
-					.read("$.normal.available_repos[0]", Map.class)).keySet().toArray()[0];
-			String normalGnosID = (String) (JsonPath.using(jsonPathConfig).parse(jsonFile).read("$.normal.gnos_id",
-					String.class));
+			String normalBamMetadataURL = (String) (parsedJSON.read("$.normal.available_repos[0]", Map.class)).keySet()
+					.toArray()[0];
+			String normalGnosID = (String) (parsedJSON.read("$.normal.gnos_id", String.class));
 			normalBamMetadataURL += "cghub/metadata/analysisFull/" + normalGnosID;
 			Map<String, Object> normalInfo = new HashMap<String, Object>(4);
 			normalInfo.put(DATA, normalBamInfo);
@@ -169,14 +169,13 @@ public abstract class JSONUtils {
 			results.put(NORMAL_BAM_INFO, normalInfo);
 
 			// Get Tumour BAM object ID
-			Map<String, String> tumourBamInfo = (Map<String, String>) JsonPath.using(jsonPathConfig).parse(jsonFile)
+			Map<String, String> tumourBamInfo = (Map<String, String>) parsedJSON
 					.read("$.tumors[0].files[?(@.file_name=~/.*\\.bam/)]", List.class).get(0);
-			Map<String, String> tumourBaiInfo = (Map<String, String>) JsonPath.using(jsonPathConfig).parse(jsonFile)
+			Map<String, String> tumourBaiInfo = (Map<String, String>) parsedJSON
 					.read("$.tumors[0].files[?(@.file_name=~/.*\\.bai/)]", List.class).get(0);
-			String tumourBamMetadataURL = (String) (JsonPath.using(jsonPathConfig).parse(jsonFile)
-					.read("$.tumors[0].available_repos[0]", Map.class)).keySet().toArray()[0];
-			String tumourGnosID = (String) (JsonPath.using(jsonPathConfig).parse(jsonFile).read("$.tumors[0].gnos_id",
-					String.class));
+			String tumourBamMetadataURL = (String) (parsedJSON.read("$.tumors[0].available_repos[0]", Map.class))
+					.keySet().toArray()[0];
+			String tumourGnosID = (String) (parsedJSON.read("$.tumors[0].gnos_id", String.class));
 			tumourBamMetadataURL += "cghub/metadata/analysisFull/" + tumourGnosID;
 			Map<String, Object> tumourInfo = new HashMap<String, Object>(4);
 			tumourInfo.put(DATA, tumourBamInfo);
@@ -187,8 +186,7 @@ public abstract class JSONUtils {
 
 			// Get the aliquot ID from the tumour. This may get more complicated
 			// in multi-tumour scenarios.
-			String aliquotID = (String) (JsonPath.using(jsonPathConfig).parse(jsonFile).read("$.tumors[0].aliquot_id",
-					String.class));
+			String aliquotID = (String) (parsedJSON.read("$.tumors[0].aliquot_id", String.class));
 			results.put(ALIQUOT_ID, aliquotID);
 
 			// Sanger
@@ -208,18 +206,15 @@ public abstract class JSONUtils {
 			results.put(MUSE_VCF_INFO, museInfo);
 
 			// Get OxoQ Score
-			String oxoqScore = (String) (JsonPath.using(jsonPathConfig).parse(jsonFile).read("$.tumors[0].oxog_score",
-					String.class));
+			String oxoqScore = (String) (parsedJSON.read("$.tumors[0].oxog_score", String.class));
 			results.put(OXOQ_SCORE, oxoqScore);
 
 			// Get donor ID
-			String submitterDonorID = (String) (JsonPath.using(jsonPathConfig).parse(jsonFile)
-					.read("$.submitter_donor_id", String.class));
+			String submitterDonorID = (String) (parsedJSON.read("$.submitter_donor_id", String.class));
 			results.put(SUBMITTER_DONOR_ID, submitterDonorID);
 
 			// Get project code
-			String projectCode = (String) (JsonPath.using(jsonPathConfig).parse(jsonFile).read("$.project_code",
-					String.class));
+			String projectCode = (String) (parsedJSON.read("$.project_code", String.class));
 			results.put(PROJECT_CODE, projectCode);
 
 		} catch (FileNotFoundException e) {

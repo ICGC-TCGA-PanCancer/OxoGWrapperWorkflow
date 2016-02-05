@@ -1,6 +1,5 @@
 package com.github.seqware;
 
-import java.io.File;
 import java.nio.file.Files;
 import java.nio.file.Paths;
 import java.util.Map;
@@ -10,13 +9,10 @@ import com.github.seqware.OxoGWrapperWorkflow.VCFType;
 public class INIGenerator {
 
 	private static String ini = "uploadURL = http://some.rsync.server.com/oxogUpload/\n"
-			+ "JSONrepo = https://github.com/ICGC-TCGA-PanCancer/oxog-ops.git\n"
-			+ "JSONrepoName = oxog-ops\n"
-			+ "JSONfolderName = oxog-collab-jobs-test\n"
-			+ "JSONlocation = /home/seqware/gitroot/\n" +
+			+ "JSONrepo = https://github.com/ICGC-TCGA-PanCancer/oxog-ops.git\n" + "JSONrepoName = oxog-ops\n"
+			+ "JSONfolderName = oxog-collab-jobs-test\n" + "JSONlocation = /home/seqware/gitroot/\n" +
 			// "JSONfileName = SomeDonor_1234.json\n"+
-			"GITemail = denis.yuen+icgc@gmail.com\n"
-			+ "GITname = icgc-bot\n"
+			"GITemail = denis.yuen+icgc@gmail.com\n" + "GITname = icgc-bot\n"
 			+ "GITPemFile = /home/seqware/.gnos/git.pem\n";
 
 	private static Map<String, Object> getDataFromJSON(String pathToJSON) {
@@ -29,14 +25,14 @@ public class INIGenerator {
 
 		for (String k : m.keySet()) {
 			if (m.get(k) instanceof String) {
-				System.out.println(prefix + " " + m.get(k));
+				//System.out.println(prefix + " " + m.get(k));
 				// Some things *don't* need to be printed
 				if (!(k.equals(JSONUtils.TAG))) {
 					sb.append(prefix.equals("") ? "" : prefix + "_").append(k).append(" = ").append(m.get(k))
 							.append("\n");
 				}
 			} else if (m.get(k) instanceof Map) {
-				System.out.println(prefix + " " + m.get(k));
+				//System.out.println(prefix + " " + m.get(k));
 				String newPrefix = prefix.equals("") ? "" : prefix;
 
 				if (((Map<String, Object>) m.get(k)).containsKey(JSONUtils.TAG)) {
@@ -45,14 +41,11 @@ public class INIGenerator {
 					newPrefix += "_" + k;
 				} else if (k.equals(JSONUtils.INDEX)) {
 					newPrefix += "_" + k;
-				}
-				else if (k.equals(VCFType.sv.toString())) {
+				} else if (k.equals(VCFType.sv.toString())) {
 					newPrefix += "_" + k;
-				}
-				else if (k.equals(VCFType.indel.toString())) {
+				} else if (k.equals(VCFType.indel.toString())) {
 					newPrefix += "_" + k;
-				}
-				else if (k.equals(VCFType.snv.toString())) {
+				} else if (k.equals(VCFType.snv.toString())) {
 					newPrefix += "_" + k;
 				}
 				sb.append(mapToINI((Map<String, Object>) m.get(k), newPrefix));
