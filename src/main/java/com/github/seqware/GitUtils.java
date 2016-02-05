@@ -78,7 +78,7 @@ class GitUtils {
 		if (!gitMoveTestMode) {
 			manageGit.getCommand().addArgument("git checkout master \n");
 			manageGit.getCommand().addArgument("git reset --hard origin/master \n");
-			manageGit.getCommand().addArgument("git fetch --all \n");
+			manageGit.getCommand().addArgument("git pull \n");
 		}
 		manageGit.getCommand().addArgument("[ -d " + dst + " ] || mkdir -p " + dst + " \n");
 
