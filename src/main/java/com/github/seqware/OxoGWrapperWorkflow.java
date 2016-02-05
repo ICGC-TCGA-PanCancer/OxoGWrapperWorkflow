@@ -110,6 +110,12 @@ public class OxoGWrapperWorkflow extends AbstractWorkflowDataModel {
 	private String dkfzemblGnosID;
 	private String museGnosID;
 	
+	//This could be used implement a sort of local-file mode. For now, it's just used to speed up testing.
+	private boolean skipDownload = false;
+	
+	//Path to reference file usd for normalization, *relative* to /datastore/refdata
+	private String refFile = "pcawg/genome.fa";
+	
 	/**
 	 * Get a property name that is mandatory
 	 * @param propName The name of the property
@@ -223,6 +229,14 @@ public class OxoGWrapperWorkflow extends AbstractWorkflowDataModel {
 				this.indelPadding = Integer.valueOf(getProperty("indelPadding"));
 			}
 			
+			if (hasPropertyAndNotNull("refFile")) {
+				this.refFile = getProperty("refFile");
+			}
+			
+			if (hasPropertyAndNotNull("skipDownload")) {
+				this.skipDownload = Boolean.valueOf(getProperty("skipDownload"));
+			}
+			
 			this.generateRulesFile();
 			
 		} catch (Exception e) {
@@ -290,7 +304,7 @@ public class OxoGWrapperWorkflow extends AbstractWorkflowDataModel {
 			+ " /icgc/icgc-storage-client/bin/icgc-storage-client download --object-id "
 				+ objectID +" --output-layout bundle --output-dir /downloads/ ;\n";
 		}
-		String storageClientDockerCmdNormal ="sudo docker run --rm --name get_bam_"+bamType+" "
+		String storageClientDockerCmdNormal =" docker run --rm --name get_bam_"+bamType+" "
 				+ " -e STORAGE_PROFILE="+this.storageSource+" " 
 			    + " -v /datastore/bam/"+bamType.toString()+"/logs/:/icgc/icgc-storage-client/logs/:rw "
 				+ " -v /datastore/credentials/collab.token:/icgc/icgc-storage-client/conf/application.properties:ro "
@@ -339,7 +353,7 @@ public class OxoGWrapperWorkflow extends AbstractWorkflowDataModel {
 				+ " /icgc/icgc-storage-client/bin/icgc-storage-client download --object-id " + objectID+" --output-layout bundle --output-dir /downloads/ ;\n "; 
 		}
 		
-		String getVCFCommand = "sudo docker run --rm --name get_vcf_"+workflowName+" "
+		String getVCFCommand = " docker run --rm --name get_vcf_"+workflowName+" "
 				+ " -e STORAGE_PROFILE="+this.storageSource+" " 
 			    + " -v "+outDir+"/logs/:/icgc/icgc-storage-client/logs/:rw "
 				+ " -v /datastore/credentials/collab.token:/icgc/icgc-storage-client/conf/application.properties:ro "
@@ -366,17 +380,21 @@ public class OxoGWrapperWorkflow extends AbstractWorkflowDataModel {
 		String outDir = "/datastore/vcf/"+workflowName;
 		String normalizedINDELName = workflowName+"_somatic.indel.bcftools-norm.vcf.gz";
 		String extractedSNVVCFName = workflowName+"_somatic.indel.bcftools-norm.extracted-snvs.vcf";
+		String fixedIndel = vcfName.replace("indel.", "indel.fixed.");
 		// TODO: Many of these steps below could probably be combined into a single Job
 		// that makes runs a single docker container, but executes multiple commands.
-		Job bcfToolsNormJob = this.getWorkflow().createBashJob("Normalize Indels");
-		String runBCFToolsNormCommand = "sudo docker run --rm --name normalize_indel_"+workflowName+" "
+		Job bcfToolsNormJob = this.getWorkflow().createBashJob("Normalize "+workflowName+" Indels");
+		String runBCFToolsNormCommand = "docker run --rm --name normalize_indel_"+workflowName+" "
 					+ " -v "+outDir+"/"+vcfName+":/datastore/datafile.vcf.gz "
 					+ " -v "+outDir+"/"+":/outdir/:rw "
-					+ " -v /datastore/refdata/public:/ref"
+					+ " -v /datastore/refdata/:/ref/"
 					+ " compbio/ngseasy-base:a1.0-002 /bin/bash -c \""
-					+ " bcftools norm -c w -m -any -Oz -f /ref/Homo_sapiens_assembly19.fasta  /datastore/datafile.vcf.gz "  
-				+ " > /outdir/"+normalizedINDELName
-				+ " && tabix -f -p vcf /outdir/"+normalizedINDELName + "\"";
+						+ " bgzip -d -c /datastore/datafile.vcf.gz \\\n"
+						+ " | sed -e s/\\\"$(echo -e '\\t\\t')\\\"/\\\"$(echo -e '\\t')\\\".\\\"$(echo -e '\\t')\\\"./g -e s/\\\"$(echo -e '\\t')\\\"$/\\\"$(echo -e '\\t')\\\"./g \\\n"
+						+ "> /outdir/"+fixedIndel+" && \\\n"
+						+ " bcftools norm -c w -m -any -Oz -f /ref/"+this.refFile+"  /outdir/"+fixedIndel+" "  
+						+ " > /outdir/"+normalizedINDELName
+						+ " && tabix -f -p vcf /outdir/"+normalizedINDELName + "\"";
 		bcfToolsNormJob.setCommand(runBCFToolsNormCommand);
 		bcfToolsNormJob.addParent(parent);
 		
@@ -385,12 +403,16 @@ public class OxoGWrapperWorkflow extends AbstractWorkflowDataModel {
 		filesToUpload.add(outDir+"/"+normalizedINDELName);
 		filesToUpload.add(outDir+"/"+normalizedINDELName+".tbi");
 		
-		Job extractSNVFromIndel = this.getWorkflow().createBashJob("extracting SNVs from INDEL");
-		extractSNVFromIndel.setCommand("bgzip -d -c "+outDir+"/"+normalizedINDELName+" > "+outDir+"/"+workflowName+"_somatic.indel.bcftools-norm.vcf "
-				+ "							&& grep -e '^#' -i -e '^[^#].*[[:space:]][ACTG][[:space:]][ACTG][[:space:]]' "+outDir+"/somatic.indel.bcftools-norm.vcf "
-											+ "> "+outDir+"/"+extractedSNVVCFName
-												+ " && bgzip "+outDir+"/"+extractedSNVVCFName
-												+ " && tabix -f -p vcf "+outDir+"/"+extractedSNVVCFName);
+		Job extractSNVFromIndel = this.getWorkflow().createBashJob("extracting SNVs from "+workflowName+" INDEL");
+		extractSNVFromIndel.setCommand("docker run --rm --name extract_"+workflowName+"_snv_from_normalized_indels "
+										+ " -v "+outDir+"/"+":/workdir/:rw "
+										+ "compbio/ngseasy-base:a1.0-002 /bin/bash -c \" \\\n"
+											+ " bgzip -d -c /workdir/"+normalizedINDELName+" > /workdir/"+workflowName+"_somatic.indel.bcftools-norm.vcf \\\n"
+											+ " && grep -e '^#' -i -e '^[^#].*[[:space:]][ACTG][[:space:]][ACTG][[:space:]]' /workdir/"+workflowName+"_somatic.indel.bcftools-norm.vcf \\\n"
+											+ "> /workdir/"+extractedSNVVCFName
+											+ " && bgzip -f /workdir/"+extractedSNVVCFName
+											+ " && tabix -f -p vcf /workdir/"+extractedSNVVCFName + ".gz \" ");
+		
 		extractSNVFromIndel.addParent(bcfToolsNormJob);
 		
 		switch (workflowName) {
@@ -442,18 +464,18 @@ public class OxoGWrapperWorkflow extends AbstractWorkflowDataModel {
 		//Create symlinks to the files in the proper directory.
 		Job prepVCFs = this.getWorkflow().createBashJob("Create links to VCFs");
 		prepVCFs.getCommand().addArgument("\n sudo mkdir /datastore/merged_vcfs/ && sudo chmod a+rw /datastore/merged_vcfs ; \n");
-		prepVCFs.getCommand().addArgument("\n ln -s /datastore/vcf/"+Pipeline.sanger+"/"+this.sangerSNVName+" /datastore/vcf/"+Pipeline.sanger+"_snv.vcf ; \n");
-		prepVCFs.getCommand().addArgument(" ln -s /datastore/vcf/"+Pipeline.broad+"/"+this.broadSNVName+" /datastore/vcf/"+Pipeline.broad+"_snv.vcf ; \n");
-		prepVCFs.getCommand().addArgument(" ln -s /datastore/vcf/"+Pipeline.dkfz_embl+"/"+this.sangerSNVName+" /datastore/vcf/"+Pipeline.dkfz_embl+"_snv.vcf ; \n");
-		prepVCFs.getCommand().addArgument(" ln -s /datastore/vcf/"+Pipeline.muse+"/"+this.sangerSNVName+" /datastore/vcf/"+Pipeline.muse+"_snv.vcf ; \n");
+		prepVCFs.getCommand().addArgument("\n ln -s /datastore/vcf/"+Pipeline.sanger+"/"+this.sangerGnosID+"/"+this.sangerSNVName+" /datastore/vcf/"+Pipeline.sanger+"_snv.vcf ; \n");
+		prepVCFs.getCommand().addArgument(" ln -s /datastore/vcf/"+Pipeline.broad+"/"+this.broadGnosID+"/"+this.broadSNVName+" /datastore/vcf/"+Pipeline.broad+"_snv.vcf ; \n");
+		prepVCFs.getCommand().addArgument(" ln -s /datastore/vcf/"+Pipeline.dkfz_embl+"/"+this.dkfzemblGnosID+"/"+this.dkfzEmblSNVName+" /datastore/vcf/"+Pipeline.dkfz_embl+"_snv.vcf ; \n");
+		prepVCFs.getCommand().addArgument(" ln -s /datastore/vcf/"+Pipeline.muse+"/"+this.museGnosID+"/"+this.museSNVName+" /datastore/vcf/"+Pipeline.muse+"_snv.vcf ; \n");
 
 		prepVCFs.getCommand().addArgument(" ln -s /datastore/vcf/"+Pipeline.sanger+"/"+this.sangerNormalizedIndelVCFName+" /datastore/vcf/"+Pipeline.sanger+"_indel.vcf ; \n");
 		prepVCFs.getCommand().addArgument(" ln -s /datastore/vcf/"+Pipeline.broad+"/"+this.broadNormalizedIndelVCFName+" /datastore/vcf/"+Pipeline.broad+"_indel.vcf ; \n");
 		prepVCFs.getCommand().addArgument(" ln -s /datastore/vcf/"+Pipeline.dkfz_embl+"/"+this.dkfzEmblNormalizedIndelVCFName+" /datastore/vcf/"+Pipeline.dkfz_embl+"_indel.vcf ; \n");
 
-		prepVCFs.getCommand().addArgument(" ln -s /datastore/vcf/"+Pipeline.sanger+"/"+this.sangerSVName+" /datastore/vcf/"+Pipeline.sanger+"_sv.vcf ; \n");
-		prepVCFs.getCommand().addArgument(" ln -s /datastore/vcf/"+Pipeline.broad+"/"+this.broadSVName+" /datastore/vcf/"+Pipeline.broad+"_sv.vcf ; \n");
-		prepVCFs.getCommand().addArgument(" ln -s /datastore/vcf/"+Pipeline.dkfz_embl+"/"+this.dkfzEmblSVName+" /datastore/vcf/"+Pipeline.dkfz_embl+"_sv.vcf ; \n");
+		prepVCFs.getCommand().addArgument(" ln -s /datastore/vcf/"+Pipeline.sanger+"/"+this.sangerGnosID+"/"+this.sangerSVName+" /datastore/vcf/"+Pipeline.sanger+"_sv.vcf ; \n");
+		prepVCFs.getCommand().addArgument(" ln -s /datastore/vcf/"+Pipeline.broad+"/"+this.broadGnosID+"/"+this.broadSVName+" /datastore/vcf/"+Pipeline.broad+"_sv.vcf ; \n");
+		prepVCFs.getCommand().addArgument(" ln -s /datastore/vcf/"+Pipeline.dkfz_embl+"/"+this.dkfzemblGnosID+"/"+this.dkfzEmblSVName+" /datastore/vcf/"+Pipeline.dkfz_embl+"_sv.vcf ; \n");
 		
 		for (Job parent : parents)
 		{
@@ -501,7 +523,7 @@ public class OxoGWrapperWorkflow extends AbstractWorkflowDataModel {
 				+ this.aliquotID + " " + this.tumourBAMFileName + " " + this.normalBAMFileName + " " + this.oxoQScore + " "
 				+ this.sangerSNVName + " " + this.dkfzEmblSNVName + " " + this.broadSNVName;
 		runOxoGWorkflow.setCommand(
-				"sudo docker run --name=\"oxog_filter\" "+oxogMounts+" oxog " + oxogCommand);
+				" docker run --name=\"oxog_filter\" "+oxogMounts+" oxog " + oxogCommand);
 		
 		runOxoGWorkflow.addParent(parent);
 		//Job getLogs = this.getOxoGLogs(runOxoGWorkflow);
@@ -577,7 +599,7 @@ public class OxoGWrapperWorkflow extends AbstractWorkflowDataModel {
 		Job getLog = this.getWorkflow().createBashJob("get OxoG docker logs");
 		// This will get the docker logs and print them to stdout, but we may also want to get the logs
 		// in the mounted oxog_workspace dir...
-		getLog.setCommand("sudo docker logs oxog_run");
+		getLog.setCommand(" docker logs oxog_run");
 		getLog.addParent(parent);
 		return getLog;
 	}
@@ -635,33 +657,39 @@ public class OxoGWrapperWorkflow extends AbstractWorkflowDataModel {
 			
 			// indicate job is in downloading stage.
 			Job move2download = GitUtils.gitMove("queued-jobs", "downloading-jobs", this.getWorkflow(), this.JSONlocation, this.JSONrepoName, this.JSONfolderName, this.GITname, this.GITemail, this.gitMoveTestMode, this.JSONfileName ,copy);
-
-			//Download jobs. VCFs downloading serial. Trying to download all in parallel seems to put too great a strain on the system 
-			//since the icgc-storage-client can make full use of all cores on a multi-core system. 
-			Job downloadSangerVCFs = this.getVCF(move2download, Pipeline.sanger, this.sangerSNVVCFObjectID, this.sangerSNVIndexObjectID,
-											this.sangerSVVCFObjectID, this.sangerSVIndexObjectID,
-											this.sangerIndelVCFObjectID, this.sangerIndelIndexObjectID);
-			Job downloadDkfzEmblVCFs = this.getVCF(downloadSangerVCFs, Pipeline.dkfz_embl, this.dkfzemblSNVVCFObjectID, this.dkfzemblSNVIndexObjectID,
-										this.dkfzemblSVVCFObjectID, this.dkfzemblSVIndexObjectID,
-										this.dkfzemblIndelVCFObjectID, this.dkfzemblIndelIndexObjectID);
-			Job downloadBroadVCFs = this.getVCF(downloadDkfzEmblVCFs, Pipeline.broad, this.broadSNVVCFObjectID, this.broadSNVIndexObjectID,
-										this.broadSVVCFObjectID, this.broadSVIndexObjectID,
-										this.broadIndelVCFObjectID, this.broadIndelIndexObjectID);
-			Job downloadMuseVCFs = this.getVCF(downloadBroadVCFs, Pipeline.muse, this.museSNVVCFObjectID, this.museSNVIndexObjectID);
-			// Once VCFs are downloaded, download the BAMs.
-			Job downloadNormalBam = this.getBAM(downloadMuseVCFs,BAMType.normal, this.bamNormalIndexObjectID,this.bamNormalObjectID);
-			//this.normalBAMFileName = "/datastore/bam/normal/*.bam";
-			Job downloadTumourBam = this.getBAM(downloadNormalBam,BAMType.tumour, this.bamTumourIndexObjectID,this.bamTumourObjectID);
-			//this.tumourBAMFileName = "/datastore/bam/tumour/*.bam";
-			
-			// After we've downloaded all VCFs on a per-workflow basis, we also need to do a vcfcombine 
-			// on the *types* of VCFs, for the minibam generator. The per-workflow combined VCFs will
-			// be used by the OxoG filter. These three can be done in parallel because they all require the same inputs, 
-			// but none require the inputs of the other and they are not very intense jobs.
-			// indicate job is running.
-			Job move2running = GitUtils.gitMove( "downloading-jobs", "running-jobs", this.getWorkflow(),
-					this.JSONlocation, this.JSONrepoName, this.JSONfolderName, this.GITname, this.GITemail, this.gitMoveTestMode, this.JSONfileName
-					, downloadSangerVCFs, downloadDkfzEmblVCFs, downloadBroadVCFs, downloadMuseVCFs, downloadNormalBam, downloadTumourBam);
+			Job move2running;
+			if (!skipDownload) {
+				//Download jobs. VCFs downloading serial. Trying to download all in parallel seems to put too great a strain on the system 
+				//since the icgc-storage-client can make full use of all cores on a multi-core system. 
+				Job downloadSangerVCFs = this.getVCF(move2download, Pipeline.sanger, this.sangerSNVVCFObjectID, this.sangerSNVIndexObjectID,
+												this.sangerSVVCFObjectID, this.sangerSVIndexObjectID,
+												this.sangerIndelVCFObjectID, this.sangerIndelIndexObjectID);
+				Job downloadDkfzEmblVCFs = this.getVCF(downloadSangerVCFs, Pipeline.dkfz_embl, this.dkfzemblSNVVCFObjectID, this.dkfzemblSNVIndexObjectID,
+											this.dkfzemblSVVCFObjectID, this.dkfzemblSVIndexObjectID,
+											this.dkfzemblIndelVCFObjectID, this.dkfzemblIndelIndexObjectID);
+				Job downloadBroadVCFs = this.getVCF(downloadDkfzEmblVCFs, Pipeline.broad, this.broadSNVVCFObjectID, this.broadSNVIndexObjectID,
+											this.broadSVVCFObjectID, this.broadSVIndexObjectID,
+											this.broadIndelVCFObjectID, this.broadIndelIndexObjectID);
+				Job downloadMuseVCFs = this.getVCF(downloadBroadVCFs, Pipeline.muse, this.museSNVVCFObjectID, this.museSNVIndexObjectID);
+				// Once VCFs are downloaded, download the BAMs.
+				Job downloadNormalBam = this.getBAM(downloadMuseVCFs,BAMType.normal, this.bamNormalIndexObjectID,this.bamNormalObjectID);
+				//this.normalBAMFileName = "/datastore/bam/normal/*.bam";
+				Job downloadTumourBam = this.getBAM(downloadNormalBam,BAMType.tumour, this.bamTumourIndexObjectID,this.bamTumourObjectID);
+				//this.tumourBAMFileName = "/datastore/bam/tumour/*.bam";
+				
+				// After we've downloaded all VCFs on a per-workflow basis, we also need to do a vcfcombine 
+				// on the *types* of VCFs, for the minibam generator. The per-workflow combined VCFs will
+				// be used by the OxoG filter. These three can be done in parallel because they all require the same inputs, 
+				// but none require the inputs of the other and they are not very intense jobs.
+				// indicate job is running.
+				move2running = GitUtils.gitMove( "downloading-jobs", "running-jobs", this.getWorkflow(),
+						this.JSONlocation, this.JSONrepoName, this.JSONfolderName, this.GITname, this.GITemail, this.gitMoveTestMode, this.JSONfileName
+						, downloadSangerVCFs, downloadDkfzEmblVCFs, downloadBroadVCFs, downloadMuseVCFs, downloadNormalBam, downloadTumourBam);
+			}
+			else {
+				// If user is skipping download, then we will just move directly to runnning...
+				move2running = GitUtils.gitMove("downloading-jobs", "running-jobs", this.getWorkflow(), this.JSONlocation, this.JSONrepoName, this.JSONfolderName, this.GITname, this.GITemail, this.gitMoveTestMode, this.JSONfileName ,move2download);
+			}
 
 			// OxoG will run after move2running. Move2running will run after all the jobs that perform input file downloads and file preprocessing have finished.  
 			Job sangerPreprocessVCF = this.preProcessVCF(move2running, Pipeline.sanger,"/"+ this.sangerGnosID +"/"+ this.sangerIndelName);
