@@ -91,13 +91,12 @@ sub sort_and_index {
   my ($file) = @_;
   my @parts = split /\//, $file;
   my $filename = $parts[-1];
-  my $cmd = "sudo docker run --rm \\
+  my $cmd = "sudo docker run --rm --name=sort_merged_vcf \\
         -v $file.vcf:/input.vcf:rw \\
         -v /datastore/refdata/public:/ref \\
-        -v ~/vcflib/:/home/ngseasy/vcflib/ \\
         -v $out_dir:/outdir/:rw \\
         compbio/ngseasy-base:a1.0-002 /bin/bash -c \\
-        \"vcf-sort /input.vcf > /outdir/$filename.sorted.vcf; \\
+        \" vcf-sort /input.vcf > /outdir/$filename.sorted.vcf; \\
         echo \"zipping and indexing...\" \\
         bgzip -f /outdir/$filename.sorted.vcf ; \\
         tabix -p vcf /outdir/$filename.sorted.vcf.gz\"
