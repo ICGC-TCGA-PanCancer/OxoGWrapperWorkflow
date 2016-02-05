@@ -66,7 +66,7 @@ public abstract class JSONUtils {
 
 	static final String BROAD_GNOS_ID = "broad_gnosID";
 	static final String SANGER_GNOS_ID = "sanger_gnosID";
-	static final String DKFZEMBL_GNOS_ID = "dkfzembl_gnosID";
+	static final String DKFZEMBL_GNOS_ID = "dkfz_embl_gnosID";
 	static final String MUSE_GNOS_ID = "muse_gnosID";
 
 	static final String ALIQUOT_ID = "aliquotID";
