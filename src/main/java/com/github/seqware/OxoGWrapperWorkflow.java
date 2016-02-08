@@ -513,16 +513,6 @@ public class OxoGWrapperWorkflow extends AbstractWorkflowDataModel {
 				+ Pipeline.broad+"_indel.vcf "+Pipeline.sanger+"_indel.vcf "+Pipeline.dkfz_embl+"_indel.vcf " 
 				+ Pipeline.broad+"_sv.vcf "+Pipeline.sanger+"_sv.vcf "+Pipeline.dkfz_embl+"_sv.vcf "
 				+ " /datastore/vcf/ /datastore/merged_vcfs/ "
-				/*+ " \\\n && sudo docker run --rm --name=zip_and_index "
-				+ " -v /datastore/merged_vcfs/:/workdir/:rw \\\n"
-				+ " compbio/ngseasy-base:a1.0-002 "
-				+ " /bin/bash -c \" "
-				+ " bgzip -c -f /workdir/snv.clean.sorted.vcf > /workdir/snv.clean.sorted.vcf.gz ; \\\n"
-				+ " bgzip -c -f /workdir/sv.clean.sorted.vcf > /workdir/sv.clean.sorted.vcf.gz ; \\\n"
-				+ " bgzip -c -f /workdir/indel.clean.sorted.vcf > /workdir/indel.clean.sorted.vcf.gz ; \\\n"
-				+ " tabix -p vcf -f /workdir/snv.clean.sorted.vcf.gz ; \\\n"
-				+ " tabix -p vcf -f /workdir/sv.clean.sorted.vcf.gz ; \\\n"
-				+ " tabix -p vcf -f /workdir/indel.clean.sorted.vcf.gz ; \\\n \" )"*/
 				+ " ) || "+moveToFailed;
 		vcfCombineJob.setCommand(combineCommand);
 		
@@ -691,6 +681,7 @@ public class OxoGWrapperWorkflow extends AbstractWorkflowDataModel {
 
 //	public Job runAnnotator(Job parent)
 //	{
+//	// Placeholder for running Jonathan's container.
 //		//docker run -v local/path:/data pcawg-annotate SNV /data/snvs.vcf /data/normal-minibam.bam /data/tumour-minibam.bam ljdursi/pcawg-annotate
 //	}
 	

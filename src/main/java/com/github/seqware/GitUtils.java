@@ -70,51 +70,10 @@ class GitUtils {
 		if (parents == null || parents.length == 0) {
 			throw new Exception("You must provide at least one parent job!");
 		}
-/*		Job manageGit = workflow.createBashJob("git_manage_" + src + "_" + dst);
-		String path = JSONlocation + "/" + JSONrepoName + "/" + JSONfolderName;
-		// It shouldn't be necessary to do this config again if it was already
-		// done in pullRepo, but probably safer this way.
-		manageGit.getCommand().addArgument("git config --global user.name " + GITname + " \n");
-		manageGit.getCommand().addArgument("git config --global user.email " + GITemail + " \n");
-		// I think maybe it should be an error if the *repo* doesn't exist.
-		manageGit.getCommand().addArgument("cd " + JSONlocation + "/" + JSONrepoName + " \n");
-		manageGit.getCommand().addArgument("[ -d " + path + " ] || mkdir -p " + path + " \n");
-		manageGit.getCommand().addArgument("cd " + path + " \n");
-		manageGit.getCommand().addArgument("# This is not idempotent: git pull \n");
 
-		// If gitMoveTestMode is true, then the file moves will only happen
-		// locally, but will not be checked into git.
-		//TODO: Add a retry mechanism here. Git operations may fail but that doesn't mean the whole workflow should fail immediately. Retrying should be possible.
-		if (!gitMoveTestMode) {
-			manageGit.getCommand().addArgument("git checkout master \n");
-			manageGit.getCommand().addArgument("git reset --hard origin/master \n");
-			manageGit.getCommand().addArgument("git pull \n");
-		}
-		manageGit.getCommand().addArgument("[ -d " + dst + " ] || mkdir -p " + dst + " \n");
-
-		if (!gitMoveTestMode) {
-			manageGit.getCommand().addArgument("if [[ -d " + src + " ]]; then git mv " + path + "/" + src + "/"
-					+ JSONfileName + " " + path + "/" + dst + "; fi \n");
-			manageGit.getCommand().addArgument("git stage . \n");
-			manageGit.getCommand().addArgument("git commit -m '" + dst + ": " + JSONfileName + "' \n");
-			manageGit.getCommand().addArgument("git push \n");
-		} else {
-			manageGit.getCommand().addArgument("if [[ -d " + src + " ]]; then mv " + path + "/" + src + "/"
-					+ JSONfileName + " " + path + "/" + dst + "; fi \n");
-		}
-
-*/
 		Job gitMove = workflow.createBashJob("git_move_from_"+src+"_to_"+dst);
 		
-//		gitMove.setCommand("python "+workflow.getWorkflowBundleDir()+"/scripts/git_move.py ");
-//		gitMove.getCommand().addArgument(JSONlocation + "/" + JSONrepoName + "/" + JSONfolderName );
-//		gitMove.getCommand().addArgument(src);
-//		gitMove.getCommand().addArgument(dst);
-//		gitMove.getCommand().addArgument(JSONfileName);
-//		//Ensure that string going to python script is formatted properly.
-//		String testModeStr = String.valueOf(gitMoveTestMode);
-//		gitMove.getCommand().addArgument( testModeStr.substring(0,1).toUpperCase() + testModeStr.substring(1) );
-		
+	
 		gitMove.setCommand(gitMoveCommand(src, dst, JSONlocation + "/" + JSONrepoName + "/" + JSONfolderName, JSONfileName, gitMoveTestMode,pathToScripts ));
 		for (Job p : parents) {
 			gitMove.addParent(p);
