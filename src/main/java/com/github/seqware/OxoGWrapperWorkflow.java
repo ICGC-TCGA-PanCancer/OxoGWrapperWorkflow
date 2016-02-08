@@ -494,17 +494,17 @@ public class OxoGWrapperWorkflow extends AbstractWorkflowDataModel {
 				+ Pipeline.broad+"_snv.vcf "+Pipeline.sanger+"_snv.vcf "+Pipeline.dkfz_embl+"_snv.vcf "
 				+ Pipeline.broad+"_indel.vcf "+Pipeline.sanger+"_indel.vcf "+Pipeline.dkfz_embl+"_indel.vcf " 
 				+ Pipeline.broad+"_sv.vcf "+Pipeline.sanger+"_sv.vcf "+Pipeline.dkfz_embl+"_sv.vcf "
-				+ " /datastore/vcf/ /datastore/merged_vcfs/ && \n"
+				+ " /datastore/vcf/ /datastore/merged_vcfs/ && \\\n"
 				+ " sudo docker run --rm --name=zip_and_index "
-				+ " -v /datastore/merged_vcfs/:/workdir/:rw \n"
-				+ " compbio/ngseasy-base:a1.0-002"
+				+ " -v /datastore/merged_vcfs/:/workdir/:rw \\\n"
+				+ " compbio/ngseasy-base:a1.0-002 "
 				+ " /bin/bash -c \" "
-				+ " bgzip -f /workdir/snv.clean.sorted.vcf ; \n"
-				+ " bgzip -f /workdir/sv.clean.sorted.vcf ; \n"
-				+ " bgzip -f /workdir/indel.clean.sorted.vcf ; \n"
-				+ " tabix -f /workdir/snv.clean.sorted.vcf.gz ; \n"
-				+ " tabix -f /workdir/sv.clean.sorted.vcf.gz ; \n"
-				+ " tabix -f /workdir/indel.clean.sorted.vcf.gz ; \n \"");
+				+ " bgzip -f /workdir/snv.clean.sorted.vcf ; \\\n"
+				+ " bgzip -f /workdir/sv.clean.sorted.vcf ; \\\n"
+				+ " bgzip -f /workdir/indel.clean.sorted.vcf ; \\\n"
+				+ " tabix -f /workdir/snv.clean.sorted.vcf.gz ; \\\n"
+				+ " tabix -f /workdir/sv.clean.sorted.vcf.gz ; \\\n"
+				+ " tabix -f /workdir/indel.clean.sorted.vcf.gz ; \\\n \"");
 		
 		
 		vcfCombineJob.addParent(prepVCFs);
@@ -720,8 +720,8 @@ public class OxoGWrapperWorkflow extends AbstractWorkflowDataModel {
 			Job oxoG = this.doOxoG(combineVCFsByType);
 			Job oxoGSnvsFromIndels = this.doOxoGSnvsFromIndels(oxoG);
 			// variantbam jobs will run parallel to each other. variant seems to only use a *single* core, but runs long ( 60 - 120 min on OpenStack);
-			Job normalVariantBam = this.doVariantBam(combineVCFsByType,BAMType.normal,"/datastore/bam/normal/"+this.normalBamGnosID+"/"+this.bamNormalObjectID+"/"+this.normalBAMFileName);
-			Job tumourVariantBam = this.doVariantBam(combineVCFsByType,BAMType.tumour,"/datastore/bam/tumour/"+this.tumourBamGnosID+"/"+this.bamTumourObjectID+"/"+this.tumourBAMFileName);
+			Job normalVariantBam = this.doVariantBam(combineVCFsByType,BAMType.normal,"/datastore/bam/normal/"+this.normalBamGnosID+"/"+this.normalBAMFileName);
+			Job tumourVariantBam = this.doVariantBam(combineVCFsByType,BAMType.tumour,"/datastore/bam/tumour/"+this.tumourBamGnosID+"/"+this.tumourBAMFileName);
 	
 			// indicate job is in uploading stage.
 			Job move2uploading = GitUtils.gitMove("running-jobs", "uploading-jobs", this.getWorkflow(), this.JSONlocation, this.JSONrepoName, this.JSONfolderName, this.GITname, this.GITemail, this.gitMoveTestMode, this.JSONfileName , oxoGSnvsFromIndels, normalVariantBam, tumourVariantBam);
