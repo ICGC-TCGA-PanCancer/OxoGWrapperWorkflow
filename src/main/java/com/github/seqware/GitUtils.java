@@ -124,7 +124,7 @@ class GitUtils {
 	
 	static String gitMoveCommand(String src, String dst, String pathToRootDir, String filename, boolean testMode, String pathToScriptDir)
 	{
-		String testModeStr = String.valueOf(testMode);
+		String testModeStr = (String.valueOf(testMode)).substring(0,1).toUpperCase() + (String.valueOf(testMode)).substring(1);
 		String cmd = "python "+pathToScriptDir + "/git_move.py" + " "+ pathToRootDir + " "+src + " "+dst + " "+filename + " " + testModeStr;
 		return cmd;
 	}
