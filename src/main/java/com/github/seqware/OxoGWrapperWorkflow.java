@@ -512,15 +512,18 @@ public class OxoGWrapperWorkflow extends AbstractWorkflowDataModel {
 				+ Pipeline.broad+"_snv.vcf "+Pipeline.sanger+"_snv.vcf "+Pipeline.dkfz_embl+"_snv.vcf "
 				+ Pipeline.broad+"_indel.vcf "+Pipeline.sanger+"_indel.vcf "+Pipeline.dkfz_embl+"_indel.vcf " 
 				+ Pipeline.broad+"_sv.vcf "+Pipeline.sanger+"_sv.vcf "+Pipeline.dkfz_embl+"_sv.vcf "
-				+ " /datastore/vcf/ /datastore/merged_vcfs/ && \\\n"
-				+ " sudo docker run --rm --name=zip_and_index "
+				+ " /datastore/vcf/ /datastore/merged_vcfs/ "
+				/*+ " \\\n && sudo docker run --rm --name=zip_and_index "
 				+ " -v /datastore/merged_vcfs/:/workdir/:rw \\\n"
 				+ " compbio/ngseasy-base:a1.0-002 "
 				+ " /bin/bash -c \" "
-				+ " tabix -f /workdir/snv.clean.sorted.vcf ; \\\n"
-				+ " tabix -f /workdir/sv.clean.sorted.vcf ; \\\n"
-				+ " tabix -f /workdir/indel.clean.sorted.vcf ; \\\n \" )"
-				+ " || "+moveToFailed;
+				+ " bgzip -c -f /workdir/snv.clean.sorted.vcf > /workdir/snv.clean.sorted.vcf.gz ; \\\n"
+				+ " bgzip -c -f /workdir/sv.clean.sorted.vcf > /workdir/sv.clean.sorted.vcf.gz ; \\\n"
+				+ " bgzip -c -f /workdir/indel.clean.sorted.vcf > /workdir/indel.clean.sorted.vcf.gz ; \\\n"
+				+ " tabix -p vcf -f /workdir/snv.clean.sorted.vcf.gz ; \\\n"
+				+ " tabix -p vcf -f /workdir/sv.clean.sorted.vcf.gz ; \\\n"
+				+ " tabix -p vcf -f /workdir/indel.clean.sorted.vcf.gz ; \\\n \" )"*/
+				+ " ) || "+moveToFailed;
 		vcfCombineJob.setCommand(combineCommand);
 		
 		
