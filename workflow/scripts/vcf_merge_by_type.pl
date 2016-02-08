@@ -98,7 +98,7 @@ sub sort_and_index {
         compbio/ngseasy-base:a1.0-002 /bin/bash -c \\
         \" vcf-sort /input.vcf > /outdir/$filename.sorted.vcf; \\
         echo zipping_and_indexing ; \\
-        bgzip -f /outdir/$filename.sorted.vcf ; \\
+        bgzip -f -c /outdir/$filename.sorted.vcf > /outdir/$filename.sorted.vcf.gz ; \\
         tabix -p vcf /outdir/$filename.sorted.vcf.gz\"
    ";
 
