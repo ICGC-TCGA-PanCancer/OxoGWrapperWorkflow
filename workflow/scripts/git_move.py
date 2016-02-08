@@ -23,7 +23,7 @@ file_name = args[4];
 test_mode = args[5];
 
 move_command = '';
-if test_mode == False:
+if test_mode == True:
     move_command = 'mv {} {}'.format(os.path.join(repo_location, src_dir , file_name),
                                             os.path.join(repo_location, dest_dir , file_name));
 else:
