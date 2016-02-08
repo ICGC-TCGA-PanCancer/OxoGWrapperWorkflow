@@ -112,6 +112,7 @@ public class OxoGWrapperWorkflow extends AbstractWorkflowDataModel {
 	
 	//This could be used implement a sort of local-file mode. For now, it's just used to speed up testing.
 	private boolean skipDownload = false;
+	private boolean skipUpload = false;
 	
 	//Path to reference file usd for normalization, *relative* to /datastore/refdata
 	private String refFile = "pcawg/genome.fa";
@@ -242,6 +243,10 @@ public class OxoGWrapperWorkflow extends AbstractWorkflowDataModel {
 				this.skipDownload = Boolean.valueOf(getProperty("skipDownload"));
 			}
 			
+			if (hasPropertyAndNotNull("skipUpload")) {
+				this.skipUpload = Boolean.valueOf(getProperty("skipUpload"));
+			}
+			
 			this.generateRulesFile();
 			
 		} catch (Exception e) {
@@ -365,6 +370,9 @@ public class OxoGWrapperWorkflow extends AbstractWorkflowDataModel {
 			    + " -v "+outDir+"/:/downloads/:rw"
 	    		+ " icgc/icgc-storage-client /bin/bash -c \" "+downloadObjects+" \" ";
 		
+		String moveToFailed = GitUtils.gitMoveCommand("downloading-jobs","failed-jobs",this.JSONlocation + "/" + this.JSONrepoName + "/" + this.JSONfolderName,this.JSONfileName, this.gitMoveTestMode, this.getWorkflowBaseDir() + "/scripts/");				 
+		getVCFCommand += (" || " + moveToFailed);
+		
 		getVCFJob.setCommand(getVCFCommand);
 		getVCFJob.addParent(parentJob);
 
@@ -400,6 +408,10 @@ public class OxoGWrapperWorkflow extends AbstractWorkflowDataModel {
 						+ " bcftools norm -c w -m -any -Oz -f /ref/"+this.refFile+"  /outdir/"+fixedIndel+" "  
 						+ " > /outdir/"+normalizedINDELName
 						+ " && tabix -f -p vcf /outdir/"+normalizedINDELName + "\"";
+		
+		String moveToFailed = GitUtils.gitMoveCommand("running-jobs","failed-jobs",this.JSONlocation + "/" + this.JSONrepoName + "/" + this.JSONfolderName,this.JSONfileName, this.gitMoveTestMode, this.getWorkflowBaseDir() + "/scripts/");				 
+		runBCFToolsNormCommand += (" || " + moveToFailed );
+		
 		bcfToolsNormJob.setCommand(runBCFToolsNormCommand);
 		bcfToolsNormJob.addParent(parent);
 		
@@ -468,19 +480,25 @@ public class OxoGWrapperWorkflow extends AbstractWorkflowDataModel {
 	{
 		//Create symlinks to the files in the proper directory.
 		Job prepVCFs = this.getWorkflow().createBashJob("Create links to VCFs");
-		prepVCFs.getCommand().addArgument("\n sudo mkdir /datastore/merged_vcfs/ && sudo chmod a+rw /datastore/merged_vcfs ; \n");
-		prepVCFs.getCommand().addArgument("\n ln -s /datastore/vcf/"+Pipeline.sanger+"/"+this.sangerGnosID+"/"+this.sangerSNVName+" /datastore/vcf/"+Pipeline.sanger+"_snv.vcf ; \n");
-		prepVCFs.getCommand().addArgument(" ln -s /datastore/vcf/"+Pipeline.broad+"/"+this.broadGnosID+"/"+this.broadSNVName+" /datastore/vcf/"+Pipeline.broad+"_snv.vcf ; \n");
-		prepVCFs.getCommand().addArgument(" ln -s /datastore/vcf/"+Pipeline.dkfz_embl+"/"+this.dkfzemblGnosID+"/"+this.dkfzEmblSNVName+" /datastore/vcf/"+Pipeline.dkfz_embl+"_snv.vcf ; \n");
-		prepVCFs.getCommand().addArgument(" ln -s /datastore/vcf/"+Pipeline.muse+"/"+this.museGnosID+"/"+this.museSNVName+" /datastore/vcf/"+Pipeline.muse+"_snv.vcf ; \n");
+		String prepCommand = "";
+		prepCommand+="\n ( sudo mkdir /datastore/merged_vcfs/ && sudo chmod a+rw /datastore/merged_vcfs && \\\n"
+		+"\n ln -s /datastore/vcf/"+Pipeline.sanger+"/"+this.sangerGnosID+"/"+this.sangerSNVName+" /datastore/vcf/"+Pipeline.sanger+"_snv.vcf && \\\n"
+		+" ln -s /datastore/vcf/"+Pipeline.broad+"/"+this.broadGnosID+"/"+this.broadSNVName+" /datastore/vcf/"+Pipeline.broad+"_snv.vcf && \\\n"
+		+" ln -s /datastore/vcf/"+Pipeline.dkfz_embl+"/"+this.dkfzemblGnosID+"/"+this.dkfzEmblSNVName+" /datastore/vcf/"+Pipeline.dkfz_embl+"_snv.vcf && \\\n"
+		+" ln -s /datastore/vcf/"+Pipeline.muse+"/"+this.museGnosID+"/"+this.museSNVName+" /datastore/vcf/"+Pipeline.muse+"_snv.vcf && \\\n"
 
-		prepVCFs.getCommand().addArgument(" ln -s "+this.sangerNormalizedIndelVCFName+" /datastore/vcf/"+Pipeline.sanger+"_indel.vcf ; \n");
-		prepVCFs.getCommand().addArgument(" ln -s "+this.broadNormalizedIndelVCFName+" /datastore/vcf/"+Pipeline.broad+"_indel.vcf ; \n");
-		prepVCFs.getCommand().addArgument(" ln -s "+this.dkfzEmblNormalizedIndelVCFName+" /datastore/vcf/"+Pipeline.dkfz_embl+"_indel.vcf ; \n");
+		+" ln -s "+this.sangerNormalizedIndelVCFName+" /datastore/vcf/"+Pipeline.sanger+"_indel.vcf && \\\n"
+		+" ln -s "+this.broadNormalizedIndelVCFName+" /datastore/vcf/"+Pipeline.broad+"_indel.vcf && \\\n"
+		+" ln -s "+this.dkfzEmblNormalizedIndelVCFName+" /datastore/vcf/"+Pipeline.dkfz_embl+"_indel.vcf && \\\n"
 
-		prepVCFs.getCommand().addArgument(" ln -s /datastore/vcf/"+Pipeline.sanger+"/"+this.sangerGnosID+"/"+this.sangerSVName+" /datastore/vcf/"+Pipeline.sanger+"_sv.vcf ; \n");
-		prepVCFs.getCommand().addArgument(" ln -s /datastore/vcf/"+Pipeline.broad+"/"+this.broadGnosID+"/"+this.broadSVName+" /datastore/vcf/"+Pipeline.broad+"_sv.vcf ; \n");
-		prepVCFs.getCommand().addArgument(" ln -s /datastore/vcf/"+Pipeline.dkfz_embl+"/"+this.dkfzemblGnosID+"/"+this.dkfzEmblSVName+" /datastore/vcf/"+Pipeline.dkfz_embl+"_sv.vcf ; \n");
+		+" ln -s /datastore/vcf/"+Pipeline.sanger+"/"+this.sangerGnosID+"/"+this.sangerSVName+" /datastore/vcf/"+Pipeline.sanger+"_sv.vcf && \\\n"
+		+" ln -s /datastore/vcf/"+Pipeline.broad+"/"+this.broadGnosID+"/"+this.broadSVName+" /datastore/vcf/"+Pipeline.broad+"_sv.vcf && \\\n"
+		+" ln -s /datastore/vcf/"+Pipeline.dkfz_embl+"/"+this.dkfzemblGnosID+"/"+this.dkfzEmblSVName+" /datastore/vcf/"+Pipeline.dkfz_embl+"_sv.vcf ) ";
+		
+		String moveToFailed = GitUtils.gitMoveCommand("running-jobs","failed-jobs",this.JSONlocation + "/" + this.JSONrepoName + "/" + this.JSONfolderName,this.JSONfileName, this.gitMoveTestMode, this.getWorkflowBaseDir() + "/scripts/");
+		prepCommand += (" || " + moveToFailed);
+		
+		prepVCFs.setCommand(prepCommand);
 		
 		for (Job parent : parents)
 		{
@@ -490,7 +508,7 @@ public class OxoGWrapperWorkflow extends AbstractWorkflowDataModel {
 		Job vcfCombineJob = this.getWorkflow().createBashJob("Combining VCFs by type");
 		
 		//run the merge script, then bgzip and index them all.
-		vcfCombineJob.setCommand("perl "+this.getWorkflowBaseDir()+"/scripts/vcf_merge_by_type.pl "
+		String combineCommand = "( perl "+this.getWorkflowBaseDir()+"/scripts/vcf_merge_by_type.pl "
 				+ Pipeline.broad+"_snv.vcf "+Pipeline.sanger+"_snv.vcf "+Pipeline.dkfz_embl+"_snv.vcf "
 				+ Pipeline.broad+"_indel.vcf "+Pipeline.sanger+"_indel.vcf "+Pipeline.dkfz_embl+"_indel.vcf " 
 				+ Pipeline.broad+"_sv.vcf "+Pipeline.sanger+"_sv.vcf "+Pipeline.dkfz_embl+"_sv.vcf "
@@ -499,18 +517,17 @@ public class OxoGWrapperWorkflow extends AbstractWorkflowDataModel {
 				+ " -v /datastore/merged_vcfs/:/workdir/:rw \\\n"
 				+ " compbio/ngseasy-base:a1.0-002 "
 				+ " /bin/bash -c \" "
-				+ " bgzip -f /workdir/snv.clean.sorted.vcf ; \\\n"
-				+ " bgzip -f /workdir/sv.clean.sorted.vcf ; \\\n"
-				+ " bgzip -f /workdir/indel.clean.sorted.vcf ; \\\n"
-				+ " tabix -f /workdir/snv.clean.sorted.vcf.gz ; \\\n"
-				+ " tabix -f /workdir/sv.clean.sorted.vcf.gz ; \\\n"
-				+ " tabix -f /workdir/indel.clean.sorted.vcf.gz ; \\\n \"");
+				+ " tabix -f /workdir/snv.clean.sorted.vcf ; \\\n"
+				+ " tabix -f /workdir/sv.clean.sorted.vcf ; \\\n"
+				+ " tabix -f /workdir/indel.clean.sorted.vcf ; \\\n \" )"
+				+ " || "+moveToFailed;
+		vcfCombineJob.setCommand(combineCommand);
 		
 		
 		vcfCombineJob.addParent(prepVCFs);
-		this.snvVCF = "/datastore/merged_vcfs/snv.clean.sorted.vcf.gz";
-		this.svVCF = "/datastore/merged_vcfs/sv.clean.sorted.vcf.gz";
-		this.indelVCF = "/datastore/merged_vcfs/indel.clean.sorted.vcf.gz";
+		this.snvVCF = "/datastore/merged_vcfs/snv.clean.sorted.vcf";
+		this.svVCF = "/datastore/merged_vcfs/sv.clean.sorted.vcf";
+		this.indelVCF = "/datastore/merged_vcfs/indel.clean.sorted.vcf";
 		
 		return vcfCombineJob;
 	}
@@ -540,7 +557,10 @@ public class OxoGWrapperWorkflow extends AbstractWorkflowDataModel {
 				+ " /datafiles/VCF/"+Pipeline.sanger+"/" + this.sangerSNVName
 				+ " /datafiles/VCF/"+Pipeline.dkfz_embl+"/" + this.dkfzEmblSNVName 
 				+ " /datafiles/VCF/"+Pipeline.muse+"/" + this.museSNVName
-				+ " /datafiles/VCF/"+Pipeline.broad+"/" + this.broadSNVName;
+				+ " /datafiles/VCF/"+Pipeline.broad+"/" + this.broadSNVName ;
+		
+		String moveToFailed = GitUtils.gitMoveCommand("running-jobs","failed-jobs",this.JSONlocation + "/" + this.JSONrepoName + "/" + this.JSONfolderName,this.JSONfileName, this.gitMoveTestMode, this.getWorkflowBaseDir() + "/scripts/");
+		oxogCommand += (" || "+moveToFailed);
 		runOxoGWorkflow.setCommand(
 				" docker run --rm --name=\"oxog_filter\" "+oxogMounts+" oxog " + oxogCommand);
 		
@@ -567,11 +587,14 @@ public class OxoGWrapperWorkflow extends AbstractWorkflowDataModel {
 		String vcf2 = this.broadExtractedSNVVCFName; //vcfBaseDir+Pipeline.sanger.toString()+"/somatic.indel.bcftools-norm.extracted-snvs.vcf ";
 		String vcf3 = this.dkfzEmblExtractedSNVVCFName; //vcfBaseDir+Pipeline.dkfz_embl.toString()+"/somatic.indel.bcftools-norm.extracted-snvs.vcf ";
 		//String vcf4 = this.museExtractedSNVVCFName; //vcfBaseDir+Pipeline.muse.toString()+"/somatic.iindel.bcftools-norm.extracted-snvs.vcf ";
-		oxoGOnSnvsFromIndels.setCommand(this.getWorkflowBaseDir()+"/scripts/run_oxog_extracted_SNVs.sh "+
-																vcf1+" "+vcf2+" "+vcf3+" "+
-																this.normalBAMFileName+" "+this.tumourBAMFileName+" "+
-																this.aliquotID+" "+
-																this.oxoQScore);
+		String extractionCommand = this.getWorkflowBaseDir()+"/scripts/run_oxog_extracted_SNVs.sh "+
+				vcf1+" "+vcf2+" "+vcf3+" "+
+				this.normalBAMFileName+" "+this.tumourBAMFileName+" "+
+				this.aliquotID+" "+
+				this.oxoQScore;
+		String moveToFailed = GitUtils.gitMoveCommand("running-jobs","failed-jobs",this.JSONlocation + "/" + this.JSONrepoName + "/" + this.JSONfolderName,this.JSONfileName, this.gitMoveTestMode, this.getWorkflowBaseDir() + "/scripts/");
+		extractionCommand += (" || " + moveToFailed);
+		oxoGOnSnvsFromIndels.setCommand(extractionCommand);
 		oxoGOnSnvsFromIndels.addParent(parent);
 		//TODO: will probably need to find a way to extract *just* the VCF from this tar.
 		//Also, this one will be tricky: the file might not exist, but we can't determine that at 
@@ -593,6 +616,8 @@ public class OxoGWrapperWorkflow extends AbstractWorkflowDataModel {
 		Job runOxoGWorkflow = this.getWorkflow().createBashJob("Run "+bamType+" variantbam");
 
 		String command = DockerCommandCreator.createVariantBamCommand(bamType, bamPath, this.snvVCF, this.svVCF, this.indelVCF);
+		String moveToFailed = GitUtils.gitMoveCommand("running-jobs","failed-jobs",this.JSONlocation + "/" + this.JSONrepoName + "/" + this.JSONfolderName,this.JSONfileName, this.gitMoveTestMode, this.getWorkflowBaseDir() + "/scripts/");
+		command += (" || " + moveToFailed);
 		runOxoGWorkflow.setCommand(command);
 		//The bam file will need to be indexed!
 		//runOxoGWorkflow.getCommand().addArgument("\nsamtools index /datastore/variantbam_results/minibam_"+bamType+".bam ; \n");
@@ -649,8 +674,13 @@ public class OxoGWrapperWorkflow extends AbstractWorkflowDataModel {
 		//Note: It was decided there should be two uploads: one for minibams and one for VCFs (for people who want VCFs but not minibams).
 
 		Job uploadResults = this.getWorkflow().createBashJob("upload results");
-		uploadResults.setCommand("rsync /cga/fh/pcawg_pipeline/jobResults_pipette/results/" + this.aliquotID
-				+ ".oxoG.somatic.snv_mnv.vcf.gz.tar  " + this.uploadURL);
+		String command = "rsync /cga/fh/pcawg_pipeline/jobResults_pipette/results/" + this.aliquotID
+				+ ".oxoG.somatic.snv_mnv.vcf.gz.tar  " + this.uploadURL;
+		
+		String moveToFailed = GitUtils.gitMoveCommand("upload-jobs","failed-jobs",this.JSONlocation + "/" + this.JSONrepoName + "/" + this.JSONfolderName,this.JSONfileName, this.gitMoveTestMode, this.getWorkflowBaseDir() + "/scripts/");
+		command += (" || " + moveToFailed);
+
+		uploadResults.setCommand(command);
 		uploadResults.addParent(generateAnalysisFiles);
 		return uploadResults;
 	}
@@ -670,12 +700,18 @@ public class OxoGWrapperWorkflow extends AbstractWorkflowDataModel {
 		try {
 			this.init();
 			// Pull the repo.
-			Job pullRepo = GitUtils.pullRepo(this.getWorkflow(), this.GITPemFile, this.GITname, this.JSONrepo, this.JSONrepoName, this.JSONlocation, this.GITemail  );
+			Job configJob = GitUtils.gitConfig(this.getWorkflow(), this.GITname, this.GITemail);
 			
-			Job copy = this.copyCredentials(pullRepo);
+			Job copy = this.copyCredentials(configJob);
+			
+			Job pullRepo = GitUtils.pullRepo(this.getWorkflow(), this.GITPemFile, this.JSONrepo, this.JSONrepoName, this.JSONlocation);
+			pullRepo.addParent(copy);
+			
+			
 			
 			// indicate job is in downloading stage.
-			Job move2download = GitUtils.gitMove("queued-jobs", "downloading-jobs", this.getWorkflow(), this.JSONlocation, this.JSONrepoName, this.JSONfolderName, this.GITname, this.GITemail, this.gitMoveTestMode, this.JSONfileName ,copy);
+			String pathToScripts = this.getWorkflowBaseDir() + "/scripts";
+			Job move2download = GitUtils.gitMove("queued-jobs", "downloading-jobs", this.getWorkflow(), this.JSONlocation, this.JSONrepoName, this.JSONfolderName, this.GITname, this.GITemail, this.gitMoveTestMode, this.JSONfileName, pathToScripts ,copy);
 			Job move2running;
 			if (!skipDownload) {
 				//Download jobs. VCFs downloading serial. Trying to download all in parallel seems to put too great a strain on the system 
@@ -702,12 +738,12 @@ public class OxoGWrapperWorkflow extends AbstractWorkflowDataModel {
 				// but none require the inputs of the other and they are not very intense jobs.
 				// indicate job is running.
 				move2running = GitUtils.gitMove( "downloading-jobs", "running-jobs", this.getWorkflow(),
-						this.JSONlocation, this.JSONrepoName, this.JSONfolderName, this.GITname, this.GITemail, this.gitMoveTestMode, this.JSONfileName
+						this.JSONlocation, this.JSONrepoName, this.JSONfolderName, this.GITname, this.GITemail, this.gitMoveTestMode, this.JSONfileName, pathToScripts
 						, downloadSangerVCFs, downloadDkfzEmblVCFs, downloadBroadVCFs, downloadMuseVCFs, downloadNormalBam, downloadTumourBam);
 			}
 			else {
 				// If user is skipping download, then we will just move directly to runnning...
-				move2running = GitUtils.gitMove("downloading-jobs", "running-jobs", this.getWorkflow(), this.JSONlocation, this.JSONrepoName, this.JSONfolderName, this.GITname, this.GITemail, this.gitMoveTestMode, this.JSONfileName ,move2download);
+				move2running = GitUtils.gitMove("downloading-jobs", "running-jobs", this.getWorkflow(), this.JSONlocation, this.JSONrepoName, this.JSONfolderName, this.GITname, this.GITemail, this.gitMoveTestMode, this.JSONfileName , pathToScripts,move2download);
 			}
 
 			// OxoG will run after move2running. Move2running will run after all the jobs that perform input file downloads and file preprocessing have finished.  
@@ -723,14 +759,21 @@ public class OxoGWrapperWorkflow extends AbstractWorkflowDataModel {
 			Job normalVariantBam = this.doVariantBam(combineVCFsByType,BAMType.normal,"/datastore/bam/normal/"+this.normalBamGnosID+"/"+this.normalBAMFileName);
 			Job tumourVariantBam = this.doVariantBam(combineVCFsByType,BAMType.tumour,"/datastore/bam/tumour/"+this.tumourBamGnosID+"/"+this.tumourBAMFileName);
 	
-			// indicate job is in uploading stage.
-			Job move2uploading = GitUtils.gitMove("running-jobs", "uploading-jobs", this.getWorkflow(), this.JSONlocation, this.JSONrepoName, this.JSONfolderName, this.GITname, this.GITemail, this.gitMoveTestMode, this.JSONfileName , oxoGSnvsFromIndels, normalVariantBam, tumourVariantBam);
 			
 			//Now do the Upload
-			Job uploadResults = doUpload(move2uploading);
+			if (!skipUpload)
+			{
+				// indicate job is in uploading stage.
+				Job move2uploading = GitUtils.gitMove("running-jobs", "uploading-jobs", this.getWorkflow(), this.JSONlocation, this.JSONrepoName, this.JSONfolderName, this.GITname, this.GITemail, this.gitMoveTestMode, this.JSONfileName, pathToScripts , oxoGSnvsFromIndels, normalVariantBam, tumourVariantBam);
+				Job uploadResults = doUpload(move2uploading);
+				// indicate job is complete.
+				GitUtils.gitMove( "uploading-jobs", "completed-jobs", this.getWorkflow(), this.JSONlocation, this.JSONrepoName, this.JSONfolderName, this.GITname, this.GITemail, this.gitMoveTestMode, this.JSONfileName , pathToScripts, uploadResults);
+			}
+			else
+			{
+				GitUtils.gitMove( "uploading-jobs", "completed-jobs", this.getWorkflow(), this.JSONlocation, this.JSONrepoName, this.JSONfolderName, this.GITname, this.GITemail, this.gitMoveTestMode, this.JSONfileName ,pathToScripts, normalVariantBam, tumourVariantBam);				
+			}
 	
-			// indicate job is complete.
-			/*Job move2finished = */GitUtils.gitMove( "uploading-jobs", "completed-jobs", this.getWorkflow(), this.JSONlocation, this.JSONrepoName, this.JSONfolderName, this.GITname, this.GITemail, this.gitMoveTestMode, this.JSONfileName , uploadResults);
 		}
 		catch (Exception e)
 		{

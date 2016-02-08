@@ -4,6 +4,16 @@ import net.sourceforge.seqware.pipeline.workflowV2.model.Job;
 import net.sourceforge.seqware.pipeline.workflowV2.model.Workflow;
 
 class GitUtils {
+	static Job gitConfig(Workflow workflow, String GitName, String GitEmail)
+	{
+		Job configJob = workflow.createBashJob("set git name and email");
+		
+		configJob.getCommand().addArgument("git config --global user.name " + GitName + " ; \n");
+		configJob.getCommand().addArgument("git config --global user.email " + GitEmail + " ; \n");
+		configJob.getCommand().addArgument("git config --list  ; \n");
+		return configJob;
+	}
+	
 	/**
 	 * Pulls files from a git repository.
 	 * 
@@ -14,8 +24,9 @@ class GitUtils {
 	 * @param GITemail
 	 * @return
 	 */
-	static Job pullRepo(Workflow workflow, String GITPemFile, String GITname, String JSONrepo, String JSONrepoName,
-			String JSONlocation, String GITemail) {
+	static Job pullRepo(Workflow workflow, String GITPemFile,  String JSONrepo, String JSONrepoName,
+			String JSONlocation) {
+				
 		Job pullRepoJob = workflow.createBashJob("pull_git_repo");
 		pullRepoJob.getCommand().addArgument("if [[ ! -d ~/.ssh/ ]]; then  mkdir ~/.ssh; fi \n");
 		pullRepoJob.getCommand().addArgument("cp " + GITPemFile + " ~/.ssh/id_rsa \n");
@@ -23,8 +34,6 @@ class GitUtils {
 		pullRepoJob.getCommand().addArgument("echo 'StrictHostKeyChecking no' > ~/.ssh/config \n");
 		pullRepoJob.getCommand().addArgument("[ -d " + JSONlocation + " ] || mkdir -p " + JSONlocation + " \n");
 		pullRepoJob.getCommand().addArgument("cd " + JSONlocation + " \n");
-		pullRepoJob.getCommand().addArgument("git config --global user.name " + GITname + " \n");
-		pullRepoJob.getCommand().addArgument("git config --global user.email " + GITemail + " \n");
 		pullRepoJob.getCommand()
 				.addArgument("[ -d " + JSONlocation + "/" + JSONrepoName + " ] || git clone " + JSONrepo + " \n");
 		// pullRepoJob.getCommand().addArgument("echo $? \n");
@@ -56,12 +65,12 @@ class GitUtils {
 	 * @throws Exception
 	 */
 	static Job gitMove(String src, String dst, Workflow workflow, String JSONlocation, String JSONrepoName,
-			String JSONfolderName, String GITname, String GITemail, boolean gitMoveTestMode, String JSONfileName,
+			String JSONfolderName, String GITname, String GITemail, boolean gitMoveTestMode, String JSONfileName, String pathToScripts,
 			Job... parents) throws Exception {
 		if (parents == null || parents.length == 0) {
 			throw new Exception("You must provide at least one parent job!");
 		}
-		Job manageGit = workflow.createBashJob("git_manage_" + src + "_" + dst);
+/*		Job manageGit = workflow.createBashJob("git_manage_" + src + "_" + dst);
 		String path = JSONlocation + "/" + JSONrepoName + "/" + JSONfolderName;
 		// It shouldn't be necessary to do this config again if it was already
 		// done in pullRepo, but probably safer this way.
@@ -94,10 +103,29 @@ class GitUtils {
 					+ JSONfileName + " " + path + "/" + dst + "; fi \n");
 		}
 
+*/
+		Job gitMove = workflow.createBashJob("git_move_from_"+src+"_to_"+dst);
+		
+//		gitMove.setCommand("python "+workflow.getWorkflowBundleDir()+"/scripts/git_move.py ");
+//		gitMove.getCommand().addArgument(JSONlocation + "/" + JSONrepoName + "/" + JSONfolderName );
+//		gitMove.getCommand().addArgument(src);
+//		gitMove.getCommand().addArgument(dst);
+//		gitMove.getCommand().addArgument(JSONfileName);
+//		//Ensure that string going to python script is formatted properly.
+//		String testModeStr = String.valueOf(gitMoveTestMode);
+//		gitMove.getCommand().addArgument( testModeStr.substring(0,1).toUpperCase() + testModeStr.substring(1) );
+		
+		gitMove.setCommand(gitMoveCommand(src, dst, JSONlocation + "/" + JSONrepoName + "/" + JSONfolderName, JSONfileName, gitMoveTestMode,pathToScripts ));
 		for (Job p : parents) {
-			manageGit.addParent(p);
+			gitMove.addParent(p);
 		}
-
-		return manageGit;
+		return gitMove;
+	}
+	
+	static String gitMoveCommand(String src, String dst, String pathToRootDir, String filename, boolean testMode, String pathToScriptDir)
+	{
+		String testModeStr = String.valueOf(testMode);
+		String cmd = "python "+pathToScriptDir + "/git_move.py" + " "+ pathToRootDir + " "+src + " "+dst + " "+filename + " " + testModeStr;
+		return cmd;
 	}
 }

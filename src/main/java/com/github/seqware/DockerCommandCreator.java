@@ -54,7 +54,7 @@ public class DockerCommandCreator {
 		containerCommandArgs.add("-l /indel.vcf");
 
 		command = DockerCommandCreator.createDockerRunCommand("oxog", mountedObjects, runOpts,
-				" bgzip -f -d /snv.vcf.gz ; bgzip -f -d /sv.vcf.gz ; bgzip -f -d /indel.vcf.gz ; /cga/fh/pcawg_pipeline/modules/VariantBam/variant", containerCommandArgs);
+				"  /cga/fh/pcawg_pipeline/modules/VariantBam/variant", containerCommandArgs);
 
 		return command;
 	}
