@@ -3,13 +3,15 @@
 VCF1=$1
 VCF2=$2
 VCF3=$3
-
+# MAKE SURE THAT TUMOUR IS BAM1
 BAM1=$4
 BAM2=$5
 
 ALIQUOTID=$6
 
 OXOQSCORE=$7
+
+# TODO: INCLUDE MUSE
 
 NUMINDELS1=$(zcat $VCF1 | grep "^[^#]" | wc -l)
 echo "$VCF1 has $NUMINDELS1 INDELS"
@@ -41,7 +43,6 @@ if [[ $VCFFORDOCKER != "" ]] ; then
 
     sudo docker run --rm --name="oxog_container_snv_from_indel" \
                 -v /datastore/refdata/:/cga/fh/pcawg_pipeline/refdata/ \
-                -v /datastore/oncotator_db/:/cga/fh/pcawg_pipeline/refdata/public/oncotator_db/ \
                 -v /datastore/oxog_workspace_extracted_snvs/:/cga/fh/pcawg_pipeline/jobResults_pipette/jobs/${ALIQUOTID}/:rw \
                 -v /datastore/bam/:/datafiles/BAM/ \
             	${VCFFORDOCKER} \
@@ -52,6 +53,11 @@ if [[ $VCFFORDOCKER != "" ]] ; then
                 /datafiles/BAM/${BAM2} \
                 ${OXOQSCORE} \
             	${VCFFOROXOG}
+            	
+	tar -xf /datastore/oxog_results_extracted_snvs/${ALIQUOTID}.gnos_files.tar 
+	[ -d /datastore/files_to_upload/snvs_from_indels ] || mkdir -p /datastore/files_to_upload/snvs_from_indels
+	cp /datastore/oxog_results_extracted_snvs/cga/fh/pcawg_pipeline/jobResults_pipette/jobs/${ALIQUOTID}/links_for_gnos/annotate_failed_sites_to_vcfs/*.vcf.* /datastore/files_to_upload/snvs_from_indels/
+	
 else
 	echo "There were NO SNVs extracted from INDELs to run OxoG on."
 fi
