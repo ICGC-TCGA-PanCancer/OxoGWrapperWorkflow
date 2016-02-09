@@ -9,6 +9,7 @@ import java.nio.file.Paths;
 import java.nio.file.StandardOpenOption;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.stream.Collectors;
 
 import net.sourceforge.seqware.pipeline.workflowV2.AbstractWorkflowDataModel;
 import net.sourceforge.seqware.pipeline.workflowV2.model.Job;
@@ -118,6 +119,7 @@ public class OxoGWrapperWorkflow extends AbstractWorkflowDataModel {
 	private String refFile = "pcawg/genome.fa";
 	private String tumourBamGnosID;
 	private String normalBamGnosID;
+	private String uploadKey;
 	
 	/**
 	 * Get a property name that is mandatory
@@ -649,21 +651,50 @@ public class OxoGWrapperWorkflow extends AbstractWorkflowDataModel {
 	private Job doUpload(Job parentJob) {
 		// Will need to run gtupload to generate the analysis.xml and manifest files (but not actually upload). 
 		// The tar file contains all results.
-		Job generateAnalysisFiles = this.getWorkflow().createBashJob("generate_analysis_files_for_upload");
+		Job generateAnalysisFilesVCFs = this.getWorkflow().createBashJob("generate_analysis_files_for_VCF_upload");
 		
 		//Files to upload:
 		//OxoG files
 		//minibams
 		//other intermediate files?
 		
-		//first thing to do is generate MD5 sums for all uploadable files.
-		for (String file : this.filesToUpload)
+		generateAnalysisFilesVCFs.getCommand().addArgument("[ -d /datastore/files_for_upload ] || mkdir -p /datastore/files_for_upload ; \n");
+		
+		//Files need to be copied to the staging directory
+		String vcfs = "";
+		String vcfIndicies = "";
+		String vcfMD5Sums = "";
+		String vcfIndexMD5Sums = "";
+		for (String file : this.filesToUpload.stream().filter(p -> p.contains(".vcf") ).collect(Collectors.toList()) )
 		{
 			//md5sum test_files/tumour_minibam.bam.bai | cut -d ' ' -f 1 > test_files/tumour_minibam.bai.md5
-			generateAnalysisFiles.getCommand().addArgument(" md5sum "+file+" | cut -d ' ' -f 1 > "+file+".md5 \n");
+			generateAnalysisFilesVCFs.getCommand().addArgument(" md5sum "+file+" | cut -d ' ' -f 1 > "+file+".md5 \n");
+			
+			if (file.contains(".tbi"))
+			{
+				vcfIndicies += file + ",";
+				vcfIndexMD5Sums += file + ".md5" + ",";
+			}
+			else
+			{
+				vcfs += file + ",";
+				vcfMD5Sums += file + ".md5" + ",";	 
+			}
+			
 		}
-		generateAnalysisFiles.addParent(parentJob);
+		generateAnalysisFilesVCFs.getCommand().addArgument("docker run pancancer/pancancer_upload_download /bin/bash -c"
+				+ "\" /opt/vcf-uploader/vcf-uploader-2.0.9/gnos_upload_vcf --gto-only --pem "+this.uploadKey+" "
+						+ "--metadata-urls "+this.normalMetdataURL+","+this.tumourMetdataURL
+						+ "--vcfs "+vcfs
+						+ "--vcf-idx "+vcfIndicies
+						+ "--vcf-md5sum-files "+vcfMD5Sums
+						+ "--vcf-idx-md5sum-files "+vcfIndexMD5Sums
+						+ "--workflow-name OxoGWorkflow"
+				+ "\"");
 		
+		
+		generateAnalysisFilesVCFs.addParent(parentJob);
+
 		//Note: It was decided there should be two uploads: one for minibams and one for VCFs (for people who want VCFs but not minibams).
 
 		Job uploadResults = this.getWorkflow().createBashJob("upload results");
@@ -674,7 +705,7 @@ public class OxoGWrapperWorkflow extends AbstractWorkflowDataModel {
 		command += (" || " + moveToFailed);
 
 		uploadResults.setCommand(command);
-		uploadResults.addParent(generateAnalysisFiles);
+		uploadResults.addParent(generateAnalysisFilesVCFs);
 		return uploadResults;
 	}
 	
