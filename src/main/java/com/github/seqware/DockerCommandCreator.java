@@ -33,7 +33,7 @@ public class DockerCommandCreator {
 		return sb.toString();
 	}
 
-	static String createVariantBamCommand(BAMType bamType, String bamPath, String snvVCF, String svVCF, String indelVCF) {
+	static String createVariantBamCommand(BAMType bamType, String aliquotID, String bamPath, String snvVCF, String svVCF, String indelVCF) {
 		String command = "";
 
 		Map<String, String> mountedObjects = new HashMap<String, String>(6);
@@ -47,11 +47,13 @@ public class DockerCommandCreator {
 		runOpts.add("--rm");
 		runOpts.add("--name=\"oxog_variantbam_" + bamType + "\"");
 		List<String> containerCommandArgs = new ArrayList<String>(12);
-		containerCommandArgs.add("-o /outdir/minibam_" + bamType + ".bam");
+		containerCommandArgs.add("-o /outdir/"+aliquotID+"_minibam_" + bamType + ".bam");
 		containerCommandArgs.add("-i /input.bam");
 		containerCommandArgs.add("-l /snv.vcf");
 		containerCommandArgs.add("-l /sv.vcf");
 		containerCommandArgs.add("-l /indel.vcf");
+		//UGLY!! - rethink this whole DockerComandCreator...
+		containerCommandArgs.add(" && samtools index  /outdir/"+aliquotID+"_minibam_" + bamType + ".bam");
 
 		command = DockerCommandCreator.createDockerRunCommand("oxog", mountedObjects, runOpts,
 				"  /cga/fh/pcawg_pipeline/modules/VariantBam/variant", containerCommandArgs);
