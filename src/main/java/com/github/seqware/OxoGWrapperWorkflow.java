@@ -393,8 +393,8 @@ public class OxoGWrapperWorkflow extends AbstractWorkflowDataModel {
 	private Job preProcessVCF(Job parent, Pipeline workflowName, String vcfName )
 	{
 		String outDir = "/datastore/vcf/"+workflowName;
-		String normalizedINDELName = workflowName+"_somatic.indel.bcftools-norm.vcf.gz";
-		String extractedSNVVCFName = workflowName+"_somatic.indel.bcftools-norm.extracted-snvs.vcf";
+		String normalizedINDELName = this.aliquotID+ "_"+ workflowName+"_somatic.indel.bcftools-norm.vcf.gz";
+		String extractedSNVVCFName = this.aliquotID+ "_"+ workflowName+"_somatic.indel.bcftools-norm.extracted-snvs.vcf";
 		String fixedIndel = vcfName.replace("indel.", "indel.fixed.");
 		// TODO: Many of these steps below could probably be combined into a single Job
 		// that makes runs a single docker container, but executes multiple commands.
@@ -536,7 +536,7 @@ public class OxoGWrapperWorkflow extends AbstractWorkflowDataModel {
 	private Job doOxoG(Job parent) {
 		Job runOxoGWorkflow = this.getWorkflow().createBashJob("Run OxoG Filter");
 		String oxogMounts = " -v /datastore/refdata/:/cga/fh/pcawg_pipeline/refdata/ \\\n"
-				+ " -v /datastore/oncotator_db/:/cga/fh/pcawg_pipeline/refdata/public/oncotator_db/ \\\n"  
+				//+ " -v /datastore/oncotator_db/:/cga/fh/pcawg_pipeline/refdata/public/oncotator_db/ \\\n"  
 				+ " -v /datastore/oxog_workspace/:/cga/fh/pcawg_pipeline/jobResults_pipette/jobs/"+this.aliquotID+"/:rw \\\n" 
 				+ " -v /datastore/bam/:/datafiles/BAM/ \\\n"
 				+ " -v /datastore/vcf/"+Pipeline.broad+"/"+this.broadGnosID+"/"+"/:/datafiles/VCF/"+Pipeline.broad+"/ \\\n"
@@ -562,10 +562,19 @@ public class OxoGWrapperWorkflow extends AbstractWorkflowDataModel {
 		runOxoGWorkflow.addParent(parent);
 		//Job getLogs = this.getOxoGLogs(runOxoGWorkflow);
 		
-		//TODO: will probably need to find a way to extract *just* the VCF (and the index - or create a new index) from this tar.
-		this.filesToUpload.add("/datastore/oxog_results/*.gnos_files.tar");
+		Job extractOutputFiles = this.getWorkflow().createBashJob("extract oxog output files from tar");
+		extractOutputFiles.setCommand("tar -xvf /datastore/oxog_results/"+this.aliquotID+".gnos_files.tar ");
+		extractOutputFiles.addParent(runOxoGWorkflow);
+		this.filesToUpload.add("/datastore/oxog_results/cga/fh/pcawg_pipeline/jobResults_pipette/jobs/"+this.aliquotID+"/links_for_gnos/annotate_failed_sites_to_vcfs/"+this.aliquotID+".broad-mutect-*.somatic.snv_mnv.oxoG.vcf.gz");
+		this.filesToUpload.add("/datastore/oxog_results/cga/fh/pcawg_pipeline/jobResults_pipette/jobs/"+this.aliquotID+"/links_for_gnos/annotate_failed_sites_to_vcfs/"+this.aliquotID+".dkfz-snvCalling_*.somatic.snv_mnv.oxoG.vcf.gz");
+		this.filesToUpload.add("/datastore/oxog_results/cga/fh/pcawg_pipeline/jobResults_pipette/jobs/"+this.aliquotID+"/links_for_gnos/annotate_failed_sites_to_vcfs/"+this.aliquotID+".svcp_*.somatic.snv_mnv.oxoG.vcf.gz");
+		this.filesToUpload.add("/datastore/oxog_results/cga/fh/pcawg_pipeline/jobResults_pipette/jobs/"+this.aliquotID+"/links_for_gnos/annotate_failed_sites_to_vcfs/"+this.aliquotID+".MUSE_1-0rc-vcf.*.somatic.snv_mnv.oxoG.vcf.gz");
+		this.filesToUpload.add("/datastore/oxog_results/cga/fh/pcawg_pipeline/jobResults_pipette/jobs/"+this.aliquotID+"/links_for_gnos/annotate_failed_sites_to_vcfs/"+this.aliquotID+".broad-mutect-*.somatic.snv_mnv.oxoG.vcf.gz.tbi");
+		this.filesToUpload.add("/datastore/oxog_results/cga/fh/pcawg_pipeline/jobResults_pipette/jobs/"+this.aliquotID+"/links_for_gnos/annotate_failed_sites_to_vcfs/"+this.aliquotID+".dkfz-snvCalling_*.somatic.snv_mnv.oxoG.vcf.gz.tbi");
+		this.filesToUpload.add("/datastore/oxog_results/cga/fh/pcawg_pipeline/jobResults_pipette/jobs/"+this.aliquotID+"/links_for_gnos/annotate_failed_sites_to_vcfs/"+this.aliquotID+".svcp_*.somatic.snv_mnv.oxoG.vcf.gz.tbi");
+		this.filesToUpload.add("/datastore/oxog_results/cga/fh/pcawg_pipeline/jobResults_pipette/jobs/"+this.aliquotID+"/links_for_gnos/annotate_failed_sites_to_vcfs/"+this.aliquotID+".MUSE_1-0rc-vcf.*.somatic.snv_mnv.oxoG.vcf.gz.tbi");
 
-		return runOxoGWorkflow;
+		return extractOutputFiles;
 	}
 
 	/**
@@ -591,11 +600,9 @@ public class OxoGWrapperWorkflow extends AbstractWorkflowDataModel {
 		extractionCommand += (" || " + moveToFailed);
 		oxoGOnSnvsFromIndels.setCommand(extractionCommand);
 		oxoGOnSnvsFromIndels.addParent(parent);
-		//TODO: will probably need to find a way to extract *just* the VCF from this tar.
-		//Also, this one will be tricky: the file might not exist, but we can't determine that at 
-		//workflow-build time - it will only be known once the scripts start running. Might need 
-		//to add this to the upload programatically...
-		this.filesToUpload.add("/datastore/oxog_results_extracted_snvs/*.gnos_files.tar");
+		// At workflow-build time, we won't know if there's any files to upload from this step. So...
+		// The script run_oxog_extracted_SNVs.sh will un-tar the tar file if it exists and copy the files to /datastore/files_to_upload
+		// and then ... somehow we have to include those (if they exist) in the vcf-upload script. :/
 		
 		return oxoGOnSnvsFromIndels;
 	}
@@ -610,15 +617,15 @@ public class OxoGWrapperWorkflow extends AbstractWorkflowDataModel {
 	private Job doVariantBam(Job parent, BAMType bamType, String bamPath) {
 		Job runOxoGWorkflow = this.getWorkflow().createBashJob("Run "+bamType+" variantbam");
 
-		String command = DockerCommandCreator.createVariantBamCommand(bamType, bamPath, this.snvVCF, this.svVCF, this.indelVCF);
+		String command = DockerCommandCreator.createVariantBamCommand(bamType, this.aliquotID, bamPath, this.snvVCF, this.svVCF, this.indelVCF);
 		String moveToFailed = GitUtils.gitMoveCommand("running-jobs","failed-jobs",this.JSONlocation + "/" + this.JSONrepoName + "/" + this.JSONfolderName,this.JSONfileName, this.gitMoveTestMode, this.getWorkflowBaseDir() + "/scripts/");
 		command += (" || " + moveToFailed);
 		runOxoGWorkflow.setCommand(command);
 		//The bam file will need to be indexed!
 		//runOxoGWorkflow.getCommand().addArgument("\nsamtools index /datastore/variantbam_results/minibam_"+bamType+".bam ; \n");
 		
-		this.filesToUpload.add("/datastore/variantbam_results/minibam_"+bamType+".bam");
-		this.filesToUpload.add("/datastore/variantbam_results/minibam_"+bamType+".bai");
+		this.filesToUpload.add("/datastore/variantbam_results/"+this.aliquotID+"minibam_"+bamType+".bam");
+		this.filesToUpload.add("/datastore/variantbam_results/"+this.aliquotID+"minibam_"+bamType+".bai");
 		runOxoGWorkflow.addParent(parent);
 		
 		//Job getLogs = this.getOxoGLogs(runOxoGWorkflow);
@@ -668,9 +675,9 @@ public class OxoGWrapperWorkflow extends AbstractWorkflowDataModel {
 		for (String file : this.filesToUpload.stream().filter(p -> p.contains(".vcf") ).collect(Collectors.toList()) )
 		{
 			//md5sum test_files/tumour_minibam.bam.bai | cut -d ' ' -f 1 > test_files/tumour_minibam.bai.md5
-			generateAnalysisFilesVCFs.getCommand().addArgument(" md5sum "+file+" | cut -d ' ' -f 1 > "+file+".md5 \n");
+			generateAnalysisFilesVCFs.getCommand().addArgument(" md5sum "+file+" | cut -d ' ' -f 1 > "+file+".md5 ; \n");
 			
-			if (file.contains(".tbi"))
+			if (file.contains(".tbi") || file.contains(".idx"))
 			{
 				vcfIndicies += file + ",";
 				vcfIndexMD5Sums += file + ".md5" + ",";
@@ -682,21 +689,68 @@ public class OxoGWrapperWorkflow extends AbstractWorkflowDataModel {
 			}
 			
 		}
-		generateAnalysisFilesVCFs.getCommand().addArgument("docker run pancancer/pancancer_upload_download /bin/bash -c"
+		//This ugliness is here because of the OxoG results on SNVs from INDELs. We won't know until the workflow actually runs if there are any SNVs from INDELs.
+		//So we need to build up the list of files to upload using a bash script that will be evaluated at runtime rather
+		//than Java code that gets evaluated when the workflow is built.
+		generateAnalysisFilesVCFs.getCommand().addArgument("SNV_FROM_INDEL_OXOG=\'\'\n"
+															+ "SNV_FROM_INDEL_OXOG_INDEX=\'\'\n"
+															+ "SNV_FROM_INDEL_OXOG_MD5=\'\'\n"
+															+ "SNV_FROM_INDEL_OXOG_INDEX_MD5=\'\'\n"
+															+ "[ -d /datastore/files_to_upload/snvs_from_indels/ ] &&  for f in $(ls /datastore/files_to_upload/snvs_from_indels/) ; do \n"
+															+ "    mv $f /datastore/files_to_upload/$f \n"
+															+ "    md5sum $f | cud -d ' ' -f 1 > $f.md5 \n"
+															+ "    if [[ \"$f\" =~ tbi|idx ]] ; then \n"
+															+ "        SNV_FROM_INDEL_OXOG_INDEX=$SNV_FROM_INDEL_OXOG_INDEX,$f\n"
+															+ "        SNV_FROM_INDEL_OXOG_INDEX_MD5=$SNV_FROM_INDEL_OXOG_INDEX_MD5,$f\n"
+															+ "    else \n"
+															+ "        SNV_FROM_INDEL_OXOG=$SNV_FROM_INDEL_OXOG,$f\n"
+															+ "        SNV_FROM_INDEL_OXOG_MD5=$SNV_FROM_INDEL_OXOG_MD5,$f\n"
+															+ "    fi\n"
+															+ "done");
+		generateAnalysisFilesVCFs.getCommand().addArgument("set -x ; docker run pancancer/pancancer_upload_download /bin/bash -c"
 				+ "\" /opt/vcf-uploader/vcf-uploader-2.0.9/gnos_upload_vcf --gto-only --pem "+this.uploadKey+" "
-						+ "--metadata-urls "+this.normalMetdataURL+","+this.tumourMetdataURL
-						+ "--vcfs "+vcfs
-						+ "--vcf-idx "+vcfIndicies
-						+ "--vcf-md5sum-files "+vcfMD5Sums
-						+ "--vcf-idx-md5sum-files "+vcfIndexMD5Sums
-						+ "--workflow-name OxoGWorkflow"
+						+ " --metadata-urls "+this.normalMetdataURL+","+this.tumourMetdataURL
+						+ " --vcfs $SNV_FROM_INDEL_OXOG"+vcfs
+						+ " --vcf-idx $SNV_FROM_INDEL_OXOG_INDEX"+vcfIndicies
+						+ " --vcf-md5sum-files $SNV_FROM_INDEL_OXOG_MD5"+vcfMD5Sums
+						+ " --vcf-idx-md5sum-files $SNV_FROM_INDEL_OXOG_INDEX_MD5"+vcfIndexMD5Sums
+						+ " --workflow-name OxoGWorkflow-OxoGFiltering"
+				+ "\" set +x;");
+		Job generateAnalysisFilesBAMs = this.getWorkflow().createBashJob("generate_analysis_files_for_BAM_upload");
+		
+		String bams = "";
+		String bamIndicies = "";
+		String bamMD5Sums = "";
+		String bamIndexMD5Sums = "";
+		for (String file : this.filesToUpload.stream().filter(p -> p.contains(".bam") || p.contains(".bai") ).collect(Collectors.toList()) )
+		{
+			//md5sum test_files/tumour_minibam.bam.bai | cut -d ' ' -f 1 > test_files/tumour_minibam.bai.md5
+			generateAnalysisFilesBAMs.getCommand().addArgument(" md5sum "+file+" | cut -d ' ' -f 1 > "+file+".md5 ; \n");
+			
+			if (file.contains(".bai") )
+			{
+				bamIndicies += file + ",";
+				bamIndexMD5Sums += file + ".md5" + ",";
+			}
+			else
+			{
+				bams += file + ",";
+				bamMD5Sums += file + ".md5" + ",";	 
+			}
+			
+		}
+		generateAnalysisFilesBAMs.getCommand().addArgument("docker run pancancer/pancancer_upload_download /bin/bash -c"
+				+ "\" /opt/vcf-uploader/vcf-uploader-2.0.9/gnos_upload_vcf --gto-only --pem "+this.uploadKey+" "
+						+ " --metadata-urls "+this.normalMetdataURL+","+this.tumourMetdataURL
+						+ " --bams "+bams
+						+ " --bam-bais "+bamIndicies
+						+ " --bam-md5sum-files "+bamMD5Sums
+						+ " --bam-bai-md5sum-files "+bamIndexMD5Sums
+						+ " --workflow-name OxoGWorkflow-variantbam"
 				+ "\"");
-		
-		
-		generateAnalysisFilesVCFs.addParent(parentJob);
+		generateAnalysisFilesBAMs.addParent(parentJob);
 
 		//Note: It was decided there should be two uploads: one for minibams and one for VCFs (for people who want VCFs but not minibams).
-
 		Job uploadResults = this.getWorkflow().createBashJob("upload results");
 		String command = "rsync /cga/fh/pcawg_pipeline/jobResults_pipette/results/" + this.aliquotID
 				+ ".oxoG.somatic.snv_mnv.vcf.gz.tar  " + this.uploadURL;
@@ -706,6 +760,7 @@ public class OxoGWrapperWorkflow extends AbstractWorkflowDataModel {
 
 		uploadResults.setCommand(command);
 		uploadResults.addParent(generateAnalysisFilesVCFs);
+		uploadResults.addParent(generateAnalysisFilesBAMs);
 		return uploadResults;
 	}
 	
