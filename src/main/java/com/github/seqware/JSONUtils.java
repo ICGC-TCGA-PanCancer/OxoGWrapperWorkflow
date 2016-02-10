@@ -16,6 +16,8 @@ public abstract class JSONUtils {
 
 	static final String OXOQ_SCORE = "OxoQScore";
 
+	// ugh... so many constants. There's probably a more elegant way to do this, seeing as most 
+	// of them follow a pattern. Just don't have time to fix that right now.
 	static final String BROAD_SNV_VCF_OBJECT_ID = "broad_snv_data_object_id";
 	static final String BROAD_SNV_VCF_NAME = "broad_snv_data_file_name";
 	static final String DKFZEMBL_SNV_VCF_OBJECT_ID = "dkfz_embl_snv_data_object_id";
@@ -219,9 +221,6 @@ public abstract class JSONUtils {
 			String projectCode = (String) (parsedJSON.read("$.project_code", String.class));
 			results.put(PROJECT_CODE, projectCode);
 
-		} catch (FileNotFoundException e) {
-			// TODO Auto-generated catch block
-			e.printStackTrace();
 		} catch (IOException e) {
 			// TODO Auto-generated catch block
 			e.printStackTrace();

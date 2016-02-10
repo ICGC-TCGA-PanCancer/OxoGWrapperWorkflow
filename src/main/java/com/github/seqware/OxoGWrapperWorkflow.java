@@ -18,6 +18,7 @@ import net.sourceforge.seqware.pipeline.workflowV2.model.Job;
 
 public class OxoGWrapperWorkflow extends AbstractWorkflowDataModel {
 
+	//ugh... so many fields. There's probably a better way to do this, just no time right now.
 	private String oxoQScore = "";
 	// private String donorID;
 	private String aliquotID;
@@ -394,7 +395,7 @@ public class OxoGWrapperWorkflow extends AbstractWorkflowDataModel {
 		String fixedIndel = vcfName.replace("indel.", "indel.fixed.");
 		// TODO: Many of these steps below could probably be combined into a single Job
 		// that makes runs a single docker container, but executes multiple commands.
-		Job bcfToolsNormJob = this.getWorkflow().createBashJob("Normalize "+workflowName+" Indels");
+		Job bcfToolsNormJob = this.getWorkflow().createBashJob("normalize "+workflowName+" Indels");
 		String runBCFToolsNormCommand = "docker run --rm --name normalize_indel_"+workflowName+" "
 					+ " -v "+outDir+"/"+vcfName+":/datastore/datafile.vcf.gz "
 					+ " -v "+outDir+"/"+":/outdir/:rw "
@@ -477,7 +478,7 @@ public class OxoGWrapperWorkflow extends AbstractWorkflowDataModel {
 	private Job combineVCFsByType(Job ... parents)
 	{
 		//Create symlinks to the files in the proper directory.
-		Job prepVCFs = this.getWorkflow().createBashJob("Create links to VCFs");
+		Job prepVCFs = this.getWorkflow().createBashJob("create links to VCFs");
 		String prepCommand = "";
 		prepCommand+="\n ( sudo mkdir /datastore/merged_vcfs/ && sudo chmod a+rw /datastore/merged_vcfs && \\\n"
 		+"\n ln -s /datastore/vcf/"+Pipeline.sanger+"/"+this.sangerGnosID+"/"+this.sangerSNVName+" /datastore/vcf/"+Pipeline.sanger+"_snv.vcf && \\\n"
@@ -503,11 +504,11 @@ public class OxoGWrapperWorkflow extends AbstractWorkflowDataModel {
 			prepVCFs.addParent(parent);
 		}
 		
-		Job vcfCombineJob = this.getWorkflow().createBashJob("Combining VCFs by type");
+		Job vcfCombineJob = this.getWorkflow().createBashJob("combining VCFs by type");
 		
 		//run the merge script, then bgzip and index them all.
 		String combineCommand = "( perl "+this.getWorkflowBaseDir()+"/scripts/vcf_merge_by_type.pl "
-				+ Pipeline.broad+"_snv.vcf "+Pipeline.sanger+"_snv.vcf "+Pipeline.dkfz_embl+"_snv.vcf "
+				+ Pipeline.broad+"_snv.vcf "+Pipeline.sanger+"_snv.vcf "+Pipeline.dkfz_embl+"_snv.vcf "+Pipeline.muse+"_snv.vcf "
 				+ Pipeline.broad+"_indel.vcf "+Pipeline.sanger+"_indel.vcf "+Pipeline.dkfz_embl+"_indel.vcf " 
 				+ Pipeline.broad+"_sv.vcf "+Pipeline.sanger+"_sv.vcf "+Pipeline.dkfz_embl+"_sv.vcf "
 				+ " /datastore/vcf/ /datastore/merged_vcfs/ "
@@ -529,7 +530,7 @@ public class OxoGWrapperWorkflow extends AbstractWorkflowDataModel {
 	 * @return
 	 */
 	private Job doOxoG(Job parent) {
-		Job runOxoGWorkflow = this.getWorkflow().createBashJob("Run OxoG Filter");
+		Job runOxoGWorkflow = this.getWorkflow().createBashJob("run OxoG Filter");
 		String oxogMounts = " -v /datastore/refdata/:/cga/fh/pcawg_pipeline/refdata/ \\\n"
 				//+ " -v /datastore/oncotator_db/:/cga/fh/pcawg_pipeline/refdata/public/oncotator_db/ \\\n"  
 				+ " -v /datastore/oxog_workspace/:/cga/fh/pcawg_pipeline/jobResults_pipette/jobs/"+this.aliquotID+"/:rw \\\n" 
@@ -539,20 +540,20 @@ public class OxoGWrapperWorkflow extends AbstractWorkflowDataModel {
 				+ " -v /datastore/vcf/"+Pipeline.dkfz_embl+"/"+this.dkfzemblGnosID+"/"+"/:/datafiles/VCF/"+Pipeline.dkfz_embl+"/ \\\n"
 				+ " -v /datastore/vcf/"+Pipeline.muse+"/"+this.museGnosID+"/"+"/:/datafiles/VCF/"+Pipeline.muse+"/ \\\n"
 				+ " -v /datastore/oxog_results/:/cga/fh/pcawg_pipeline/jobResults_pipette/results:rw \\\n";
-		String oxogCommand = "/cga/fh/pcawg_pipeline/pipelines/run_one_pipeline.bash pcawg /cga/fh/pcawg_pipeline/pipelines/oxog_pipeline.py "
-				+ this.aliquotID
-				+ " /datafiles/BAM/tumour/" + this.tumourBamGnosID + "/" + this.tumourBAMFileName 
-				+ " /datafiles/BAM/normal/" +this.normalBamGnosID + "/" +  this.normalBAMFileName 
-				+ " " + this.oxoQScore + " "
-				+ " /datafiles/VCF/"+Pipeline.sanger+"/" + this.sangerSNVName
-				+ " /datafiles/VCF/"+Pipeline.dkfz_embl+"/" + this.dkfzEmblSNVName 
-				+ " /datafiles/VCF/"+Pipeline.muse+"/" + this.museSNVName
-				+ " /datafiles/VCF/"+Pipeline.broad+"/" + this.broadSNVName ;
+		String oxogCommand = "/cga/fh/pcawg_pipeline/pipelines/run_one_pipeline.bash pcawg /cga/fh/pcawg_pipeline/pipelines/oxog_pipeline.py \\\n"
+				+ this.aliquotID + " \\\n"
+				+ " /datafiles/BAM/tumour/" + this.tumourBamGnosID + "/" + this.tumourBAMFileName + " \\\n" 
+				+ " /datafiles/BAM/normal/" +this.normalBamGnosID + "/" +  this.normalBAMFileName + " \\\n" 
+				+ " " + this.oxoQScore + " \\\n"
+				+ " /datafiles/VCF/"+Pipeline.sanger+"/" + this.sangerSNVName + " \\\n"
+				+ " /datafiles/VCF/"+Pipeline.dkfz_embl+"/" + this.dkfzEmblSNVName  + " \\\n"
+				+ " /datafiles/VCF/"+Pipeline.muse+"/" + this.museSNVName + " \\\n"
+				+ " /datafiles/VCF/"+Pipeline.broad+"/" + this.broadSNVName + " \\\n;" ;
 		
 		String moveToFailed = GitUtils.gitMoveCommand("running-jobs","failed-jobs",this.JSONlocation + "/" + this.JSONrepoName + "/" + this.JSONfolderName,this.JSONfileName, this.gitMoveTestMode, this.getWorkflowBaseDir() + "/scripts/");
 
 		runOxoGWorkflow.setCommand(
-				" docker run --rm --name=\"oxog_filter\" "+oxogMounts+" oxog /bin/bash -c \"" + oxogCommand+ "\" || "+moveToFailed);
+				"( docker run --rm --name=\"oxog_filter\" "+oxogMounts+" oxog /bin/bash -c \"" + oxogCommand+ "\" ) 	|| "+moveToFailed);
 		
 		runOxoGWorkflow.addParent(parent);
 		//Job getLogs = this.getOxoGLogs(runOxoGWorkflow);
@@ -580,7 +581,7 @@ public class OxoGWrapperWorkflow extends AbstractWorkflowDataModel {
 	 * @return
 	 */
 	private Job doOxoGSnvsFromIndels(Job parent) {
-		Job oxoGOnSnvsFromIndels = this.getWorkflow().createBashJob("Running OxoG on SNVs from INDELs");
+		Job oxoGOnSnvsFromIndels = this.getWorkflow().createBashJob("running OxoG on SNVs from INDELs");
 		//String vcfBaseDir = "/datastore/vcf/";
 		String vcf1 = this.sangerExtractedSNVVCFName; //vcfBaseDir+Pipeline.broad.toString()+"/somatic.indel.bcftools-norm.extracted-snvs.vcf ";
 		String vcf2 = this.broadExtractedSNVVCFName; //vcfBaseDir+Pipeline.sanger.toString()+"/somatic.indel.bcftools-norm.extracted-snvs.vcf ";
@@ -610,7 +611,7 @@ public class OxoGWrapperWorkflow extends AbstractWorkflowDataModel {
 	 * @return
 	 */
 	private Job doVariantBam(Job parent, BAMType bamType, String bamPath) {
-		Job runOxoGWorkflow = this.getWorkflow().createBashJob("Run "+bamType+" variantbam");
+		Job runOxoGWorkflow = this.getWorkflow().createBashJob("run "+bamType+" variantbam");
 
 		String command = DockerCommandCreator.createVariantBamCommand(bamType, this.aliquotID, bamPath, this.snvVCF, this.svVCF, this.indelVCF);
 		String moveToFailed = GitUtils.gitMoveCommand("running-jobs","failed-jobs",this.JSONlocation + "/" + this.JSONrepoName + "/" + this.JSONfolderName,this.JSONfileName, this.gitMoveTestMode, this.getWorkflowBaseDir() + "/scripts/");
@@ -702,7 +703,7 @@ public class OxoGWrapperWorkflow extends AbstractWorkflowDataModel {
 															+ "        SNV_FROM_INDEL_OXOG_MD5=$SNV_FROM_INDEL_OXOG_MD5,$f\n"
 															+ "    fi\n"
 															+ "done");
-		generateAnalysisFilesVCFs.getCommand().addArgument("set -x ; docker run pancancer/pancancer_upload_download /bin/bash -c"
+		generateAnalysisFilesVCFs.getCommand().addArgument("set -x ; docker run pancancer/pancancer_upload_download:1.7 /bin/bash -c"
 				+ "\" /opt/vcf-uploader/vcf-uploader-2.0.9/gnos_upload_vcf --gto-only --pem "+this.uploadKey+" "
 						+ " --metadata-urls "+this.normalMetdataURL+","+this.tumourMetdataURL
 						+ " --vcfs $SNV_FROM_INDEL_OXOG"+vcfs
@@ -747,8 +748,7 @@ public class OxoGWrapperWorkflow extends AbstractWorkflowDataModel {
 
 		//Note: It was decided there should be two uploads: one for minibams and one for VCFs (for people who want VCFs but not minibams).
 		Job uploadResults = this.getWorkflow().createBashJob("upload results");
-		String command = "rsync /cga/fh/pcawg_pipeline/jobResults_pipette/results/" + this.aliquotID
-				+ ".oxoG.somatic.snv_mnv.vcf.gz.tar  " + this.uploadURL;
+		String command = "rsync -avz -e 'ssh -i "+this.uploadKey+"' /datastore/files_to_upload/ " + this.uploadURL;
 		
 		String moveToFailed = GitUtils.gitMoveCommand("upload-jobs","failed-jobs",this.JSONlocation + "/" + this.JSONrepoName + "/" + this.JSONfolderName,this.JSONfileName, this.gitMoveTestMode, this.getWorkflowBaseDir() + "/scripts/");
 		command += (" || " + moveToFailed);
