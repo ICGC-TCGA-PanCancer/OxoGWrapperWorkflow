@@ -37,12 +37,12 @@ my $d = {};
 #                                               /datastore/path_to_above_VCFs/ \
 #                                               /datastore/output_directory 
 
-my ($broad_snv, $sanger_snv, $de_snv,
+my ($broad_snv, $sanger_snv, $de_snv, $muse_snv,
         $broad_indel, $sanger_indel, $de_indel,
         $broad_sv, $sanger_sv, $de_sv,
         $in_dir, $out_dir) = @ARGV;
 
-my @snv = ($broad_snv, $sanger_snv, $de_snv);
+my @snv = ($broad_snv, $sanger_snv, $de_snv, $muse_snv);
 my @indel = ($broad_indel, $sanger_indel, $de_indel);
 my @sv = ($broad_sv, $sanger_sv, $de_sv);
 
