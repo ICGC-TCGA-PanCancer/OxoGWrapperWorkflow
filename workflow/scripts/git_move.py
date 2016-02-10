@@ -22,11 +22,16 @@ dest_dir = args[3];
 file_name = args[4];
 test_mode = args[5];
 
+# TODO: There should be something in here to set the git config username and email. If a workflow is retried, the values set previously
+# will have been lost since they were set in a different docker container.
+
 move_command = '';
-if test_mode == True:
+if test_mode:
+    print ("In test mode - file will only be moved locally.");
     move_command = 'mv {} {}'.format(os.path.join(repo_location, src_dir , file_name),
                                             os.path.join(repo_location, dest_dir , file_name));
 else:
+    print ("In \"live\" mode - files will be moved in git");
     move_command = 'git mv {} {} && '.format(os.path.join(repo_location, src_dir , file_name),
                                             os.path.join(repo_location, dest_dir , file_name)) + \
                   'git commit -m \'{} to {}: {} \' && '.format(src_dir,
@@ -57,7 +62,7 @@ for i in range(10): # try 10 times. If there are MANY clients trying to check-in
         break  # succeeded
     else:
         print('Error while moving the file: '+file_name+'.\nError message: {}\n\nRetrying...'.format(err))
-        if test_mode == False:
+        if not test_mode:
             # Only retry if we're not in test mode.
             time.sleep(randint(1,15))  # pause a few seconds before retry
         else:
