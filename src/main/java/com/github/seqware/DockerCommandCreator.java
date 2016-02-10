@@ -40,7 +40,7 @@ public class DockerCommandCreator {
 		mountedObjects.put(snvVCF, "/snv.vcf");
 		mountedObjects.put(svVCF, "/sv.vcf");
 		mountedObjects.put(indelVCF, "/indel.vcf");
-		mountedObjects.put("/datastore/padding_rules.text", "/rules.txt");
+		mountedObjects.put("/datastore/padding_rules.txt", "/rules.txt");
 		mountedObjects.put("/datastore/variantbam_results/", "/outdir/");
 		mountedObjects.put(bamPath, "/input.bam");
 		List<String> runOpts = new ArrayList<String>(2);
