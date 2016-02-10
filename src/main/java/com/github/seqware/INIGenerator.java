@@ -13,7 +13,8 @@ public class INIGenerator {
 			+ "JSONfolderName = oxog-collab-jobs-test\n" + "JSONlocation = /home/seqware/gitroot/\n" +
 			// "JSONfileName = SomeDonor_1234.json\n"+
 			"GITemail = denis.yuen+icgc@gmail.com\n" + "GITname = icgc-bot\n"
-			+ "GITPemFile = /home/seqware/.gnos/git.pem\n";
+			+ "GITPemFile = /home/seqware/.gnos/git.pem\n"
+			+ "uploadURL = oicr@192.170.233.206:~/incoming/bulk_upload/";
 
 	private static Map<String, Object> getDataFromJSON(String pathToJSON) {
 		Map<String, Object> inputsFromJSON = JSONUtils.processJSONFile(pathToJSON);
