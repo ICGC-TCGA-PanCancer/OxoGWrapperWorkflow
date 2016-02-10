@@ -787,7 +787,7 @@ public class OxoGWrapperWorkflow extends AbstractWorkflowDataModel {
 	
 	private Job gatkMergeVCF(Map<String,String> inputs, String vcfType, String outputFilename, Job ... parents)
 	{
-		Job mergeVCFs = this.getWorkflow().createBashJob("merge VCFs");
+		Job mergeVCFs = this.getWorkflow().createBashJob("merge VCFs "+vcfType);
 		String varString = "";
 		for (String k : inputs.keySet())
 		{
