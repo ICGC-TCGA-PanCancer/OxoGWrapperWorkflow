@@ -555,9 +555,9 @@ public class OxoGWrapperWorkflow extends AbstractWorkflowDataModel {
 				+ " /datafiles/VCF/"+Pipeline.broad+"/" + this.broadSNVName ;
 		
 		String moveToFailed = GitUtils.gitMoveCommand("running-jobs","failed-jobs",this.JSONlocation + "/" + this.JSONrepoName + "/" + this.JSONfolderName,this.JSONfileName, this.gitMoveTestMode, this.getWorkflowBaseDir() + "/scripts/");
-		oxogCommand += (" || "+moveToFailed);
+
 		runOxoGWorkflow.setCommand(
-				" docker run --rm --name=\"oxog_filter\" "+oxogMounts+" oxog " + oxogCommand);
+				" docker run --rm --name=\"oxog_filter\" "+oxogMounts+" oxog /bin/bash -c \"" + oxogCommand+ "\" || "+moveToFailed);
 		
 		runOxoGWorkflow.addParent(parent);
 		//Job getLogs = this.getOxoGLogs(runOxoGWorkflow);
@@ -765,11 +765,22 @@ public class OxoGWrapperWorkflow extends AbstractWorkflowDataModel {
 	}
 	
 
-//	public Job runAnnotator(Job parent)
-//	{
-//	// Placeholder for running Jonathan's container.
-//		//docker run -v local/path:/data pcawg-annotate SNV /data/snvs.vcf /data/normal-minibam.bam /data/tumour-minibam.bam ljdursi/pcawg-annotate
-//	}
+	Job runAnnotator(Job parent, String inputType, String vcfPath, String tumourBamPath, String normalBamPath)
+	{
+		Job annotatorJob = this.getWorkflow().createBashJob("run annotator");
+		String command = " docker run --rm --name=pcawg-annotator"+inputType+" -v "+vcfPath+":/input.vcf "
+						+ " -v "+tumourBamPath+":/tumour_minibam.bam "
+						+ " -v "+normalBamPath+":/normal_minibam.bam "
+						+ " -v /datastore/annotation_results/:/outdir/ "
+						+ " -v /datastore/refdata/public/:/ref/ "
+						+ " ljdursi/pcawg-annotate /bin/bash -c \" "
+						+ " "+inputType+" /input.vcf /normal_minibam.bam /tumour_minibam.bam \""
+						;
+		
+		annotatorJob.setCommand(command);
+		annotatorJob.addParent(parent);
+		return annotatorJob;
+	}
 	
 
 	/**
@@ -851,7 +862,7 @@ public class OxoGWrapperWorkflow extends AbstractWorkflowDataModel {
 			}
 			else
 			{
-				GitUtils.gitMove( "uploading-jobs", "completed-jobs", this.getWorkflow(), this.JSONlocation, this.JSONrepoName, this.JSONfolderName, this.GITname, this.GITemail, this.gitMoveTestMode, this.JSONfileName ,pathToScripts, normalVariantBam, tumourVariantBam);				
+				GitUtils.gitMove( "running-jobs", "completed-jobs", this.getWorkflow(), this.JSONlocation, this.JSONrepoName, this.JSONfolderName, this.GITname, this.GITemail, this.gitMoveTestMode, this.JSONfileName ,pathToScripts, normalVariantBam, tumourVariantBam, oxoGSnvsFromIndels);				
 			}
 	
 		}
