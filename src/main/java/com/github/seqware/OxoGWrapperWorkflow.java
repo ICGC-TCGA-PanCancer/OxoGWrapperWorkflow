@@ -365,7 +365,7 @@ public class OxoGWrapperWorkflow extends BaseOxoGWrapperWorkflow {
 		}
 		oxoGOnSnvsFromIndels.addParent(parent);
 		// At workflow-build time, we won't know if there's any files to upload from this step. So...
-		// The script run_oxog_extracted_SNVs.sh will un-tar the tar file if it exists and copy the files to /datastore/files_to_upload
+		// The script run_oxog_extracted_SNVs.sh will un-tar the tar file if it exists and copy the files to /datastore/files_for_upload
 		// and then ... somehow we have to include those (if they exist) in the vcf-upload script. :/
 		
 		return oxoGOnSnvsFromIndels;
@@ -487,8 +487,8 @@ public class OxoGWrapperWorkflow extends BaseOxoGWrapperWorkflow {
 															+ "SNV_FROM_INDEL_OXOG_INDEX_MD5=\'\'\n"
 															+ "SNV_FROM_INDEL_TARBALL=\'\'\n"
 															+ "SNV_FROM_INDEL_TARBALL_MD5=\'\'\n"
-															+ "[ -d /datastore/files_to_upload/snvs_from_indels/ ] &&  for f in $(ls /datastore/files_to_upload/snvs_from_indels/) ; do \n"
-															+ "    mv $f /datastore/files_to_upload/$f \n"
+															+ "[ -d /datastore/files_for_upload/snvs_from_indels/ ] &&  for f in $(ls /datastore/files_for_upload/snvs_from_indels/) ; do \n"
+															+ "    mv $f /datastore/files_for_upload/$f \n"
 															+ "    md5sum $f | cud -d ' ' -f 1 > $f.md5 \n"
 															+ "    if [[ \"$f\" =~ gnos_files\\.tar ]] ; then \n"
 															+ "        SNV_FROM_INDEL_TARBALL=$f,$SNV_FROM_INDEL_TARBALL\n"
@@ -551,7 +551,7 @@ public class OxoGWrapperWorkflow extends BaseOxoGWrapperWorkflow {
 
 		//Note: It was decided there should be two uploads: one for minibams and one for VCFs (for people who want VCFs but not minibams).
 		Job uploadResults = this.getWorkflow().createBashJob("upload results");
-		String command = "rsync -avz -e 'ssh -i "+this.uploadKey+"' /datastore/files_to_upload/ " + this.uploadURL;
+		String command = "rsync -avz -e 'ssh -i "+this.uploadKey+"' /datastore/files_for_upload/ " + this.uploadURL;
 		
 		String moveToFailed = GitUtils.gitMoveCommand("uploading-jobs","failed-jobs",this.JSONlocation + "/" + this.JSONrepoName + "/" + this.JSONfolderName,this.JSONfileName, this.gitMoveTestMode, this.getWorkflowBaseDir() + "/scripts/");
 		command += (" || " + moveToFailed);
@@ -563,36 +563,37 @@ public class OxoGWrapperWorkflow extends BaseOxoGWrapperWorkflow {
 	}
 	
 
-	private Job runAnnotator(String inputType, String vcfPath, String tumourBamPath, String normalBamPath, Job ...parents)
+	private Job runAnnotator(String inputType, String workflowName, String vcfPath, String tumourBamPath, String normalBamPath, Job ...parents)
 	{
 		Job annotatorJob = this.getWorkflow().createBashJob("run annotator for "+inputType);
-		String outDir = "/datastore/files_to_upload/";
+		String outDir = "/datastore/files_for_upload/";
 		if (vcfPath.contains("extracted-snvs"))
 		{
 			outDir+= "snvs_from_indels/";
 		}
+		String annotatedFileName = this.aliquotID+workflowName+"_"+inputType+".vcf";
 		String command = "([ -f "+vcfPath+" ] \\\n"
-						+ " && (docker run --rm --name=pcawg-annotator"+inputType+" -v "+vcfPath+":/input.vcf "
+						+ " && (docker run --rm --name=pcawg-annotator_"+workflowName+"_"+inputType+" -v "+vcfPath+":/input.vcf "
 						+ " -v "+tumourBamPath+":/tumour_minibam.bam "
 						+ " -v "+normalBamPath+":/normal_minibam.bam "
-						+ " -v "+outDir+":/outdir/ "
-						+ " -v /datastore/refdata/public/:/ref/ "
+//						+ " -v "+outDir+":/outdir/ "
+//						+ " -v /datastore/refdata/public/:/ref/ "
 						+ " ljdursi/pcawg-annotate  "
-						+ " "+inputType+" /input.vcf /normal_minibam.bam /tumour_minibam.bam > /outdir/"+this.aliquotID+"_annotated_"+inputType+".vcf ) \\\n"
-						+ " && ( docker run --rm -name=zip_and_index_annotated"+inputType+" "
+						+ " "+inputType+" /input.vcf /normal_minibam.bam /tumour_minibam.bam ) > "+outDir+"/"+annotatedFileName+" ) \\\n"
+						+ " && ( docker run --rm -name=zip_and_index_annotated_"+workflowName+"_"+inputType+" "
 						+ " -v "+outDir+":/outdir/"
 						+ " -v /outdir/"+this.aliquotID+"_annotated_"+inputType+".vcf:/input.vcf "
 						+ " compbio/ngseasy-base:a1.0-002 /bin/bash -c \""
-						+ " bgzip -f -c /input.vcf > /outdir/"+this.aliquotID+"_annotated_"+inputType+".vcf.gz && "
-						+ " tabix -p vcf /outdir/"+this.aliquotID+"_annotated_"+inputType+".vcf ; "
+						+ " bgzip -f -c /input.vcf > /outdir/"+annotatedFileName+".gz && "
+						+ " tabix -p vcf /outdir/"+annotatedFileName+".gz ; "
 						+ "\" )\\\n"
 						+ ")";
 		
 		
 		String moveToFailed = GitUtils.gitMoveCommand("running-jobs","failed-jobs",this.JSONlocation + "/" + this.JSONrepoName + "/" + this.JSONfolderName,this.JSONfileName, this.gitMoveTestMode, this.getWorkflowBaseDir() + "/scripts/");
 		command += " || " + moveToFailed;
-		filesToUpload.add("/datastore/files_to_upload/"+this.aliquotID+"_annotated_"+inputType+".vcf.gz ");
-		filesToUpload.add("/datastore/files_to_upload/"+this.aliquotID+"_annotated_"+inputType+".vcf.gz.tbi ");
+		filesToUpload.add("/datastore/files_for_upload/"+this.aliquotID+"_annotated_"+inputType+".vcf.gz ");
+		filesToUpload.add("/datastore/files_for_upload/"+this.aliquotID+"_annotated_"+inputType+".vcf.gz.tbi ");
 		
 		
 		annotatorJob.setCommand(command);
@@ -623,18 +624,18 @@ public class OxoGWrapperWorkflow extends BaseOxoGWrapperWorkflow {
 		String dkfzEmblOxoGSNVFromIndelFileName = dkfzEmbleOxogSNVFileName.replace("/oxog_results/", "/oxog_results_extracted_snvs/");
 		
 
-		Job broadIndelAnnotatorJob = this.runAnnotator("indel", this.broadNormalizedIndelVCFName, this.tumourMinibamPath,this.normalMinibamPath, tumourVariantBam, normalVariantBam);
-		Job dfkzEmblIndelAnnotatorJob = this.runAnnotator("indel", this.dkfzEmblNormalizedIndelVCFName, this.tumourMinibamPath, this.normalMinibamPath, broadIndelAnnotatorJob);
-		Job sangerIndelAnnotatorJob = this.runAnnotator("indel", this.sangerNormalizedIndelVCFName, this.tumourMinibamPath, this.normalMinibamPath, dfkzEmblIndelAnnotatorJob);
+		Job broadIndelAnnotatorJob = this.runAnnotator("indel", "broad", this.broadNormalizedIndelVCFName, this.tumourMinibamPath,this.normalMinibamPath, tumourVariantBam, normalVariantBam);
+		Job dfkzEmblIndelAnnotatorJob = this.runAnnotator("indel", "dkfz_embl", this.dkfzEmblNormalizedIndelVCFName, this.tumourMinibamPath, this.normalMinibamPath, broadIndelAnnotatorJob);
+		Job sangerIndelAnnotatorJob = this.runAnnotator("indel","sanger", this.sangerNormalizedIndelVCFName, this.tumourMinibamPath, this.normalMinibamPath, dfkzEmblIndelAnnotatorJob);
 
-		Job broadSNVAnnotatorJob = this.runAnnotator("SNV",broadOxogSNVFileName, this.tumourMinibamPath, this.normalMinibamPath, tumourVariantBam, normalVariantBam);
-		Job dfkzEmblSNVAnnotatorJob = this.runAnnotator("SNV",dkfzEmbleOxogSNVFileName, this.tumourMinibamPath, this.normalMinibamPath, broadSNVAnnotatorJob);
-		Job sangerSNVAnnotatorJob = this.runAnnotator("SNV",sangerOxogSNVFileName, this.tumourMinibamPath, this.normalMinibamPath, dfkzEmblSNVAnnotatorJob);
-		Job museSNVAnnotatorJob = this.runAnnotator("SNV",museOxogSNVFileName, this.tumourMinibamPath, this.normalMinibamPath, dfkzEmblSNVAnnotatorJob);
+		Job broadSNVAnnotatorJob = this.runAnnotator("SNV", "broad",broadOxogSNVFileName, this.tumourMinibamPath, this.normalMinibamPath, tumourVariantBam, normalVariantBam);
+		Job dfkzEmblSNVAnnotatorJob = this.runAnnotator("SNV", "dkfz_embl",dkfzEmbleOxogSNVFileName, this.tumourMinibamPath, this.normalMinibamPath, broadSNVAnnotatorJob);
+		Job sangerSNVAnnotatorJob = this.runAnnotator("SNV","sanger",sangerOxogSNVFileName, this.tumourMinibamPath, this.normalMinibamPath, dfkzEmblSNVAnnotatorJob);
+		Job museSNVAnnotatorJob = this.runAnnotator("SNV","muse",museOxogSNVFileName, this.tumourMinibamPath, this.normalMinibamPath, dfkzEmblSNVAnnotatorJob);
 
-		Job broadSNVFromIndelAnnotatorJob = this.runAnnotator("SNV", broadOxoGSNVFromIndelFileName, this.tumourMinibamPath, this.normalMinibamPath, tumourVariantBam, normalVariantBam);
-		Job dfkzEmblSNVFromIndelAnnotatorJob = this.runAnnotator("SNV", sangerOxoGSNVFromIndelFileName, this.tumourMinibamPath, this.normalMinibamPath, broadSNVFromIndelAnnotatorJob);
-		Job sangerSNVFromIndelAnnotatorJob = this.runAnnotator("SNV", dkfzEmblOxoGSNVFromIndelFileName, this.tumourMinibamPath, this.normalMinibamPath, dfkzEmblSNVFromIndelAnnotatorJob);
+		Job broadSNVFromIndelAnnotatorJob = this.runAnnotator("SNV","broad", broadOxoGSNVFromIndelFileName, this.tumourMinibamPath, this.normalMinibamPath, tumourVariantBam, normalVariantBam);
+		Job dfkzEmblSNVFromIndelAnnotatorJob = this.runAnnotator("SNV","dkfz_embl", sangerOxoGSNVFromIndelFileName, this.tumourMinibamPath, this.normalMinibamPath, broadSNVFromIndelAnnotatorJob);
+		Job sangerSNVFromIndelAnnotatorJob = this.runAnnotator("SNV","sanger", dkfzEmblOxoGSNVFromIndelFileName, this.tumourMinibamPath, this.normalMinibamPath, dfkzEmblSNVFromIndelAnnotatorJob);
 		
 		finalAnnotatorJobs.add(sangerSNVFromIndelAnnotatorJob);
 		finalAnnotatorJobs.add(sangerSNVAnnotatorJob);
