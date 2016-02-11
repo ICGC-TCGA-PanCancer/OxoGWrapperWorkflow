@@ -116,7 +116,9 @@ public abstract class BaseOxoGWrapperWorkflow extends AbstractWorkflowDataModel 
 	protected boolean skipOxoG = false;
 	protected boolean skipVariantBam = false;
 	
-
+	protected String normalMinibamPath;
+	protected String tumourMinibamPath;
+	
 	/**
 	 * Get a property name that is mandatory
 	 * @param propName The name of the property

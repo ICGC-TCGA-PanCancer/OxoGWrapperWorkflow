@@ -7,14 +7,13 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.nio.file.StandardOpenOption;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.stream.Collectors;
 
 import net.sourceforge.seqware.pipeline.workflowV2.model.Job;
 
 public class OxoGWrapperWorkflow extends BaseOxoGWrapperWorkflow {
-
-
-	
 
 	/**
 	 * Generates a rules file that is used for the variant program that produces minibams.
@@ -394,13 +393,16 @@ public class OxoGWrapperWorkflow extends BaseOxoGWrapperWorkflow {
 		if (bamType == BAMType.normal)
 		{
 			minibamName = this.normalBAMFileName.replace(".bam", "_minibam");
+			this.normalMinibamPath = "/datastore/variantbam_results/"+minibamName+".bam";
+			this.filesToUpload.add(this.normalMinibamPath);
 		}
 		else
 		{
-			minibamName = this.tumourBAMFileName.replace(".bam", "_minibam");	
+			minibamName = this.tumourBAMFileName.replace(".bam", "_minibam");
+			this.tumourMinibamPath = "/datastore/variantbam_results/"+minibamName+".bam";
+			this.filesToUpload.add(this.tumourMinibamPath);
 		}
-			
-		this.filesToUpload.add("/datastore/variantbam_results/"+minibamName+".bam");
+		
 		this.filesToUpload.add("/datastore/variantbam_results/"+minibamName+".bai");
 		runOxoGWorkflow.addParent(parent);
 		
@@ -581,6 +583,41 @@ public class OxoGWrapperWorkflow extends BaseOxoGWrapperWorkflow {
 		return GitUtils.gitMove(src, dest, this.getWorkflow(), this.JSONlocation, this.JSONrepoName, this.JSONfolderName, this.GITname, this.GITemail, this.gitMoveTestMode, this.JSONfileName, pathToScripts , (parents));
 	}
 	
+	private List<Job> doAnnotations(Job tumourVariantBam, Job normalVariantBam)
+	{
+		List<Job> finalAnnotatorJobs = new ArrayList<Job>(3);
+		
+		String broadOxogSNVFileName = filesToUpload.stream().filter(p -> p.contains("broad-mutect") && p.endsWith("somatic.snv_mnv.oxoG.vcf.gz")).collect(Collectors.toList()).get(0);
+		String sangerOxogSNVFileName = filesToUpload.stream().filter(p -> p.contains("svcp_") && p.endsWith("somatic.snv_mnv.oxoG.vcf.gz")).collect(Collectors.toList()).get(0);
+		String museOxogSNVFileName = filesToUpload.stream().filter(p -> p.contains("MUSE") && p.endsWith("somatic.snv_mnv.oxoG.vcf.gz")).collect(Collectors.toList()).get(0);
+		String dkfzEmbleOxogSNVFileName = filesToUpload.stream().filter(p -> p.contains("dkfz-snvCalling") && p.endsWith("somatic.snv_mnv.oxoG.vcf.gz")).collect(Collectors.toList()).get(0);
+		
+		String broadOxoGSNVFromIndelFileName = broadOxogSNVFileName.replace("/oxog_results/", "/oxog_results_extracted_snvs/");
+		String sangerOxoGSNVFromIndelFileName = sangerOxogSNVFileName.replace("/oxog_results/", "/oxog_results_extracted_snvs/");
+		String dkfzEmblOxoGSNVFromIndelFileName = dkfzEmbleOxogSNVFileName.replace("/oxog_results/", "/oxog_results_extracted_snvs/");
+		
+
+		Job broadIndelAnnotatorJob = this.runAnnotator("indel", this.broadNormalizedIndelVCFName, this.tumourMinibamPath,this.normalMinibamPath, tumourVariantBam, normalVariantBam);
+		Job dfkzEmblIndelAnnotatorJob = this.runAnnotator("indel", this.dkfzEmblNormalizedIndelVCFName, this.tumourMinibamPath, this.normalMinibamPath, broadIndelAnnotatorJob);
+		Job sangerIndelAnnotatorJob = this.runAnnotator("indel", this.sangerNormalizedIndelVCFName, this.tumourMinibamPath, this.normalMinibamPath, dfkzEmblIndelAnnotatorJob);
+
+		Job broadSNVAnnotatorJob = this.runAnnotator("SNV",broadOxogSNVFileName, this.tumourMinibamPath, this.normalMinibamPath, tumourVariantBam, normalVariantBam);
+		Job dfkzEmblSNVAnnotatorJob = this.runAnnotator("SNV",dkfzEmbleOxogSNVFileName, this.tumourMinibamPath, this.normalMinibamPath, broadSNVAnnotatorJob);
+		Job sangerSNVAnnotatorJob = this.runAnnotator("SNV",sangerOxogSNVFileName, this.tumourMinibamPath, this.normalMinibamPath, dfkzEmblSNVAnnotatorJob);
+		Job museSNVAnnotatorJob = this.runAnnotator("SNV",museOxogSNVFileName, this.tumourMinibamPath, this.normalMinibamPath, dfkzEmblSNVAnnotatorJob);
+
+		Job broadSNVFromIndelAnnotatorJob = this.runAnnotator("SNV", broadOxoGSNVFromIndelFileName, this.tumourMinibamPath, this.normalMinibamPath, tumourVariantBam, normalVariantBam);
+		Job dfkzEmblSNVFromIndelAnnotatorJob = this.runAnnotator("SNV", sangerOxoGSNVFromIndelFileName, this.tumourMinibamPath, this.normalMinibamPath, broadSNVFromIndelAnnotatorJob);
+		Job sangerSNVFromIndelAnnotatorJob = this.runAnnotator("SNV", dkfzEmblOxoGSNVFromIndelFileName, this.tumourMinibamPath, this.normalMinibamPath, dfkzEmblSNVFromIndelAnnotatorJob);
+		
+		finalAnnotatorJobs.add(sangerSNVFromIndelAnnotatorJob);
+		finalAnnotatorJobs.add(sangerSNVAnnotatorJob);
+		finalAnnotatorJobs.add(sangerIndelAnnotatorJob);
+		finalAnnotatorJobs.add(museSNVAnnotatorJob);
+		
+		return finalAnnotatorJobs;
+	}
+	
 	/**
 	 * Build the workflow!!
 	 */
@@ -648,30 +685,16 @@ public class OxoGWrapperWorkflow extends BaseOxoGWrapperWorkflow {
 			// variantbam jobs will run parallel to each other. variant seems to only use a *single* core, but runs long ( 60 - 120 min on OpenStack);
 			Job normalVariantBam = this.doVariantBam(combineVCFsByType,BAMType.normal,"/datastore/bam/normal/"+this.normalBamGnosID+"/"+this.normalBAMFileName);
 			Job tumourVariantBam = this.doVariantBam(combineVCFsByType,BAMType.tumour,"/datastore/bam/tumour/"+this.tumourBamGnosID+"/"+this.tumourBAMFileName);
-			
 
-			String tumourMinibamPath = "/datastore/variantbam_results/"+this.aliquotID+"_minibam_tumour.bam";
-			String normalMinibamPath = "/datastore/variantbam_results/"+this.aliquotID+"_minibam_normal.bam"; 
-
-			Job broadIndelAnnotatorJob = this.runAnnotator("indel", this.broadNormalizedIndelVCFName, tumourMinibamPath, normalMinibamPath, tumourVariantBam, normalVariantBam);
-			Job dfkzEmblIndelAnnotatorJob = this.runAnnotator("indel", this.dkfzEmblNormalizedIndelVCFName, tumourMinibamPath, normalMinibamPath, broadIndelAnnotatorJob);
-			Job sangerIndelAnnotatorJob = this.runAnnotator("indel", this.sangerNormalizedIndelVCFName, tumourMinibamPath, normalMinibamPath, dfkzEmblIndelAnnotatorJob);
-
-			Job broadSNVAnnotatorJob = this.runAnnotator("SNV"," /datafiles/VCF/"+Pipeline.broad+"/" + this.broadSNVName, tumourMinibamPath, normalMinibamPath, tumourVariantBam, normalVariantBam);
-			Job dfkzEmblSNVAnnotatorJob = this.runAnnotator("SNV"," /datafiles/VCF/"+Pipeline.dkfz_embl+"/" + this.dkfzEmblSNVName, tumourMinibamPath, normalMinibamPath, broadSNVAnnotatorJob);
-			Job sangerSNVAnnotatorJob = this.runAnnotator("SNV"," /datafiles/VCF/"+Pipeline.sanger+"/" + this.sangerSNVName, tumourMinibamPath, normalMinibamPath, dfkzEmblSNVAnnotatorJob);
-
-			Job broadSNVFromIndelAnnotatorJob = this.runAnnotator("SNV", this.broadExtractedSNVVCFName, tumourMinibamPath, normalMinibamPath, tumourVariantBam, normalVariantBam);
-			Job dfkzEmblSNVFromIndelAnnotatorJob = this.runAnnotator("SNV", this.dkfzEmblExtractedSNVVCFName, tumourMinibamPath, normalMinibamPath, broadSNVFromIndelAnnotatorJob);
-			Job sangerSNVFromIndelAnnotatorJob = this.runAnnotator("SNV", this.sangerExtractedSNVVCFName, tumourMinibamPath, normalMinibamPath, dfkzEmblSNVFromIndelAnnotatorJob);
-
-			
+			List<Job> annotationJobs = this.doAnnotations(tumourVariantBam, normalVariantBam);
+			//Need to add oxoGSnvsFromIndels to annotationJobs so that the next jobs can receive them all in one arg.
+			annotationJobs.add(oxoGSnvsFromIndels);
 			//Now do the Upload
 			if (!skipUpload)
 			{
 				// indicate job is in uploading stage.
 				//Job move2uploading = GitUtils.gitMove("running-jobs", "uploading-jobs", this.getWorkflow(), this.JSONlocation, this.JSONrepoName, this.JSONfolderName, this.GITname, this.GITemail, this.gitMoveTestMode, this.JSONfileName, pathToScripts , indelAnnotatorJob, snvAnnotatorJob, snvFromIndelAnnotatorJob, oxoG, oxoGSnvsFromIndels, normalVariantBam, tumourVariantBam);
-				Job move2uploading = this.gitMove( "uploading-jobs", "completed-jobs", oxoGSnvsFromIndels,sangerIndelAnnotatorJob,sangerSNVAnnotatorJob,sangerSNVFromIndelAnnotatorJob);
+				Job move2uploading = this.gitMove( "uploading-jobs", "completed-jobs", annotationJobs.toArray(new Job[annotationJobs.size()]));
 				Job uploadResults = doUpload(move2uploading);
 				// indicate job is complete.
 				this.gitMove( "uploading-jobs", "completed-jobs", uploadResults);
@@ -679,7 +702,7 @@ public class OxoGWrapperWorkflow extends BaseOxoGWrapperWorkflow {
 			else
 			{
 				//GitUtils.gitMove( "running-jobs", "completed-jobs", this.getWorkflow(), this.JSONlocation, this.JSONrepoName, this.JSONfolderName, this.GITname, this.GITemail, this.gitMoveTestMode, this.JSONfileName ,pathToScripts,  indelAnnotatorJob, snvAnnotatorJob, snvFromIndelAnnotatorJob, oxoG, oxoGSnvsFromIndels, normalVariantBam, tumourVariantBam);
-				this.gitMove( "uploading-jobs", "completed-jobs",oxoGSnvsFromIndels, sangerIndelAnnotatorJob,sangerSNVAnnotatorJob,sangerSNVFromIndelAnnotatorJob);
+				this.gitMove( "uploading-jobs", "completed-jobs",annotationJobs.toArray(new Job[annotationJobs.size()]));
 			}
 	
 		}
