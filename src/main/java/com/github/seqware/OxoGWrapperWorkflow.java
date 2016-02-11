@@ -563,17 +563,16 @@ public class OxoGWrapperWorkflow extends AbstractWorkflowDataModel {
 					+ " /datafiles/VCF/"+Pipeline.sanger+"/" + this.sangerSNVName + " \\\n"
 					+ " /datafiles/VCF/"+Pipeline.dkfz_embl+"/" + this.dkfzEmblSNVName  + " \\\n"
 					+ " /datafiles/VCF/"+Pipeline.muse+"/" + this.museSNVName + " \\\n"
-					+ " /datafiles/VCF/"+Pipeline.broad+"/" + this.broadSNVName + " \\\n;" ;
+					+ " /datafiles/VCF/"+Pipeline.broad+"/" + this.broadSNVName  ;
 			
 			String moveToFailed = GitUtils.gitMoveCommand("running-jobs","failed-jobs",this.JSONlocation + "/" + this.JSONrepoName + "/" + this.JSONfolderName,this.JSONfileName, this.gitMoveTestMode, this.getWorkflowBaseDir() + "/scripts/");
 	
-			runOxoGWorkflow.setCommand("docker run --rm --name=\"oxog_filter\" "+oxogMounts+" oxog /bin/bash -c \"" + oxogCommand+ "\" ");
+			runOxoGWorkflow.setCommand("(docker run --rm --name=\"oxog_filter\" "+oxogMounts+" oxog /bin/bash -c \"" + oxogCommand+ "\" ) || "+moveToFailed);
 			
 			runOxoGWorkflow.addParent(parent);
-			//Job getLogs = this.getOxoGLogs(runOxoGWorkflow);
 		}
 		Job extractOutputFiles = this.getWorkflow().createBashJob("extract oxog output files from tar");
-		extractOutputFiles.setCommand("tar -xvf /datastore/oxog_results/"+this.aliquotID+".gnos_files.tar ");
+		extractOutputFiles.setCommand("tar -xvf /datastore/oxog_results/"+this.aliquotID+".gnos_files.tar -C /datastore/oxog_results ");
 		extractOutputFiles.addParent(runOxoGWorkflow);
 		this.filesToUpload.add("/datastore/oxog_results/cga/fh/pcawg_pipeline/jobResults_pipette/jobs/"+this.aliquotID+"/links_for_gnos/annotate_failed_sites_to_vcfs/"+this.aliquotID+".broad-mutect-*.somatic.snv_mnv.oxoG.vcf.gz");
 		this.filesToUpload.add("/datastore/oxog_results/cga/fh/pcawg_pipeline/jobResults_pipette/jobs/"+this.aliquotID+"/links_for_gnos/annotate_failed_sites_to_vcfs/"+this.aliquotID+".dkfz-snvCalling_*.somatic.snv_mnv.oxoG.vcf.gz");
@@ -641,8 +640,18 @@ public class OxoGWrapperWorkflow extends AbstractWorkflowDataModel {
 		//The bam file will need to be indexed!
 		//runOxoGWorkflow.getCommand().addArgument("\nsamtools index /datastore/variantbam_results/minibam_"+bamType+".bam ; \n");
 		
-		this.filesToUpload.add("/datastore/variantbam_results/"+this.aliquotID+"minibam_"+bamType+".bam");
-		this.filesToUpload.add("/datastore/variantbam_results/"+this.aliquotID+"minibam_"+bamType+".bai");
+		String minibamName = "";
+		if (bamType == BAMType.normal)
+		{
+			minibamName = this.normalBAMFileName.replace(".bam", "_minibam");
+		}
+		else
+		{
+			minibamName = this.tumourBAMFileName.replace(".bam", "_minibam");	
+		}
+			
+		this.filesToUpload.add("/datastore/variantbam_results/"+minibamName+".bam");
+		this.filesToUpload.add("/datastore/variantbam_results/"+minibamName+".bai");
 		runOxoGWorkflow.addParent(parent);
 		
 		//Job getLogs = this.getOxoGLogs(runOxoGWorkflow);
