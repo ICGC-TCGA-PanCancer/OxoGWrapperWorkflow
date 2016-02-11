@@ -571,15 +571,23 @@ public class OxoGWrapperWorkflow extends BaseOxoGWrapperWorkflow {
 		{
 			outDir+= "snvs_from_indels/";
 		}
-		String command = "([ -f "+vcfPath+" ] && docker run --rm --name=pcawg-annotator"+inputType+" -v "+vcfPath+":/input.vcf "
+		String command = "([ -f "+vcfPath+" ] \\\n"
+						+ " && (docker run --rm --name=pcawg-annotator"+inputType+" -v "+vcfPath+":/input.vcf "
 						+ " -v "+tumourBamPath+":/tumour_minibam.bam "
 						+ " -v "+normalBamPath+":/normal_minibam.bam "
 						+ " -v "+outDir+":/outdir/ "
 						+ " -v /datastore/refdata/public/:/ref/ "
-						+ " ljdursi/pcawg-annotate /bin/bash -c \" "
-						+ " "+inputType+" /input.vcf /normal_minibam.bam /tumour_minibam.bam \" > /outdir/"+this.aliquotID+"_annotated_"+inputType+".vcf && "
-						+ " bgzip -f -c /outdir/"+this.aliquotID+"_annotated_"+inputType+".vcf > /outdir/"+this.aliquotID+"_annotated_"+inputType+".vcf.gz && "
-						+ " tabix -p vcf /outdir/"+this.aliquotID+"_annotated_"+inputType+".vcf ;\" )";
+						+ " ljdursi/pcawg-annotate  "
+						+ " "+inputType+" /input.vcf /normal_minibam.bam /tumour_minibam.bam > /outdir/"+this.aliquotID+"_annotated_"+inputType+".vcf ) \\\n"
+						+ " && ( docker run --rm -name=zip_and_index_annotated"+inputType+" "
+						+ " -v "+outDir+":/outdir/"
+						+ " -v /outdir/"+this.aliquotID+"_annotated_"+inputType+".vcf:/input.vcf "
+						+ " compbio/ngseasy-base:a1.0-002 /bin/bash -c \""
+						+ " bgzip -f -c /input.vcf > /outdir/"+this.aliquotID+"_annotated_"+inputType+".vcf.gz && "
+						+ " tabix -p vcf /outdir/"+this.aliquotID+"_annotated_"+inputType+".vcf ; "
+						+ "\" )\\\n"
+						+ ")";
+		
 		
 		String moveToFailed = GitUtils.gitMoveCommand("running-jobs","failed-jobs",this.JSONlocation + "/" + this.JSONrepoName + "/" + this.JSONfolderName,this.JSONfileName, this.gitMoveTestMode, this.getWorkflowBaseDir() + "/scripts/");
 		command += " || " + moveToFailed;
