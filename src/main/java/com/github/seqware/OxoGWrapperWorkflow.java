@@ -121,6 +121,11 @@ public class OxoGWrapperWorkflow extends AbstractWorkflowDataModel {
 	private String normalBamGnosID;
 	private String uploadKey;
 	
+	//These two variables can be used to skip running OxoG and variant bam, in case they have already been run.
+	//Intended to speed up testing by skipping these steps when results already exist.
+	private boolean skipOxoG = false;
+	private boolean skipVariantBam = false;
+	
 	/**
 	 * Get a property name that is mandatory
 	 * @param propName The name of the property
@@ -244,6 +249,14 @@ public class OxoGWrapperWorkflow extends AbstractWorkflowDataModel {
 			
 			if (hasPropertyAndNotNull("skipUpload")) {
 				this.skipUpload = Boolean.valueOf(getProperty("skipUpload"));
+			}
+			
+			if (hasPropertyAndNotNull("skipOxoG")) {
+				this.skipOxoG = Boolean.valueOf(getProperty("skipOxoG"));
+			}
+			
+			if (hasPropertyAndNotNull("skipVariantBam")) {
+				this.skipVariantBam = Boolean.valueOf(getProperty("skipVariantBam"));
 			}
 			
 			this.generateRulesFile();
@@ -531,32 +544,34 @@ public class OxoGWrapperWorkflow extends AbstractWorkflowDataModel {
 	 */
 	private Job doOxoG(Job parent) {
 		Job runOxoGWorkflow = this.getWorkflow().createBashJob("run OxoG Filter");
-		String oxogMounts = " -v /datastore/refdata/:/cga/fh/pcawg_pipeline/refdata/ \\\n"
-				//+ " -v /datastore/oncotator_db/:/cga/fh/pcawg_pipeline/refdata/public/oncotator_db/ \\\n"  
-				+ " -v /datastore/oxog_workspace/:/cga/fh/pcawg_pipeline/jobResults_pipette/jobs/"+this.aliquotID+"/:rw \\\n" 
-				+ " -v /datastore/bam/:/datafiles/BAM/ \\\n"
-				+ " -v /datastore/vcf/"+Pipeline.broad+"/"+this.broadGnosID+"/"+"/:/datafiles/VCF/"+Pipeline.broad+"/ \\\n"
-				+ " -v /datastore/vcf/"+Pipeline.sanger+"/"+this.sangerGnosID+"/"+"/:/datafiles/VCF/"+Pipeline.sanger+"/ \\\n"
-				+ " -v /datastore/vcf/"+Pipeline.dkfz_embl+"/"+this.dkfzemblGnosID+"/"+"/:/datafiles/VCF/"+Pipeline.dkfz_embl+"/ \\\n"
-				+ " -v /datastore/vcf/"+Pipeline.muse+"/"+this.museGnosID+"/"+"/:/datafiles/VCF/"+Pipeline.muse+"/ \\\n"
-				+ " -v /datastore/oxog_results/:/cga/fh/pcawg_pipeline/jobResults_pipette/results:rw \\\n";
-		String oxogCommand = "/cga/fh/pcawg_pipeline/pipelines/run_one_pipeline.bash pcawg /cga/fh/pcawg_pipeline/pipelines/oxog_pipeline.py \\\n"
-				+ this.aliquotID + " \\\n"
-				+ " /datafiles/BAM/tumour/" + this.tumourBamGnosID + "/" + this.tumourBAMFileName + " \\\n" 
-				+ " /datafiles/BAM/normal/" +this.normalBamGnosID + "/" +  this.normalBAMFileName + " \\\n" 
-				+ " " + this.oxoQScore + " \\\n"
-				+ " /datafiles/VCF/"+Pipeline.sanger+"/" + this.sangerSNVName + " \\\n"
-				+ " /datafiles/VCF/"+Pipeline.dkfz_embl+"/" + this.dkfzEmblSNVName  + " \\\n"
-				+ " /datafiles/VCF/"+Pipeline.muse+"/" + this.museSNVName + " \\\n"
-				+ " /datafiles/VCF/"+Pipeline.broad+"/" + this.broadSNVName + " \\\n;" ;
-		
-		String moveToFailed = GitUtils.gitMoveCommand("running-jobs","failed-jobs",this.JSONlocation + "/" + this.JSONrepoName + "/" + this.JSONfolderName,this.JSONfileName, this.gitMoveTestMode, this.getWorkflowBaseDir() + "/scripts/");
-
-		runOxoGWorkflow.setCommand("docker run --rm --name=\"oxog_filter\" "+oxogMounts+" oxog /bin/bash -c \"" + oxogCommand+ "\" ");
-		
-		runOxoGWorkflow.addParent(parent);
-		//Job getLogs = this.getOxoGLogs(runOxoGWorkflow);
-		
+		if (!skipOxoG)
+		{
+			String oxogMounts = " -v /datastore/refdata/:/cga/fh/pcawg_pipeline/refdata/ \\\n"
+					//+ " -v /datastore/oncotator_db/:/cga/fh/pcawg_pipeline/refdata/public/oncotator_db/ \\\n"  
+					+ " -v /datastore/oxog_workspace/:/cga/fh/pcawg_pipeline/jobResults_pipette/jobs/"+this.aliquotID+"/:rw \\\n" 
+					+ " -v /datastore/bam/:/datafiles/BAM/ \\\n"
+					+ " -v /datastore/vcf/"+Pipeline.broad+"/"+this.broadGnosID+"/"+"/:/datafiles/VCF/"+Pipeline.broad+"/ \\\n"
+					+ " -v /datastore/vcf/"+Pipeline.sanger+"/"+this.sangerGnosID+"/"+"/:/datafiles/VCF/"+Pipeline.sanger+"/ \\\n"
+					+ " -v /datastore/vcf/"+Pipeline.dkfz_embl+"/"+this.dkfzemblGnosID+"/"+"/:/datafiles/VCF/"+Pipeline.dkfz_embl+"/ \\\n"
+					+ " -v /datastore/vcf/"+Pipeline.muse+"/"+this.museGnosID+"/"+"/:/datafiles/VCF/"+Pipeline.muse+"/ \\\n"
+					+ " -v /datastore/oxog_results/:/cga/fh/pcawg_pipeline/jobResults_pipette/results:rw \\\n";
+			String oxogCommand = "/cga/fh/pcawg_pipeline/pipelines/run_one_pipeline.bash pcawg /cga/fh/pcawg_pipeline/pipelines/oxog_pipeline.py \\\n"
+					+ this.aliquotID + " \\\n"
+					+ " /datafiles/BAM/tumour/" + this.tumourBamGnosID + "/" + this.tumourBAMFileName + " \\\n" 
+					+ " /datafiles/BAM/normal/" +this.normalBamGnosID + "/" +  this.normalBAMFileName + " \\\n" 
+					+ " " + this.oxoQScore + " \\\n"
+					+ " /datafiles/VCF/"+Pipeline.sanger+"/" + this.sangerSNVName + " \\\n"
+					+ " /datafiles/VCF/"+Pipeline.dkfz_embl+"/" + this.dkfzEmblSNVName  + " \\\n"
+					+ " /datafiles/VCF/"+Pipeline.muse+"/" + this.museSNVName + " \\\n"
+					+ " /datafiles/VCF/"+Pipeline.broad+"/" + this.broadSNVName + " \\\n;" ;
+			
+			String moveToFailed = GitUtils.gitMoveCommand("running-jobs","failed-jobs",this.JSONlocation + "/" + this.JSONrepoName + "/" + this.JSONfolderName,this.JSONfileName, this.gitMoveTestMode, this.getWorkflowBaseDir() + "/scripts/");
+	
+			runOxoGWorkflow.setCommand("docker run --rm --name=\"oxog_filter\" "+oxogMounts+" oxog /bin/bash -c \"" + oxogCommand+ "\" ");
+			
+			runOxoGWorkflow.addParent(parent);
+			//Job getLogs = this.getOxoGLogs(runOxoGWorkflow);
+		}
 		Job extractOutputFiles = this.getWorkflow().createBashJob("extract oxog output files from tar");
 		extractOutputFiles.setCommand("tar -xvf /datastore/oxog_results/"+this.aliquotID+".gnos_files.tar ");
 		extractOutputFiles.addParent(runOxoGWorkflow);
@@ -581,19 +596,23 @@ public class OxoGWrapperWorkflow extends AbstractWorkflowDataModel {
 	 */
 	private Job doOxoGSnvsFromIndels(Job parent) {
 		Job oxoGOnSnvsFromIndels = this.getWorkflow().createBashJob("running OxoG on SNVs from INDELs");
-		//String vcfBaseDir = "/datastore/vcf/";
-		String vcf1 = this.sangerExtractedSNVVCFName; //vcfBaseDir+Pipeline.broad.toString()+"/somatic.indel.bcftools-norm.extracted-snvs.vcf ";
-		String vcf2 = this.broadExtractedSNVVCFName; //vcfBaseDir+Pipeline.sanger.toString()+"/somatic.indel.bcftools-norm.extracted-snvs.vcf ";
-		String vcf3 = this.dkfzEmblExtractedSNVVCFName; //vcfBaseDir+Pipeline.dkfz_embl.toString()+"/somatic.indel.bcftools-norm.extracted-snvs.vcf ";
-		//String vcf4 = this.museExtractedSNVVCFName; //vcfBaseDir+Pipeline.muse.toString()+"/somatic.iindel.bcftools-norm.extracted-snvs.vcf ";
-		String extractionCommand = this.getWorkflowBaseDir()+"/scripts/run_oxog_extracted_SNVs.sh "+
-				vcf1+" "+vcf2+" "+vcf3+" "+
-				this.normalBAMFileName+" "+this.tumourBAMFileName+" "+
-				this.aliquotID+" "+
-				this.oxoQScore;
-		String moveToFailed = GitUtils.gitMoveCommand("running-jobs","failed-jobs",this.JSONlocation + "/" + this.JSONrepoName + "/" + this.JSONfolderName,this.JSONfileName, this.gitMoveTestMode, this.getWorkflowBaseDir() + "/scripts/");
-		extractionCommand += (" || " + moveToFailed);
-		oxoGOnSnvsFromIndels.setCommand(extractionCommand);
+		if (!skipOxoG)
+		{
+			//String vcfBaseDir = "/datastore/vcf/";
+			String vcf1 = this.sangerExtractedSNVVCFName; //vcfBaseDir+Pipeline.broad.toString()+"/somatic.indel.bcftools-norm.extracted-snvs.vcf ";
+			String vcf2 = this.broadExtractedSNVVCFName; //vcfBaseDir+Pipeline.sanger.toString()+"/somatic.indel.bcftools-norm.extracted-snvs.vcf ";
+			String vcf3 = this.dkfzEmblExtractedSNVVCFName; //vcfBaseDir+Pipeline.dkfz_embl.toString()+"/somatic.indel.bcftools-norm.extracted-snvs.vcf ";
+			//String vcf4 = this.museExtractedSNVVCFName; //vcfBaseDir+Pipeline.muse.toString()+"/somatic.iindel.bcftools-norm.extracted-snvs.vcf ";
+			String extractionCommand = this.getWorkflowBaseDir()+"/scripts/run_oxog_extracted_SNVs.sh "+
+					vcf1+" "+vcf2+" "+vcf3+" "+
+					this.normalBAMFileName+" "+this.tumourBAMFileName+" "+
+					this.aliquotID+" "+
+					this.oxoQScore;
+			
+			String moveToFailed = GitUtils.gitMoveCommand("running-jobs","failed-jobs",this.JSONlocation + "/" + this.JSONrepoName + "/" + this.JSONfolderName,this.JSONfileName, this.gitMoveTestMode, this.getWorkflowBaseDir() + "/scripts/");
+			extractionCommand += (" || " + moveToFailed);
+			oxoGOnSnvsFromIndels.setCommand(extractionCommand);
+		}
 		oxoGOnSnvsFromIndels.addParent(parent);
 		// At workflow-build time, we won't know if there's any files to upload from this step. So...
 		// The script run_oxog_extracted_SNVs.sh will un-tar the tar file if it exists and copy the files to /datastore/files_to_upload
@@ -612,10 +631,13 @@ public class OxoGWrapperWorkflow extends AbstractWorkflowDataModel {
 	private Job doVariantBam(Job parent, BAMType bamType, String bamPath) {
 		Job runOxoGWorkflow = this.getWorkflow().createBashJob("run "+bamType+" variantbam");
 
-		String command = DockerCommandCreator.createVariantBamCommand(bamType, this.aliquotID, bamPath, this.snvVCF, this.svVCF, this.indelVCF);
-		String moveToFailed = GitUtils.gitMoveCommand("running-jobs","failed-jobs",this.JSONlocation + "/" + this.JSONrepoName + "/" + this.JSONfolderName,this.JSONfileName, this.gitMoveTestMode, this.getWorkflowBaseDir() + "/scripts/");
-		command += (" || " + moveToFailed);
-		runOxoGWorkflow.setCommand(command);
+		if (!this.skipVariantBam)
+		{
+			String command = DockerCommandCreator.createVariantBamCommand(bamType, this.aliquotID, bamPath, this.snvVCF, this.svVCF, this.indelVCF);
+			String moveToFailed = GitUtils.gitMoveCommand("running-jobs","failed-jobs",this.JSONlocation + "/" + this.JSONrepoName + "/" + this.JSONfolderName,this.JSONfileName, this.gitMoveTestMode, this.getWorkflowBaseDir() + "/scripts/");
+			command += (" || " + moveToFailed);
+			runOxoGWorkflow.setCommand(command);
+		}
 		//The bam file will need to be indexed!
 		//runOxoGWorkflow.getCommand().addArgument("\nsamtools index /datastore/variantbam_results/minibam_"+bamType+".bam ; \n");
 		
@@ -793,41 +815,6 @@ public class OxoGWrapperWorkflow extends AbstractWorkflowDataModel {
 		}
 		return annotatorJob;
 	}
-//	
-//	private Job gatkMergeVCF(Map<String,String> inputs, String vcfType, String outputFilename, Job ... parents)
-//	{
-//		Job mergeVCFs = this.getWorkflow().createBashJob("merge VCFs "+vcfType);
-//		String varString = "";
-//		for (String k : inputs.keySet())
-//		{
-//			varString += " --variant:" + k + " " + inputs.get(k) + " ";
-//		}
-//		
-//		String mergeCommand = "java -jar /cga/fh/pcawg_pipeline/modules/gatk_merge_vcf/GenomeAnalysisTK.jar "
-//				+ " -T CombineVariants "
-//				+ " -R /ref/"+this.refFile+" "
-//				+ varString
-//				+ " -o "+outputFilename+".gatk.merged.vcf --genotypemergeoption UNIQUIFY --filteredAreUncalled ";
-//		
-//		String dockerCommand = " ( docker run --rm --name=merge_"+vcfType+"_VCFs "
-//							+ " -v /datastore/:/datastore/ "
-//							+ " -v /datastore/merged_vcfs:/outdir/ "
-//							+ " -v /datastore/refdata/:/ref/ "
-//							+ " oxog /bin/bash -c \""
-//							+ " "+mergeCommand+" "
-//							+ "\" ) ";
-//		
-//		
-//		String moveToFailed = GitUtils.gitMoveCommand("running-jobs","failed-jobs",this.JSONlocation + "/" + this.JSONrepoName + "/" + this.JSONfolderName,this.JSONfileName, this.gitMoveTestMode, this.getWorkflowBaseDir() + "/scripts/");
-//		dockerCommand += (" || " + moveToFailed);
-//		
-//		mergeVCFs.setCommand(dockerCommand);
-//		for (Job parent : parents)
-//		{
-//			mergeVCFs.addParent(parent);
-//		}
-//		return mergeVCFs;
-//	}
 
 	private Job gitMove(String src, String dest, Job ...parents) throws Exception
 	{
@@ -896,37 +883,12 @@ public class OxoGWrapperWorkflow extends AbstractWorkflowDataModel {
 			
 			Job combineVCFsByType = this.combineVCFsByType( sangerPreprocessVCF, dkfzEmblPreprocessVCF, broadPreprocessVCF);
 			
-			//Need to use GATK CombineVariants to create good inputs for Jonathan's Annotator. The output from Brian's script may have had too much information removed.
-//			Map<String,String> indelMergeInputs = new HashMap<String,String>(3);
-//			indelMergeInputs.put("broad", this.broadNormalizedIndelVCFName);
-//			indelMergeInputs.put("sanger", this.sangerNormalizedIndelVCFName);
-//			indelMergeInputs.put("dkfz_embl", this.dkfzEmblNormalizedIndelVCFName);
-//			Job mergeIndels = this.gatkMergeVCF(indelMergeInputs, "indel", this.aliquotID+"_indels", sangerPreprocessVCF, dkfzEmblPreprocessVCF, broadPreprocessVCF);
-//			
-//			Map<String,String> snvMergeInputs = new HashMap<String,String>(3);
-//			snvMergeInputs.put("broad", this.broadSNVName);
-//			snvMergeInputs.put("sanger", this.sangerSNVName);
-//			snvMergeInputs.put("dkfz_embl", this.dkfzEmblSNVName);
-//			snvMergeInputs.put("muse", this.museSNVName);
-//			Job mergeSNVs = this.gatkMergeVCF(snvMergeInputs, "SNV", this.aliquotID+"_snvs", sangerPreprocessVCF, dkfzEmblPreprocessVCF, broadPreprocessVCF);
-//			
-//			Map<String,String> snvFromIndelMergeInputs = new HashMap<String,String>(3);
-//			snvFromIndelMergeInputs.put("broad", "/datastore/vcf/broad/*.indel.bcftools-norm.extracted-snvs.vcf");
-//			snvFromIndelMergeInputs.put("sanger", "/datastore/vcf/broad/*.indel.bcftools-norm.extracted-snvs.vcf");
-//			snvFromIndelMergeInputs.put("dkfz_embl", "/datastore/vcf/broad/*.indel.bcftools-norm.extracted-snvs.vcf");
-//			Job mergeSnvFromIndels = this.gatkMergeVCF(indelMergeInputs, "SNV", this.aliquotID+"_snvsFromIndels", sangerPreprocessVCF, dkfzEmblPreprocessVCF, broadPreprocessVCF);
-
-			
 			Job oxoG = this.doOxoG(combineVCFsByType);
 			Job oxoGSnvsFromIndels = this.doOxoGSnvsFromIndels(oxoG);
 			// variantbam jobs will run parallel to each other. variant seems to only use a *single* core, but runs long ( 60 - 120 min on OpenStack);
 			Job normalVariantBam = this.doVariantBam(combineVCFsByType,BAMType.normal,"/datastore/bam/normal/"+this.normalBamGnosID+"/"+this.normalBAMFileName);
 			Job tumourVariantBam = this.doVariantBam(combineVCFsByType,BAMType.tumour,"/datastore/bam/tumour/"+this.tumourBamGnosID+"/"+this.tumourBAMFileName);
 			
-			//String mergedVCFsPath = "/datastore/merged_vcfs/";
-//			Job indelAnnotatorJob = this.runAnnotator("indel", mergedVCFsPath+this.aliquotID+"_indels.gatk.merged.vcf" , "/datastore/variantbam_results/"+this.aliquotID+"_minibam_tumour.bam", "/datastore/variantbam_results/"+this.aliquotID+"_minibam_normal.bam", mergeIndels, mergeSnvFromIndels, mergeSNVs,normalVariantBam, tumourVariantBam);
-//			Job snvAnnotatorJob = this.runAnnotator("SNV",  mergedVCFsPath+this.aliquotID+"_snvs.gatk.merged.vcf" , "/datastore/variantbam_results/"+this.aliquotID+"_minibam_tumour.bam", "/datastore/variantbam_results/"+this.aliquotID+"_minibam_normal.bam", mergeIndels, mergeSnvFromIndels, mergeSNVs,normalVariantBam, tumourVariantBam);
-//			Job snvFromIndelAnnotatorJob = this.runAnnotator("SNV",  mergedVCFsPath+this.aliquotID+"_snvsFromIndels.gatk.merged.vcf" , "/datastore/variantbam_results/"+this.aliquotID+"_minibam_tumour.bam", "/datastore/variantbam_results/"+this.aliquotID+"_minibam_normal.bam", mergeIndels, mergeSnvFromIndels, mergeSNVs,normalVariantBam, tumourVariantBam);
 
 			String tumourMinibamPath = "/datastore/variantbam_results/"+this.aliquotID+"_minibam_tumour.bam";
 			String normalMinibamPath = "/datastore/variantbam_results/"+this.aliquotID+"_minibam_normal.bam"; 
