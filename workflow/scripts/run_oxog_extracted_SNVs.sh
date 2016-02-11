@@ -11,7 +11,7 @@ ALIQUOTID=$6
 
 OXOQSCORE=$7
 
-# TODO: INCLUDE MUSE
+# TODO: INCLUDE MUSE. No, don't include MUSE. There is no MUSE INDEL to extract SNVs from!!
 
 NUMINDELS1=$(zcat $VCF1 | grep "^[^#]" | wc -l)
 echo "$VCF1 has $NUMINDELS1 INDELS"
@@ -54,7 +54,7 @@ if [[ $VCFFORDOCKER != "" ]] ; then
                 ${OXOQSCORE} \
             	${VCFFOROXOG}
             	
-	tar -xf /datastore/oxog_results_extracted_snvs/${ALIQUOTID}.gnos_files.tar -C /datastore/oxog_results_extracted_snvs/
+	tar -xfvk /datastore/oxog_results_extracted_snvs/${ALIQUOTID}.gnos_files.tar -C /datastore/oxog_results_extracted_snvs/
 	[ -d /datastore/files_to_upload/snvs_from_indels ] || mkdir -p /datastore/files_to_upload/snvs_from_indels
 	cp /datastore/oxog_results_extracted_snvs/cga/fh/pcawg_pipeline/jobResults_pipette/jobs/${ALIQUOTID}/links_for_gnos/annotate_failed_sites_to_vcfs/*.vcf.* /datastore/files_to_upload/snvs_from_indels/
 	

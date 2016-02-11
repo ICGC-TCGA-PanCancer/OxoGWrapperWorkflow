@@ -318,10 +318,11 @@ public class OxoGWrapperWorkflow extends BaseOxoGWrapperWorkflow {
 	
 			runOxoGWorkflow.setCommand("(docker run --rm --name=\"oxog_filter\" "+oxogMounts+" oxog /bin/bash -c \"" + oxogCommand+ "\" ) || "+moveToFailed);
 			
-			runOxoGWorkflow.addParent(parent);
+			
 		}
+		runOxoGWorkflow.addParent(parent);
 		Job extractOutputFiles = this.getWorkflow().createBashJob("extract oxog output files from tar");
-		extractOutputFiles.setCommand("tar -xvf /datastore/oxog_results/"+this.aliquotID+".gnos_files.tar -C /datastore/oxog_results ");
+		extractOutputFiles.setCommand("tar -xvfk /datastore/oxog_results/"+this.aliquotID+".gnos_files.tar -C /datastore/oxog_results ");
 		extractOutputFiles.addParent(runOxoGWorkflow);
 		this.filesToUpload.add("/datastore/oxog_results/cga/fh/pcawg_pipeline/jobResults_pipette/jobs/"+this.aliquotID+"/links_for_gnos/annotate_failed_sites_to_vcfs/"+this.aliquotID+".broad-mutect-*.somatic.snv_mnv.oxoG.vcf.gz");
 		this.filesToUpload.add("/datastore/oxog_results/cga/fh/pcawg_pipeline/jobResults_pipette/jobs/"+this.aliquotID+"/links_for_gnos/annotate_failed_sites_to_vcfs/"+this.aliquotID+".dkfz-snvCalling_*.somatic.snv_mnv.oxoG.vcf.gz");
@@ -331,7 +332,8 @@ public class OxoGWrapperWorkflow extends BaseOxoGWrapperWorkflow {
 		this.filesToUpload.add("/datastore/oxog_results/cga/fh/pcawg_pipeline/jobResults_pipette/jobs/"+this.aliquotID+"/links_for_gnos/annotate_failed_sites_to_vcfs/"+this.aliquotID+".dkfz-snvCalling_*.somatic.snv_mnv.oxoG.vcf.gz.tbi");
 		this.filesToUpload.add("/datastore/oxog_results/cga/fh/pcawg_pipeline/jobResults_pipette/jobs/"+this.aliquotID+"/links_for_gnos/annotate_failed_sites_to_vcfs/"+this.aliquotID+".svcp_*.somatic.snv_mnv.oxoG.vcf.gz.tbi");
 		this.filesToUpload.add("/datastore/oxog_results/cga/fh/pcawg_pipeline/jobResults_pipette/jobs/"+this.aliquotID+"/links_for_gnos/annotate_failed_sites_to_vcfs/"+this.aliquotID+".MUSE_1-0rc-vcf.*.somatic.snv_mnv.oxoG.vcf.gz.tbi");
-
+		this.filesToUpload.add("/datastore/oxog_results/"+this.aliquotID+".gnos_files.tar");
+		
 		return extractOutputFiles;
 	}
 
@@ -450,20 +452,29 @@ public class OxoGWrapperWorkflow extends BaseOxoGWrapperWorkflow {
 		String vcfIndicies = "";
 		String vcfMD5Sums = "";
 		String vcfIndexMD5Sums = "";
-		for (String file : this.filesToUpload.stream().filter(p -> p.contains(".vcf") ).collect(Collectors.toList()) )
+		
+		String tars = "";
+		String tarMD5Sums = "";
+		
+		for (String file : this.filesToUpload.stream().filter(p -> p.contains(".vcf") || p.endsWith(".gnos_files.tar") ).collect(Collectors.toList()) )
 		{
 			//md5sum test_files/tumour_minibam.bam.bai | cut -d ' ' -f 1 > test_files/tumour_minibam.bai.md5
 			generateAnalysisFilesVCFs.getCommand().addArgument(" md5sum "+file+" | cut -d ' ' -f 1 > "+file+".md5 ; \n");
 			
-			if (file.contains(".tbi") || file.contains(".idx"))
+			if (file.endsWith(".tar"))
+			{
+				tars += file + ",";
+				tarMD5Sums += file+".md5,";
+			}
+			else if (file.contains(".tbi") || file.contains(".idx"))
 			{
 				vcfIndicies += file + ",";
-				vcfIndexMD5Sums += file + ".md5" + ",";
+				vcfIndexMD5Sums += file + ".md5," ;
 			}
 			else
 			{
 				vcfs += file + ",";
-				vcfMD5Sums += file + ".md5" + ",";	 
+				vcfMD5Sums += file + ".md5,";	 
 			}
 			
 		}
@@ -474,21 +485,28 @@ public class OxoGWrapperWorkflow extends BaseOxoGWrapperWorkflow {
 															+ "SNV_FROM_INDEL_OXOG_INDEX=\'\'\n"
 															+ "SNV_FROM_INDEL_OXOG_MD5=\'\'\n"
 															+ "SNV_FROM_INDEL_OXOG_INDEX_MD5=\'\'\n"
+															+ "SNV_FROM_INDEL_TARBALL=\'\'\n"
+															+ "SNV_FROM_INDEL_TARBALL_MD5=\'\'\n"
 															+ "[ -d /datastore/files_to_upload/snvs_from_indels/ ] &&  for f in $(ls /datastore/files_to_upload/snvs_from_indels/) ; do \n"
 															+ "    mv $f /datastore/files_to_upload/$f \n"
 															+ "    md5sum $f | cud -d ' ' -f 1 > $f.md5 \n"
-															+ "    if [[ \"$f\" =~ tbi|idx ]] ; then \n"
+															+ "    if [[ \"$f\" =~ gnos_files\\.tar ]] ; then \n"
+															+ "        SNV_FROM_INDEL_TARBALL=$f,$SNV_FROM_INDEL_TARBALL\n"
+															+ "        SNV_FROM_INDEL_TARBALL_MD5=$f.md5,$SNV_FROM_INDEL_TARBALL_MD5\n"
+															+ "    elsif [[ \"$f\" =~ tbi|idx ]] ; then \n"
 															+ "        SNV_FROM_INDEL_OXOG_INDEX=$SNV_FROM_INDEL_OXOG_INDEX,$f\n"
-															+ "        SNV_FROM_INDEL_OXOG_INDEX_MD5=$SNV_FROM_INDEL_OXOG_INDEX_MD5,$f\n"
+															+ "        SNV_FROM_INDEL_OXOG_INDEX_MD5=$SNV_FROM_INDEL_OXOG_INDEX_MD5,$f.md5\n"
 															+ "    else \n"
 															+ "        SNV_FROM_INDEL_OXOG=$SNV_FROM_INDEL_OXOG,$f\n"
-															+ "        SNV_FROM_INDEL_OXOG_MD5=$SNV_FROM_INDEL_OXOG_MD5,$f\n"
+															+ "        SNV_FROM_INDEL_OXOG_MD5=$SNV_FROM_INDEL_OXOG_MD5,$f.md5\n"
 															+ "    fi\n"
 															+ "done");
 		generateAnalysisFilesVCFs.getCommand().addArgument("set -x ; docker run pancancer/pancancer_upload_download:1.7 /bin/bash -c"
 				+ "\" /opt/vcf-uploader/vcf-uploader-2.0.9/gnos_upload_vcf --gto-only --pem "+this.uploadKey+" "
 						+ " --metadata-urls "+this.normalMetdataURL+","+this.tumourMetdataURL
 						+ " --vcfs $SNV_FROM_INDEL_OXOG"+vcfs
+						+ " --tarballs $SNV_FROM_INDEL_TARBALL"+tars
+						+ " --tarball-md5sum-files $SNV_FROM_INDEL_TARBALL_MD5"+tarMD5Sums
 						+ " --vcf-idx $SNV_FROM_INDEL_OXOG_INDEX"+vcfIndicies
 						+ " --vcf-md5sum-files $SNV_FROM_INDEL_OXOG_MD5"+vcfMD5Sums
 						+ " --vcf-idx-md5sum-files $SNV_FROM_INDEL_OXOG_INDEX_MD5"+vcfIndexMD5Sums
