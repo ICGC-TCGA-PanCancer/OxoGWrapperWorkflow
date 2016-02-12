@@ -293,6 +293,8 @@ public class OxoGWrapperWorkflow extends BaseOxoGWrapperWorkflow {
 	 */
 	private Job doOxoG(Job parent) {
 		Job runOxoGWorkflow = this.getWorkflow().createBashJob("run OxoG Filter");
+		String moveToFailed = GitUtils.gitMoveCommand("running-jobs","failed-jobs",this.JSONlocation + "/" + this.JSONrepoName + "/" + this.JSONfolderName,this.JSONfileName, this.gitMoveTestMode, this.getWorkflowBaseDir() + "/scripts/");
+
 		if (!skipOxoG)
 		{
 			String oxogMounts = " -v /datastore/refdata/:/cga/fh/pcawg_pipeline/refdata/ \\\n"
@@ -313,28 +315,32 @@ public class OxoGWrapperWorkflow extends BaseOxoGWrapperWorkflow {
 					+ " /datafiles/VCF/"+Pipeline.dkfz_embl+"/" + this.dkfzEmblSNVName  + " \\\n"
 					+ " /datafiles/VCF/"+Pipeline.muse+"/" + this.museSNVName + " \\\n"
 					+ " /datafiles/VCF/"+Pipeline.broad+"/" + this.broadSNVName  ;
-			
-			String moveToFailed = GitUtils.gitMoveCommand("running-jobs","failed-jobs",this.JSONlocation + "/" + this.JSONrepoName + "/" + this.JSONfolderName,this.JSONfileName, this.gitMoveTestMode, this.getWorkflowBaseDir() + "/scripts/");
-	
 			runOxoGWorkflow.setCommand("(docker run --rm --name=\"oxog_filter\" "+oxogMounts+" oxog /bin/bash -c \"" + oxogCommand+ "\" ) || "+moveToFailed);
 			
 			
 		}
 		runOxoGWorkflow.addParent(parent);
 		Job extractOutputFiles = this.getWorkflow().createBashJob("extract oxog output files from tar");
-		extractOutputFiles.setCommand("tar -xvfk /datastore/oxog_results/"+this.aliquotID+".gnos_files.tar -C /datastore/oxog_results ");
+		extractOutputFiles.setCommand("cd /datastore/oxog_results && tar -xvfk ./"+this.aliquotID+".gnos_files.tar ");
 		extractOutputFiles.addParent(runOxoGWorkflow);
-		this.filesToUpload.add("/datastore/oxog_results/cga/fh/pcawg_pipeline/jobResults_pipette/jobs/"+this.aliquotID+"/links_for_gnos/annotate_failed_sites_to_vcfs/"+this.aliquotID+".broad-mutect-*.somatic.snv_mnv.oxoG.vcf.gz");
-		this.filesToUpload.add("/datastore/oxog_results/cga/fh/pcawg_pipeline/jobResults_pipette/jobs/"+this.aliquotID+"/links_for_gnos/annotate_failed_sites_to_vcfs/"+this.aliquotID+".dkfz-snvCalling_*.somatic.snv_mnv.oxoG.vcf.gz");
-		this.filesToUpload.add("/datastore/oxog_results/cga/fh/pcawg_pipeline/jobResults_pipette/jobs/"+this.aliquotID+"/links_for_gnos/annotate_failed_sites_to_vcfs/"+this.aliquotID+".svcp_*.somatic.snv_mnv.oxoG.vcf.gz");
-		this.filesToUpload.add("/datastore/oxog_results/cga/fh/pcawg_pipeline/jobResults_pipette/jobs/"+this.aliquotID+"/links_for_gnos/annotate_failed_sites_to_vcfs/"+this.aliquotID+".MUSE_1-0rc-vcf.*.somatic.snv_mnv.oxoG.vcf.gz");
-		this.filesToUpload.add("/datastore/oxog_results/cga/fh/pcawg_pipeline/jobResults_pipette/jobs/"+this.aliquotID+"/links_for_gnos/annotate_failed_sites_to_vcfs/"+this.aliquotID+".broad-mutect-*.somatic.snv_mnv.oxoG.vcf.gz.tbi");
-		this.filesToUpload.add("/datastore/oxog_results/cga/fh/pcawg_pipeline/jobResults_pipette/jobs/"+this.aliquotID+"/links_for_gnos/annotate_failed_sites_to_vcfs/"+this.aliquotID+".dkfz-snvCalling_*.somatic.snv_mnv.oxoG.vcf.gz.tbi");
-		this.filesToUpload.add("/datastore/oxog_results/cga/fh/pcawg_pipeline/jobResults_pipette/jobs/"+this.aliquotID+"/links_for_gnos/annotate_failed_sites_to_vcfs/"+this.aliquotID+".svcp_*.somatic.snv_mnv.oxoG.vcf.gz.tbi");
-		this.filesToUpload.add("/datastore/oxog_results/cga/fh/pcawg_pipeline/jobResults_pipette/jobs/"+this.aliquotID+"/links_for_gnos/annotate_failed_sites_to_vcfs/"+this.aliquotID+".MUSE_1-0rc-vcf.*.somatic.snv_mnv.oxoG.vcf.gz.tbi");
+		String pathToResults = "/datastore/oxog_results/cga/fh/pcawg_pipeline/jobResults_pipette/jobs/"+this.aliquotID+"/links_for_gnos/annotate_failed_sites_to_vcfs/";
+		this.filesToUpload.add(pathToResults+this.broadSNVName.replace("somatic.vcf.gz", "somatic.oxoG.vcf.gz")) ;// this.aliquotID+".broad-mutect-*.somatic.snv_mnv.oxoG.vcf.gz");
+		this.filesToUpload.add(pathToResults+this.dkfzEmblSNVName.replace("somatic.snv_mnv.vcf.gz","somatic.snv_mnv.oxoG.vcf.gz")) ;//  this.aliquotID+".dkfz-snvCalling_*.somatic.snv_mnv.oxoG.vcf.gz");
+		this.filesToUpload.add(pathToResults+this.sangerSNVName.replace("somatic.snv_mnv.vcf.gz", "somatic.snv_mnv.oxoG.vcf.gz"))  ;//this.aliquotID+".svcp_*.somatic.snv_mnv.oxoG.vcf.gz");
+		this.filesToUpload.add(pathToResults+this.museSNVName.replace("somatic.snv_mnv.vcf.gz", "somatic.snv_mnv.oxoG.vcf.gz") );//".MUSE_1-0rc-vcf.*.somatic.snv_mnv.oxoG.vcf.gz");
+		this.filesToUpload.add(pathToResults+this.broadSNVName.replace("somatic.vcf.gz", "somatic.oxoG.vcf.gz.tbi")) ; ;// this.aliquotID+".broad-mutect-*.somatic.snv_mnv.oxoG.vcf.gz.tbi");
+		this.filesToUpload.add(pathToResults+this.dkfzEmblSNVName.replace("somatic.snv_mnv.vcf.gz","somatic.snv_mnv.oxoG.vcf.gz.tbi")) ;//this.aliquotID+".dkfz-snvCalling_*.somatic.snv_mnv.oxoG.vcf.gz.tbi");
+		this.filesToUpload.add(pathToResults+this.sangerSNVName.replace("somatic.snv_mnv.vcf.gz", "somatic.snv_mnv.oxoG.vcf.gz.tbi"))  ;//this.aliquotID+".svcp_*.somatic.snv_mnv.oxoG.vcf.gz.tbi");
+		this.filesToUpload.add(pathToResults+this.museSNVName.replace("somatic.snv_mnv.vcf.gz", "somatic.snv_mnv.oxoG.vcf.gz") );//this.aliquotID+".MUSE_1-0rc-vcf.*.somatic.snv_mnv.oxoG.vcf.gz.tbi");
 		this.filesToUpload.add("/datastore/oxog_results/"+this.aliquotID+".gnos_files.tar");
 		
-		return extractOutputFiles;
+		Job prepMutectFile = this.getWorkflow().createBashJob("prepare mutect calls file for upload");
+		prepMutectFile.setCommand("cp /datastore/oxog_workspace/mutect/sg/gather/"+this.aliquotID+".call_stats.txt /datastore/files_for_upload/"+this.aliquotID+".call_stats.txt "
+				+ " && cd /datastore/files_for_upload/ && gzip "+this.aliquotID+".call_stats.txt && tar -cvf ./"+this.aliquotID+".call_stats.txt.gz.tar ./"+this.aliquotID+".call_stats.txt.gz");
+		this.filesToUpload.add("/datastore/files_to_upload/"+this.aliquotID+".call_stats.txt.gz.tar");
+		
+		prepMutectFile.addParent(extractOutputFiles);
+		return prepMutectFile;
 	}
 
 	/**
@@ -565,7 +571,7 @@ public class OxoGWrapperWorkflow extends BaseOxoGWrapperWorkflow {
 
 	private Job runAnnotator(String inputType, String workflowName, String vcfPath, String tumourBamPath, String normalBamPath, Job ...parents)
 	{
-		Job annotatorJob = this.getWorkflow().createBashJob("run annotator for "+inputType);
+		Job annotatorJob = this.getWorkflow().createBashJob("run annotator for "+workflowName+" "+inputType);
 		String outDir = "/datastore/files_for_upload/";
 		if (vcfPath.contains("extracted-snvs"))
 		{

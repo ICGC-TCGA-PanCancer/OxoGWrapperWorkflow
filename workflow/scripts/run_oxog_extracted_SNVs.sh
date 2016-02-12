@@ -11,8 +11,6 @@ ALIQUOTID=$6
 
 OXOQSCORE=$7
 
-# TODO: INCLUDE MUSE. No, don't include MUSE. There is no MUSE INDEL to extract SNVs from!!
-
 NUMINDELS1=$(zcat $VCF1 | grep "^[^#]" | wc -l)
 echo "$VCF1 has $NUMINDELS1 INDELS"
 NUMINDELS2=$(zcat $VCF2 | grep "^[^#]" | wc -l)
