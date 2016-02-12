@@ -54,7 +54,7 @@ if [[ $VCFFORDOCKER != "" ]] ; then
                 ${OXOQSCORE} \
             	${VCFFOROXOG}
             	
-	tar -xfvk /datastore/oxog_results_extracted_snvs/${ALIQUOTID}.gnos_files.tar -C /datastore/oxog_results_extracted_snvs/
+	cd /datastore/oxog_results_extracted_snvs && tar -xkfv ./${ALIQUOTID}.gnos_files.tar 
 	[ -d /datastore/files_to_upload/snvs_from_indels ] || mkdir -p /datastore/files_to_upload/snvs_from_indels
 	cp /datastore/oxog_results_extracted_snvs/cga/fh/pcawg_pipeline/jobResults_pipette/jobs/${ALIQUOTID}/links_for_gnos/annotate_failed_sites_to_vcfs/*.vcf.* /datastore/files_to_upload/snvs_from_indels/
 	
