@@ -331,7 +331,7 @@ public class OxoGWrapperWorkflow extends BaseOxoGWrapperWorkflow {
 		this.filesToUpload.add(pathToResults+this.broadSNVName.replace("somatic.snv_mnv.vcf.gz", "somatic.snv_mnv.oxoG.vcf.gz.tbi")) ; ;// this.aliquotID+".broad-mutect-*.somatic.snv_mnv.oxoG.vcf.gz.tbi");
 		this.filesToUpload.add(pathToResults+this.dkfzEmblSNVName.replace("somatic.snv_mnv.vcf.gz","somatic.snv_mnv.oxoG.vcf.gz.tbi")) ;//this.aliquotID+".dkfz-snvCalling_*.somatic.snv_mnv.oxoG.vcf.gz.tbi");
 		this.filesToUpload.add(pathToResults+this.sangerSNVName.replace("somatic.snv_mnv.vcf.gz", "somatic.snv_mnv.oxoG.vcf.gz.tbi"))  ;//this.aliquotID+".svcp_*.somatic.snv_mnv.oxoG.vcf.gz.tbi");
-		this.filesToUpload.add(pathToResults+this.museSNVName.replace("somatic.snv_mnv.vcf.gz", "somatic.snv_mnv.oxoG.vcf.gz") );//this.aliquotID+".MUSE_1-0rc-vcf.*.somatic.snv_mnv.oxoG.vcf.gz.tbi");
+		this.filesToUpload.add(pathToResults+this.museSNVName.replace("somatic.snv_mnv.vcf.gz", "somatic.snv_mnv.oxoG.vcf.gz.tbi") );//this.aliquotID+".MUSE_1-0rc-vcf.*.somatic.snv_mnv.oxoG.vcf.gz.tbi");
 		this.filesToUpload.add("/datastore/oxog_results/"+this.aliquotID+".gnos_files.tar");
 		
 		Job prepMutectFile = this.getWorkflow().createBashJob("prepare mutect calls file for upload");
@@ -510,7 +510,7 @@ public class OxoGWrapperWorkflow extends BaseOxoGWrapperWorkflow {
 															+ "done");
 		generateAnalysisFilesVCFs.getCommand().addArgument("\n docker run pancancer/pancancer_upload_download:1.7 --rm --name=upload_vcfs_and_tarballs"
 				+ " perl -I /opt/gt-download-upload-wrapper/gt-download-upload-wrapper-2.0.13/lib/ /opt/vcf-uploader/vcf-uploader-2.0.9/gnos_upload_vcf.pl \\\n"
-				+ " --gto-only --pem "+this.uploadKey+" "
+				+ " --gto-only --key "+this.uploadKey+" "
 						+ " --metadata-urls "+this.normalMetdataURL+","+this.tumourMetdataURL+" \\\n"
 						+ " --vcfs $SNV_FROM_INDEL_OXOG"+vcfs+" \\\n"
 						+ " --tarballs $SNV_FROM_INDEL_TARBALL"+tars+" \\\n"
@@ -548,7 +548,7 @@ public class OxoGWrapperWorkflow extends BaseOxoGWrapperWorkflow {
 		}
 		generateAnalysisFilesBAMs.getCommand().addArgument("docker run pancancer/pancancer_upload_download --rm --name=upload_bams "
 				+ " perl -I /opt/gt-download-upload-wrapper/gt-download-upload-wrapper-2.0.13/lib/ /opt/vcf-uploader/vcf-uploader-2.0.9/gnos_upload_vcf.pl \\\n"
-				+ " --gto-only --pem "+this.uploadKey+" "
+				+ " --gto-only --key "+this.uploadKey+" "
 						+ " --metadata-urls "+this.normalMetdataURL+","+this.tumourMetdataURL+" \\\n"
 						+ " --bams "+bams+" \\\n"
 						+ " --bam-bais "+bamIndicies+" \\\n"
@@ -579,7 +579,7 @@ public class OxoGWrapperWorkflow extends BaseOxoGWrapperWorkflow {
 		{
 			outDir+= "snvs_from_indels/";
 		}
-		String annotatedFileName = this.aliquotID+workflowName+"_"+inputType+".vcf";
+		String annotatedFileName = this.aliquotID+"_annotated_"+workflowName+"_"+inputType+".vcf";
 		String command = "( ([ -f "+vcfPath+" ] \\\n"
 						+ " && (docker run --rm --name=pcawg-annotator_"+workflowName+"_"+inputType+" -v "+vcfPath+":/input.vcf "
 						+ " -v "+tumourBamPath+":/tumour_minibam.bam "
