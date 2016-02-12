@@ -579,26 +579,30 @@ public class OxoGWrapperWorkflow extends BaseOxoGWrapperWorkflow {
 		{
 			outDir+= "snvs_from_indels/";
 		}
+		String command = "";
 		String annotatedFileName = this.aliquotID+"_annotated_"+workflowName+"_"+inputType+".vcf";
-		String command = "( ([ -f "+vcfPath+" ] \\\n"
-						+ " && (docker run --rm --name=pcawg-annotator_"+workflowName+"_"+inputType+" -v "+vcfPath+":/input.vcf "
-						+ " -v "+tumourBamPath+":/tumour_minibam.bam "
-						+ " -v "+normalBamPath+":/normal_minibam.bam "
-//						+ " -v "+outDir+":/outdir/ "
-//						+ " -v /datastore/refdata/public/:/ref/ "
-						+ " ljdursi/pcawg-annotate  "
-						+ " "+inputType+" /input.vcf /normal_minibam.bam /tumour_minibam.bam ) > "+outDir+"/"+annotatedFileName+" ) \\\n"
-						+ " && ( docker run --rm --name=zip_and_index_annotated_"+workflowName+"_"+inputType+" "
-						+ " -v "+outDir+":/outdir/"
-						+ " -v /outdir/"+this.aliquotID+"_annotated_"+inputType+".vcf:/input.vcf "
-						+ " compbio/ngseasy-base:a1.0-002 /bin/bash -c \""
-						+ " bgzip -f -c /input.vcf > /outdir/"+annotatedFileName+".gz && "
-						+ " tabix -p vcf /outdir/"+annotatedFileName+".gz ; "
-						+ "\" ) ) \\\n" ;
-		
-		
-		String moveToFailed = GitUtils.gitMoveCommand("running-jobs","failed-jobs",this.JSONlocation + "/" + this.JSONrepoName + "/" + this.JSONfolderName,this.JSONfileName, this.gitMoveTestMode, this.getWorkflowBaseDir() + "/scripts/");
-		command += " || " + moveToFailed;
+		if (!this.skipAnnotation)
+		{
+			command = "( ([ -f "+vcfPath+" ] \\\n"
+							+ " && (docker run --rm --name=pcawg-annotator_"+workflowName+"_"+inputType+" -v "+vcfPath+":/input.vcf "
+							+ " -v "+tumourBamPath+":/tumour_minibam.bam "
+							+ " -v "+normalBamPath+":/normal_minibam.bam "
+	//						+ " -v "+outDir+":/outdir/ "
+	//						+ " -v /datastore/refdata/public/:/ref/ "
+							+ " ljdursi/pcawg-annotate  "
+							+ " "+inputType+" /input.vcf /normal_minibam.bam /tumour_minibam.bam ) > "+outDir+"/"+annotatedFileName+" ) \\\n"
+							+ " && ( docker run --rm --name=zip_and_index_annotated_"+workflowName+"_"+inputType+" "
+							+ " -v "+outDir+":/outdir/"
+							+ " -v /outdir/"+this.aliquotID+"_annotated_"+inputType+".vcf:/input.vcf "
+							+ " compbio/ngseasy-base:a1.0-002 /bin/bash -c \""
+							+ " bgzip -f -c /input.vcf > /outdir/"+annotatedFileName+".gz && "
+							+ " tabix -p vcf /outdir/"+annotatedFileName+".gz ; "
+							+ "\" ) ) \\\n" ;
+			
+			
+			String moveToFailed = GitUtils.gitMoveCommand("running-jobs","failed-jobs",this.JSONlocation + "/" + this.JSONrepoName + "/" + this.JSONfolderName,this.JSONfileName, this.gitMoveTestMode, this.getWorkflowBaseDir() + "/scripts/");
+			command += " || " + moveToFailed;
+		}
 		filesToUpload.add("/datastore/files_for_upload/"+annotatedFileName+".gz ");
 		filesToUpload.add("/datastore/files_for_upload/"+annotatedFileName+".gz.tbi ");
 		

@@ -115,6 +115,7 @@ public abstract class BaseOxoGWrapperWorkflow extends AbstractWorkflowDataModel 
 	//Intended to speed up testing by skipping these steps when results already exist.
 	protected boolean skipOxoG = false;
 	protected boolean skipVariantBam = false;
+	protected boolean skipAnnotation = false;
 	
 	protected String normalMinibamPath;
 	protected String tumourMinibamPath;
@@ -250,6 +251,10 @@ public abstract class BaseOxoGWrapperWorkflow extends AbstractWorkflowDataModel 
 			
 			if (hasPropertyAndNotNull("skipVariantBam")) {
 				this.skipVariantBam = Boolean.valueOf(getProperty("skipVariantBam"));
+			}
+			
+			if (hasPropertyAndNotNull("skipAnnotation")) {
+				this.skipVariantBam = Boolean.valueOf(getProperty("skipAnnotation"));
 			}
 			
 			//this.generateRulesFile();
