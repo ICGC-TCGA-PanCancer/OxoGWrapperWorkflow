@@ -41,29 +41,34 @@ else:
 for i in range(10): # try 10 times. If there are MANY clients trying to check-in at once this might be necessary. 
 
     print ("git mv attempt #"+str(i));
-
-    command = 'cd {} ; '.format(repo_location) + \
-              'git checkout master ; ' + \
-              'git reset --hard origin/master ; ' + \
-              'git pull ; ' + \
-              move_command;
     
-    
-    print("Command to execute will be:\t\n"+command+"\n\n");
-    process = subprocess.Popen(
-            command,
-            shell=True,
-            stdout=subprocess.PIPE,
-            stderr=subprocess.PIPE
-        )
-    out, err = process.communicate()
+    if os.path.isfile(repo_location+"/"+src_dir+"/"+file_name):
 
-    if process.returncode == 0 :
-        break  # succeeded
-    else:
-        print('Error while moving the file: '+file_name+'.\nError message: {}\n\nRetrying...'.format(err))
-        if not test_mode:
-            # Only retry if we're not in test mode.
-            time.sleep(randint(1,15))  # pause a few seconds before retry
+        command = 'cd {} ; '.format(repo_location) + \
+                  'git checkout master ; ' + \
+                  'git reset --hard origin/master ; ' + \
+                  'git pull ; ' + \
+                  move_command;
+        
+        
+        print("Command to execute will be:\t\n"+command+"\n\n");
+        process = subprocess.Popen(
+                command,
+                shell=True,
+                stdout=subprocess.PIPE,
+                stderr=subprocess.PIPE
+            )
+        out, err = process.communicate()
+    
+        if process.returncode == 0 :
+            break  # succeeded
         else:
-            sys.exit(1);
+            print('Error while moving the file: '+file_name+'.\nError message: {}\n\nRetrying...'.format(err))
+            if not test_mode:
+                # Only retry if we're not in test mode.
+                time.sleep(randint(1,15))  # pause a few seconds before retry
+            else:
+                sys.exit(1);
+    else:
+        print ("File "+file_name+" was not in "+repo_location+"/"+src_dir+"/"+" but that might not be an error. Please check that another process hasn't already moved the file.");
+        sys.exit(0);
