@@ -15,6 +15,8 @@ import net.sourceforge.seqware.pipeline.workflowV2.model.Job;
 
 public class OxoGWrapperWorkflow extends BaseOxoGWrapperWorkflow {
 
+	
+
 	/**
 	 * Generates a rules file that is used for the variant program that produces minibams.
 	 * @throws URISyntaxException
@@ -483,8 +485,8 @@ public class OxoGWrapperWorkflow extends BaseOxoGWrapperWorkflow {
 				vcfs += file + ",";
 				vcfMD5Sums += file + ".md5,";	 
 			}
-			
 		}
+		
 		//This ugliness is here because of the OxoG results on SNVs from INDELs. We won't know until the workflow actually runs if there are any SNVs from INDELs.
 		//So we need to build up the list of files to upload using a bash script that will be evaluated at runtime rather
 		//than Java code that gets evaluated when the workflow is built.
@@ -508,17 +510,22 @@ public class OxoGWrapperWorkflow extends BaseOxoGWrapperWorkflow {
 															+ "        SNV_FROM_INDEL_OXOG_MD5=$SNV_FROM_INDEL_OXOG_MD5,$f.md5\n"
 															+ "    fi\n"
 															+ "done");
-		generateAnalysisFilesVCFs.getCommand().addArgument("\n docker run pancancer/pancancer_upload_download:1.7 --rm --name=upload_vcfs_and_tarballs"
+		generateAnalysisFilesVCFs.getCommand().addArgument("\n docker run --rm --name=upload_vcfs_and_tarballs -v "+this.gnosKey+":/gnos.key -v /datastore/:/datastore/ "
+				+ " pancancer/pancancer_upload_download:1.7 /bin/bash -c \""
 				+ " perl -I /opt/gt-download-upload-wrapper/gt-download-upload-wrapper-2.0.13/lib/ /opt/vcf-uploader/vcf-uploader-2.0.9/gnos_upload_vcf.pl \\\n"
-				+ " --gto-only --key "+this.uploadKey+" "
+				+ " --gto-only --key /gnos.key --upload-url https://gtrepo-dkfz.annailabs.com/ --skip-upload  "
 						+ " --metadata-urls "+this.normalMetdataURL+","+this.tumourMetdataURL+" \\\n"
 						+ " --vcfs $SNV_FROM_INDEL_OXOG"+vcfs+" \\\n"
 						+ " --tarballs $SNV_FROM_INDEL_TARBALL"+tars+" \\\n"
 						+ " --tarball-md5sum-files $SNV_FROM_INDEL_TARBALL_MD5"+tarMD5Sums+" \\\n"
-						+ " --vcf-idx $SNV_FROM_INDEL_OXOG_INDEX"+vcfIndicies+" \\\n"
+						+ " --vcf-idxs $SNV_FROM_INDEL_OXOG_INDEX"+vcfIndicies+" \\\n"
 						+ " --vcf-md5sum-files $SNV_FROM_INDEL_OXOG_MD5"+vcfMD5Sums+" \\\n"
 						+ " --vcf-idx-md5sum-files $SNV_FROM_INDEL_OXOG_INDEX_MD5"+vcfIndexMD5Sums+" \\\n"
-						+ " --workflow-name OxoGWorkflow-OxoGFiltering\\\n");
+						+ " --workflow-name OxoGWorkflow-OxoGFiltering \\\n"
+						+ " --workflow-version " + this.getVersion() + "\\\n"
+						+ " --workflow-src-url https://github.com/ICGC-TCGA-PanCancer/OxoGWrapperWorkflow --workflow-url https://github.com/ICGC-TCGA-PanCancer/OxoGWrapperWorkflow; \n"
+						+"ls / -lrh \n"
+						+"cp -r /vcf /datastore/upload-prep/ \"\n");
 		
 		generateAnalysisFilesVCFs.addParent(parentJob);
 		
@@ -546,15 +553,21 @@ public class OxoGWrapperWorkflow extends BaseOxoGWrapperWorkflow {
 			}
 			
 		}
-		generateAnalysisFilesBAMs.getCommand().addArgument("docker run pancancer/pancancer_upload_download --rm --name=upload_bams "
+		generateAnalysisFilesBAMs.getCommand().addArgument("\n docker run --rm --name=upload_vcfs_and_tarballs -v "+this.gnosKey+":/gnos.key -v /datastore/:/datastore/ "
+				+ " pancancer/pancancer_upload_download:1.7 /bin/bash -c \""
 				+ " perl -I /opt/gt-download-upload-wrapper/gt-download-upload-wrapper-2.0.13/lib/ /opt/vcf-uploader/vcf-uploader-2.0.9/gnos_upload_vcf.pl \\\n"
-				+ " --gto-only --key "+this.uploadKey+" "
+				+ " --gto-only --key /gnos.key --upload-url https://gtrepo-dkfz.annailabs.com/ --skip-upload  "
 						+ " --metadata-urls "+this.normalMetdataURL+","+this.tumourMetdataURL+" \\\n"
 						+ " --bams "+bams+" \\\n"
 						+ " --bam-bais "+bamIndicies+" \\\n"
 						+ " --bam-md5sum-files "+bamMD5Sums+" \\\n"
 						+ " --bam-bai-md5sum-files "+bamIndexMD5Sums+" \\\n"
-						+ " --workflow-name OxoGWorkflow-variantbam\\\n");
+						+ " --workflow-name OxoGWorkflow-variantbam \\\n"
+						+ " --workflow-version " + this.getVersion() + "\\\n"
+						+ " --workflow-src-url https://github.com/ICGC-TCGA-PanCancer/OxoGWrapperWorkflow --workflow-url https://github.com/ICGC-TCGA-PanCancer/OxoGWrapperWorkflow; \n"
+						+"ls / -lrh \n"
+						+"cp -r /vcf /datastore/upload-prep/ \"\n");
+		
 		generateAnalysisFilesBAMs.addParent(generateAnalysisFilesVCFs);
 
 		//Note: It was decided there should be two uploads: one for minibams and one for VCFs (for people who want VCFs but not minibams).
@@ -587,8 +600,6 @@ public class OxoGWrapperWorkflow extends BaseOxoGWrapperWorkflow {
 							+ " && (docker run --rm --name=pcawg-annotator_"+workflowName+"_"+inputType+" -v "+vcfPath+":/input.vcf "
 							+ " -v "+tumourBamPath+":/tumour_minibam.bam "
 							+ " -v "+normalBamPath+":/normal_minibam.bam "
-	//						+ " -v "+outDir+":/outdir/ "
-	//						+ " -v /datastore/refdata/public/:/ref/ "
 							+ " ljdursi/pcawg-annotate  "
 							+ " "+inputType+" /input.vcf /normal_minibam.bam /tumour_minibam.bam ) > "+outDir+"/"+annotatedFileName+" ) \\\n"
 							+ " && ( docker run --rm --name=zip_and_index_annotated_"+workflowName+"_"+inputType+" "

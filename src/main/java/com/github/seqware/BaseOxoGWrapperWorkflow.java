@@ -110,6 +110,7 @@ public abstract class BaseOxoGWrapperWorkflow extends AbstractWorkflowDataModel 
 	protected String tumourBamGnosID;
 	protected String normalBamGnosID;
 	protected String uploadKey;
+	protected String gnosKey;
 	
 	//These two variables can be used to skip running OxoG and variant bam, in case they have already been run.
 	//Intended to speed up testing by skipping these steps when results already exist.
@@ -212,6 +213,7 @@ public abstract class BaseOxoGWrapperWorkflow extends AbstractWorkflowDataModel 
 			this.tumourBamGnosID= this.getMandatoryProperty(JSONUtils.BAM_TUMOUR_GNOS_ID);
 			
 			this.uploadKey= this.getMandatoryProperty("uploadKey");
+			this.uploadKey= this.getMandatoryProperty("gnosKey");
 			
 			if (hasPropertyAndNotNull("gitMoveTestMode")) {
 				this.gitMoveTestMode = Boolean.valueOf(getProperty("gitMoveTestMode"));
