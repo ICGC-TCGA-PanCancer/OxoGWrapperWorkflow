@@ -321,7 +321,7 @@ public class OxoGWrapperWorkflow extends BaseOxoGWrapperWorkflow {
 		}
 		runOxoGWorkflow.addParent(parent);
 		Job extractOutputFiles = this.getWorkflow().createBashJob("extract oxog output files from tar");
-		extractOutputFiles.setCommand("cd /datastore/oxog_results && tar -xvkf ./"+this.aliquotID+".gnos_files.tar ");
+		extractOutputFiles.setCommand("cd /datastore/oxog_results && tar -xvkf ./"+this.aliquotID+".gnos_files.tar && sudo chmod a+rw -R /datastore/oxog_results/ ");
 		extractOutputFiles.addParent(runOxoGWorkflow);
 		String pathToResults = "/datastore/oxog_results/cga/fh/pcawg_pipeline/jobResults_pipette/jobs/"+this.aliquotID+"/links_for_gnos/annotate_failed_sites_to_vcfs/";
 		this.filesToUpload.add(pathToResults+this.broadSNVName.replace("somatic.snv_mnv.vcf.gz", "somatic.snv_mnv.oxoG.vcf.gz")) ;// this.aliquotID+".broad-mutect-*.somatic.snv_mnv.oxoG.vcf.gz");
@@ -464,8 +464,9 @@ public class OxoGWrapperWorkflow extends BaseOxoGWrapperWorkflow {
 		
 		for (String file : this.filesToUpload.stream().filter(p -> p.contains(".vcf") || p.endsWith(".gnos_files.tar") ).collect(Collectors.toList()) )
 		{
+			file = file.trim();
 			//md5sum test_files/tumour_minibam.bam.bai | cut -d ' ' -f 1 > test_files/tumour_minibam.bai.md5
-			generateAnalysisFilesVCFs.getCommand().addArgument(" md5sum "+file+" | cut -d ' ' -f 1 > "+file+".md5 ; \n");
+			generateAnalysisFilesVCFs.getCommand().addArgument("md5sum "+file+" | cut -d ' ' -f 1 > "+file+".md5 ; \n");
 			
 			if (file.endsWith(".tar"))
 			{
@@ -499,7 +500,7 @@ public class OxoGWrapperWorkflow extends BaseOxoGWrapperWorkflow {
 															+ "    if [[ \"$f\" =~ gnos_files\\.tar ]] ; then \n"
 															+ "        SNV_FROM_INDEL_TARBALL=$f,$SNV_FROM_INDEL_TARBALL\n"
 															+ "        SNV_FROM_INDEL_TARBALL_MD5=$f.md5,$SNV_FROM_INDEL_TARBALL_MD5\n"
-															+ "    elsif [[ \"$f\" =~ tbi|idx ]] ; then \n"
+															+ "    elif [[ \"$f\" =~ tbi|idx ]] ; then \n"
 															+ "        SNV_FROM_INDEL_OXOG_INDEX=$SNV_FROM_INDEL_OXOG_INDEX,$f\n"
 															+ "        SNV_FROM_INDEL_OXOG_INDEX_MD5=$SNV_FROM_INDEL_OXOG_INDEX_MD5,$f.md5\n"
 															+ "    else \n"
@@ -507,17 +508,17 @@ public class OxoGWrapperWorkflow extends BaseOxoGWrapperWorkflow {
 															+ "        SNV_FROM_INDEL_OXOG_MD5=$SNV_FROM_INDEL_OXOG_MD5,$f.md5\n"
 															+ "    fi\n"
 															+ "done");
-		generateAnalysisFilesVCFs.getCommand().addArgument("set -x ; docker run pancancer/pancancer_upload_download:1.7 /bin/bash -c"
-				+ "\" /opt/vcf-uploader/vcf-uploader-2.0.9/gnos_upload_vcf --gto-only --pem "+this.uploadKey+" "
-						+ " --metadata-urls "+this.normalMetdataURL+","+this.tumourMetdataURL
-						+ " --vcfs $SNV_FROM_INDEL_OXOG"+vcfs
-						+ " --tarballs $SNV_FROM_INDEL_TARBALL"+tars
-						+ " --tarball-md5sum-files $SNV_FROM_INDEL_TARBALL_MD5"+tarMD5Sums
-						+ " --vcf-idx $SNV_FROM_INDEL_OXOG_INDEX"+vcfIndicies
-						+ " --vcf-md5sum-files $SNV_FROM_INDEL_OXOG_MD5"+vcfMD5Sums
-						+ " --vcf-idx-md5sum-files $SNV_FROM_INDEL_OXOG_INDEX_MD5"+vcfIndexMD5Sums
-						+ " --workflow-name OxoGWorkflow-OxoGFiltering"
-				+ "\" set +x;");
+		generateAnalysisFilesVCFs.getCommand().addArgument("\n docker run pancancer/pancancer_upload_download:1.7 --rm --name=upload_vcfs_and_tarballs"
+				+ " perl -I /opt/gt-download-upload-wrapper/gt-download-upload-wrapper-2.0.13/lib/ /opt/vcf-uploader/vcf-uploader-2.0.9/gnos_upload_vcf.pl \\\n"
+				+ " --gto-only --pem "+this.uploadKey+" "
+						+ " --metadata-urls "+this.normalMetdataURL+","+this.tumourMetdataURL+" \\\n"
+						+ " --vcfs $SNV_FROM_INDEL_OXOG"+vcfs+" \\\n"
+						+ " --tarballs $SNV_FROM_INDEL_TARBALL"+tars+" \\\n"
+						+ " --tarball-md5sum-files $SNV_FROM_INDEL_TARBALL_MD5"+tarMD5Sums+" \\\n"
+						+ " --vcf-idx $SNV_FROM_INDEL_OXOG_INDEX"+vcfIndicies+" \\\n"
+						+ " --vcf-md5sum-files $SNV_FROM_INDEL_OXOG_MD5"+vcfMD5Sums+" \\\n"
+						+ " --vcf-idx-md5sum-files $SNV_FROM_INDEL_OXOG_INDEX_MD5"+vcfIndexMD5Sums+" \\\n"
+						+ " --workflow-name OxoGWorkflow-OxoGFiltering\\\n");
 		
 		generateAnalysisFilesVCFs.addParent(parentJob);
 		
@@ -529,6 +530,7 @@ public class OxoGWrapperWorkflow extends BaseOxoGWrapperWorkflow {
 		String bamIndexMD5Sums = "";
 		for (String file : this.filesToUpload.stream().filter(p -> p.contains(".bam") || p.contains(".bai") ).collect(Collectors.toList()) )
 		{
+			file = file.trim();
 			//md5sum test_files/tumour_minibam.bam.bai | cut -d ' ' -f 1 > test_files/tumour_minibam.bai.md5
 			generateAnalysisFilesBAMs.getCommand().addArgument(" md5sum "+file+" | cut -d ' ' -f 1 > "+file+".md5 ; \n");
 			
@@ -544,15 +546,15 @@ public class OxoGWrapperWorkflow extends BaseOxoGWrapperWorkflow {
 			}
 			
 		}
-		generateAnalysisFilesBAMs.getCommand().addArgument("docker run pancancer/pancancer_upload_download /bin/bash -c"
-				+ "\" /opt/vcf-uploader/vcf-uploader-2.0.9/gnos_upload_vcf --gto-only --pem "+this.uploadKey+" "
-						+ " --metadata-urls "+this.normalMetdataURL+","+this.tumourMetdataURL
-						+ " --bams "+bams
-						+ " --bam-bais "+bamIndicies
-						+ " --bam-md5sum-files "+bamMD5Sums
-						+ " --bam-bai-md5sum-files "+bamIndexMD5Sums
-						+ " --workflow-name OxoGWorkflow-variantbam"
-				+ "\"");
+		generateAnalysisFilesBAMs.getCommand().addArgument("docker run pancancer/pancancer_upload_download --rm --name=upload_bams "
+				+ " perl -I /opt/gt-download-upload-wrapper/gt-download-upload-wrapper-2.0.13/lib/ /opt/vcf-uploader/vcf-uploader-2.0.9/gnos_upload_vcf.pl \\\n"
+				+ " --gto-only --pem "+this.uploadKey+" "
+						+ " --metadata-urls "+this.normalMetdataURL+","+this.tumourMetdataURL+" \\\n"
+						+ " --bams "+bams+" \\\n"
+						+ " --bam-bais "+bamIndicies+" \\\n"
+						+ " --bam-md5sum-files "+bamMD5Sums+" \\\n"
+						+ " --bam-bai-md5sum-files "+bamIndexMD5Sums+" \\\n"
+						+ " --workflow-name OxoGWorkflow-variantbam\\\n");
 		generateAnalysisFilesBAMs.addParent(generateAnalysisFilesVCFs);
 
 		//Note: It was decided there should be two uploads: one for minibams and one for VCFs (for people who want VCFs but not minibams).
@@ -597,8 +599,8 @@ public class OxoGWrapperWorkflow extends BaseOxoGWrapperWorkflow {
 		
 		String moveToFailed = GitUtils.gitMoveCommand("running-jobs","failed-jobs",this.JSONlocation + "/" + this.JSONrepoName + "/" + this.JSONfolderName,this.JSONfileName, this.gitMoveTestMode, this.getWorkflowBaseDir() + "/scripts/");
 		command += " || " + moveToFailed;
-		filesToUpload.add("/datastore/files_for_upload/"+this.aliquotID+"_annotated_"+inputType+".vcf.gz ");
-		filesToUpload.add("/datastore/files_for_upload/"+this.aliquotID+"_annotated_"+inputType+".vcf.gz.tbi ");
+		filesToUpload.add("/datastore/files_for_upload/"+annotatedFileName+".gz ");
+		filesToUpload.add("/datastore/files_for_upload/"+annotatedFileName+".gz.tbi ");
 		
 		
 		annotatorJob.setCommand(command);
@@ -615,7 +617,7 @@ public class OxoGWrapperWorkflow extends BaseOxoGWrapperWorkflow {
 		return GitUtils.gitMove(src, dest, this.getWorkflow(), this.JSONlocation, this.JSONrepoName, this.JSONfolderName, this.GITname, this.GITemail, this.gitMoveTestMode, this.JSONfileName, pathToScripts , (parents));
 	}
 	
-	private List<Job> doAnnotations(Job tumourVariantBam, Job normalVariantBam)
+	private List<Job> doAnnotations(Job ... parents)
 	{
 		List<Job> finalAnnotatorJobs = new ArrayList<Job>(3);
 		
@@ -629,16 +631,16 @@ public class OxoGWrapperWorkflow extends BaseOxoGWrapperWorkflow {
 		String dkfzEmblOxoGSNVFromIndelFileName = dkfzEmbleOxogSNVFileName.replace("/oxog_results/", "/oxog_results_extracted_snvs/");
 		
 
-		Job broadIndelAnnotatorJob = this.runAnnotator("indel", "broad", this.broadNormalizedIndelVCFName, this.tumourMinibamPath,this.normalMinibamPath, tumourVariantBam, normalVariantBam);
+		Job broadIndelAnnotatorJob = this.runAnnotator("indel", "broad", this.broadNormalizedIndelVCFName, this.tumourMinibamPath,this.normalMinibamPath, parents);
 		Job dfkzEmblIndelAnnotatorJob = this.runAnnotator("indel", "dkfz_embl", this.dkfzEmblNormalizedIndelVCFName, this.tumourMinibamPath, this.normalMinibamPath, broadIndelAnnotatorJob);
 		Job sangerIndelAnnotatorJob = this.runAnnotator("indel","sanger", this.sangerNormalizedIndelVCFName, this.tumourMinibamPath, this.normalMinibamPath, dfkzEmblIndelAnnotatorJob);
 
-		Job broadSNVAnnotatorJob = this.runAnnotator("SNV", "broad",broadOxogSNVFileName, this.tumourMinibamPath, this.normalMinibamPath, tumourVariantBam, normalVariantBam);
+		Job broadSNVAnnotatorJob = this.runAnnotator("SNV", "broad",broadOxogSNVFileName, this.tumourMinibamPath, this.normalMinibamPath, parents);
 		Job dfkzEmblSNVAnnotatorJob = this.runAnnotator("SNV", "dkfz_embl",dkfzEmbleOxogSNVFileName, this.tumourMinibamPath, this.normalMinibamPath, broadSNVAnnotatorJob);
 		Job sangerSNVAnnotatorJob = this.runAnnotator("SNV","sanger",sangerOxogSNVFileName, this.tumourMinibamPath, this.normalMinibamPath, dfkzEmblSNVAnnotatorJob);
 		Job museSNVAnnotatorJob = this.runAnnotator("SNV","muse",museOxogSNVFileName, this.tumourMinibamPath, this.normalMinibamPath, dfkzEmblSNVAnnotatorJob);
 
-		Job broadSNVFromIndelAnnotatorJob = this.runAnnotator("SNV","broad", broadOxoGSNVFromIndelFileName, this.tumourMinibamPath, this.normalMinibamPath, tumourVariantBam, normalVariantBam);
+		Job broadSNVFromIndelAnnotatorJob = this.runAnnotator("SNV","broad", broadOxoGSNVFromIndelFileName, this.tumourMinibamPath, this.normalMinibamPath, parents);
 		Job dfkzEmblSNVFromIndelAnnotatorJob = this.runAnnotator("SNV","dkfz_embl", sangerOxoGSNVFromIndelFileName, this.tumourMinibamPath, this.normalMinibamPath, broadSNVFromIndelAnnotatorJob);
 		Job sangerSNVFromIndelAnnotatorJob = this.runAnnotator("SNV","sanger", dkfzEmblOxoGSNVFromIndelFileName, this.tumourMinibamPath, this.normalMinibamPath, dfkzEmblSNVFromIndelAnnotatorJob);
 		
@@ -718,9 +720,8 @@ public class OxoGWrapperWorkflow extends BaseOxoGWrapperWorkflow {
 			Job normalVariantBam = this.doVariantBam(combineVCFsByType,BAMType.normal,"/datastore/bam/normal/"+this.normalBamGnosID+"/"+this.normalBAMFileName);
 			Job tumourVariantBam = this.doVariantBam(combineVCFsByType,BAMType.tumour,"/datastore/bam/tumour/"+this.tumourBamGnosID+"/"+this.tumourBAMFileName);
 
-			List<Job> annotationJobs = this.doAnnotations(tumourVariantBam, normalVariantBam);
-			//Need to add oxoGSnvsFromIndels to annotationJobs so that the next jobs can receive them all in one arg.
-			annotationJobs.add(oxoGSnvsFromIndels);
+			List<Job> annotationJobs = this.doAnnotations(oxoGSnvsFromIndels, tumourVariantBam, normalVariantBam, oxoG);
+			
 			//Now do the Upload
 			if (!skipUpload)
 			{
