@@ -321,14 +321,14 @@ public class OxoGWrapperWorkflow extends BaseOxoGWrapperWorkflow {
 		}
 		runOxoGWorkflow.addParent(parent);
 		Job extractOutputFiles = this.getWorkflow().createBashJob("extract oxog output files from tar");
-		extractOutputFiles.setCommand("cd /datastore/oxog_results && tar -xvfk ./"+this.aliquotID+".gnos_files.tar ");
+		extractOutputFiles.setCommand("cd /datastore/oxog_results && tar -xvkf ./"+this.aliquotID+".gnos_files.tar ");
 		extractOutputFiles.addParent(runOxoGWorkflow);
 		String pathToResults = "/datastore/oxog_results/cga/fh/pcawg_pipeline/jobResults_pipette/jobs/"+this.aliquotID+"/links_for_gnos/annotate_failed_sites_to_vcfs/";
-		this.filesToUpload.add(pathToResults+this.broadSNVName.replace("somatic.vcf.gz", "somatic.oxoG.vcf.gz")) ;// this.aliquotID+".broad-mutect-*.somatic.snv_mnv.oxoG.vcf.gz");
+		this.filesToUpload.add(pathToResults+this.broadSNVName.replace("somatic.snv_mnv.vcf.gz", "somatic.snv_mnv.oxoG.vcf.gz")) ;// this.aliquotID+".broad-mutect-*.somatic.snv_mnv.oxoG.vcf.gz");
 		this.filesToUpload.add(pathToResults+this.dkfzEmblSNVName.replace("somatic.snv_mnv.vcf.gz","somatic.snv_mnv.oxoG.vcf.gz")) ;//  this.aliquotID+".dkfz-snvCalling_*.somatic.snv_mnv.oxoG.vcf.gz");
 		this.filesToUpload.add(pathToResults+this.sangerSNVName.replace("somatic.snv_mnv.vcf.gz", "somatic.snv_mnv.oxoG.vcf.gz"))  ;//this.aliquotID+".svcp_*.somatic.snv_mnv.oxoG.vcf.gz");
 		this.filesToUpload.add(pathToResults+this.museSNVName.replace("somatic.snv_mnv.vcf.gz", "somatic.snv_mnv.oxoG.vcf.gz") );//".MUSE_1-0rc-vcf.*.somatic.snv_mnv.oxoG.vcf.gz");
-		this.filesToUpload.add(pathToResults+this.broadSNVName.replace("somatic.vcf.gz", "somatic.oxoG.vcf.gz.tbi")) ; ;// this.aliquotID+".broad-mutect-*.somatic.snv_mnv.oxoG.vcf.gz.tbi");
+		this.filesToUpload.add(pathToResults+this.broadSNVName.replace("somatic.snv_mnv.vcf.gz", "somatic.snv_mnv.oxoG.vcf.gz.tbi")) ; ;// this.aliquotID+".broad-mutect-*.somatic.snv_mnv.oxoG.vcf.gz.tbi");
 		this.filesToUpload.add(pathToResults+this.dkfzEmblSNVName.replace("somatic.snv_mnv.vcf.gz","somatic.snv_mnv.oxoG.vcf.gz.tbi")) ;//this.aliquotID+".dkfz-snvCalling_*.somatic.snv_mnv.oxoG.vcf.gz.tbi");
 		this.filesToUpload.add(pathToResults+this.sangerSNVName.replace("somatic.snv_mnv.vcf.gz", "somatic.snv_mnv.oxoG.vcf.gz.tbi"))  ;//this.aliquotID+".svcp_*.somatic.snv_mnv.oxoG.vcf.gz.tbi");
 		this.filesToUpload.add(pathToResults+this.museSNVName.replace("somatic.snv_mnv.vcf.gz", "somatic.snv_mnv.oxoG.vcf.gz") );//this.aliquotID+".MUSE_1-0rc-vcf.*.somatic.snv_mnv.oxoG.vcf.gz.tbi");
@@ -336,7 +336,7 @@ public class OxoGWrapperWorkflow extends BaseOxoGWrapperWorkflow {
 		
 		Job prepMutectFile = this.getWorkflow().createBashJob("prepare mutect calls file for upload");
 		prepMutectFile.setCommand("cp /datastore/oxog_workspace/mutect/sg/gather/"+this.aliquotID+".call_stats.txt /datastore/files_for_upload/"+this.aliquotID+".call_stats.txt "
-				+ " && cd /datastore/files_for_upload/ && gzip "+this.aliquotID+".call_stats.txt && tar -cvf ./"+this.aliquotID+".call_stats.txt.gz.tar ./"+this.aliquotID+".call_stats.txt.gz");
+				+ " && cd /datastore/files_for_upload/ && gzip -f "+this.aliquotID+".call_stats.txt && tar -cvf ./"+this.aliquotID+".call_stats.txt.gz.tar ./"+this.aliquotID+".call_stats.txt.gz");
 		this.filesToUpload.add("/datastore/files_to_upload/"+this.aliquotID+".call_stats.txt.gz.tar");
 		
 		prepMutectFile.addParent(extractOutputFiles);
