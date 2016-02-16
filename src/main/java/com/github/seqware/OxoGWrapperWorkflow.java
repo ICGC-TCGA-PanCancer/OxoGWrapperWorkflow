@@ -208,10 +208,6 @@ public class OxoGWrapperWorkflow extends BaseOxoGWrapperWorkflow {
 				this.dkfzEmblNormalizedIndelVCFName = outDir + "/"+normalizedINDELName;
 				this.dkfzEmblExtractedSNVVCFName = outDir + "/"+extractedSNVVCFName;
 				break;
-//			case muse:
-//				this.museNormalizedIndelVCFName = outDir + "/"+normalizedINDELName;
-//				this.museExtractedSNVVCFName = outDir + "/"+extractedSNVVCFName;
-//				break;
 			default:
 				// Just in case someone adds a new pipeline and then doesn't write code to handle it.
 				throw new RuntimeException("Unknown pipeline: "+workflowName);
@@ -300,7 +296,6 @@ public class OxoGWrapperWorkflow extends BaseOxoGWrapperWorkflow {
 		if (!skipOxoG)
 		{
 			String oxogMounts = " -v /datastore/refdata/:/cga/fh/pcawg_pipeline/refdata/ \\\n"
-					//+ " -v /datastore/oncotator_db/:/cga/fh/pcawg_pipeline/refdata/public/oncotator_db/ \\\n"  
 					+ " -v /datastore/oxog_workspace/:/cga/fh/pcawg_pipeline/jobResults_pipette/jobs/"+this.aliquotID+"/:rw \\\n" 
 					+ " -v /datastore/bam/:/datafiles/BAM/ \\\n"
 					+ " -v /datastore/vcf/"+Pipeline.broad+"/"+this.broadGnosID+"/"+"/:/datafiles/VCF/"+Pipeline.broad+"/ \\\n"
@@ -326,14 +321,14 @@ public class OxoGWrapperWorkflow extends BaseOxoGWrapperWorkflow {
 		extractOutputFiles.setCommand("cd /datastore/oxog_results && tar -xvkf ./"+this.aliquotID+".gnos_files.tar && sudo chmod a+rw -R /datastore/oxog_results/ ");
 		extractOutputFiles.addParent(runOxoGWorkflow);
 		String pathToResults = "/datastore/oxog_results/cga/fh/pcawg_pipeline/jobResults_pipette/jobs/"+this.aliquotID+"/links_for_gnos/annotate_failed_sites_to_vcfs/";
-		this.filesToUpload.add(pathToResults+this.broadSNVName.replace("somatic.snv_mnv.vcf.gz", "somatic.snv_mnv.oxoG.vcf.gz")) ;// this.aliquotID+".broad-mutect-*.somatic.snv_mnv.oxoG.vcf.gz");
-		this.filesToUpload.add(pathToResults+this.dkfzEmblSNVName.replace("somatic.snv_mnv.vcf.gz","somatic.snv_mnv.oxoG.vcf.gz")) ;//  this.aliquotID+".dkfz-snvCalling_*.somatic.snv_mnv.oxoG.vcf.gz");
-		this.filesToUpload.add(pathToResults+this.sangerSNVName.replace("somatic.snv_mnv.vcf.gz", "somatic.snv_mnv.oxoG.vcf.gz"))  ;//this.aliquotID+".svcp_*.somatic.snv_mnv.oxoG.vcf.gz");
-		this.filesToUpload.add(pathToResults+this.museSNVName.replace("somatic.snv_mnv.vcf.gz", "somatic.snv_mnv.oxoG.vcf.gz") );//".MUSE_1-0rc-vcf.*.somatic.snv_mnv.oxoG.vcf.gz");
-		this.filesToUpload.add(pathToResults+this.broadSNVName.replace("somatic.snv_mnv.vcf.gz", "somatic.snv_mnv.oxoG.vcf.gz.tbi")) ; ;// this.aliquotID+".broad-mutect-*.somatic.snv_mnv.oxoG.vcf.gz.tbi");
-		this.filesToUpload.add(pathToResults+this.dkfzEmblSNVName.replace("somatic.snv_mnv.vcf.gz","somatic.snv_mnv.oxoG.vcf.gz.tbi")) ;//this.aliquotID+".dkfz-snvCalling_*.somatic.snv_mnv.oxoG.vcf.gz.tbi");
-		this.filesToUpload.add(pathToResults+this.sangerSNVName.replace("somatic.snv_mnv.vcf.gz", "somatic.snv_mnv.oxoG.vcf.gz.tbi"))  ;//this.aliquotID+".svcp_*.somatic.snv_mnv.oxoG.vcf.gz.tbi");
-		this.filesToUpload.add(pathToResults+this.museSNVName.replace("somatic.snv_mnv.vcf.gz", "somatic.snv_mnv.oxoG.vcf.gz.tbi") );//this.aliquotID+".MUSE_1-0rc-vcf.*.somatic.snv_mnv.oxoG.vcf.gz.tbi");
+		this.filesToUpload.add(pathToResults+this.broadSNVName.replace("somatic.snv_mnv.vcf.gz", "somatic.snv_mnv.oxoG.vcf.gz")) ;
+		this.filesToUpload.add(pathToResults+this.dkfzEmblSNVName.replace("somatic.snv_mnv.vcf.gz","somatic.snv_mnv.oxoG.vcf.gz")) ;
+		this.filesToUpload.add(pathToResults+this.sangerSNVName.replace("somatic.snv_mnv.vcf.gz", "somatic.snv_mnv.oxoG.vcf.gz"))  ;
+		this.filesToUpload.add(pathToResults+this.museSNVName.replace("somatic.snv_mnv.vcf.gz", "somatic.snv_mnv.oxoG.vcf.gz") );
+		this.filesToUpload.add(pathToResults+this.broadSNVName.replace("somatic.snv_mnv.vcf.gz", "somatic.snv_mnv.oxoG.vcf.gz.tbi")) ;
+		this.filesToUpload.add(pathToResults+this.dkfzEmblSNVName.replace("somatic.snv_mnv.vcf.gz","somatic.snv_mnv.oxoG.vcf.gz.tbi")) ;
+		this.filesToUpload.add(pathToResults+this.sangerSNVName.replace("somatic.snv_mnv.vcf.gz", "somatic.snv_mnv.oxoG.vcf.gz.tbi"))  ;
+		this.filesToUpload.add(pathToResults+this.museSNVName.replace("somatic.snv_mnv.vcf.gz", "somatic.snv_mnv.oxoG.vcf.gz.tbi") );
 		this.filesToUpload.add("/datastore/oxog_results/"+this.aliquotID+".gnos_files.tar");
 		
 		Job prepOxoGTarAndMutectCallsforUpload = this.getWorkflow().createBashJob("prepare OxoG tar and mutect calls file for upload");
@@ -358,11 +353,10 @@ public class OxoGWrapperWorkflow extends BaseOxoGWrapperWorkflow {
 		Job oxoGOnSnvsFromIndels = this.getWorkflow().createBashJob("running OxoG on SNVs from INDELs");
 		if (!skipOxoG)
 		{
-			//String vcfBaseDir = "/datastore/vcf/";
-			String vcf1 = this.sangerExtractedSNVVCFName; //vcfBaseDir+Pipeline.broad.toString()+"/somatic.indel.bcftools-norm.extracted-snvs.vcf ";
-			String vcf2 = this.broadExtractedSNVVCFName; //vcfBaseDir+Pipeline.sanger.toString()+"/somatic.indel.bcftools-norm.extracted-snvs.vcf ";
-			String vcf3 = this.dkfzEmblExtractedSNVVCFName; //vcfBaseDir+Pipeline.dkfz_embl.toString()+"/somatic.indel.bcftools-norm.extracted-snvs.vcf ";
-			//String vcf4 = this.museExtractedSNVVCFName; //vcfBaseDir+Pipeline.muse.toString()+"/somatic.iindel.bcftools-norm.extracted-snvs.vcf ";
+			String vcf1 = this.sangerExtractedSNVVCFName;
+			String vcf2 = this.broadExtractedSNVVCFName;
+			String vcf3 = this.dkfzEmblExtractedSNVVCFName;
+
 			String extractionCommand = this.getWorkflowBaseDir()+"/scripts/run_oxog_extracted_SNVs.sh "+
 					vcf1+" "+vcf2+" "+vcf3+" "+
 					this.normalBAMFileName+" "+this.tumourBAMFileName+" "+
@@ -391,16 +385,6 @@ public class OxoGWrapperWorkflow extends BaseOxoGWrapperWorkflow {
 	private Job doVariantBam(Job parent, BAMType bamType, String bamPath) {
 		Job runOxoGWorkflow = this.getWorkflow().createBashJob("run "+bamType+" variantbam");
 
-		if (!this.skipVariantBam)
-		{
-			String command = DockerCommandCreator.createVariantBamCommand(bamType, this.aliquotID, bamPath, this.snvVCF, this.svVCF, this.indelVCF);
-			String moveToFailed = GitUtils.gitMoveCommand("running-jobs","failed-jobs",this.JSONlocation + "/" + this.JSONrepoName + "/" + this.JSONfolderName,this.JSONfileName, this.gitMoveTestMode, this.getWorkflowBaseDir() + "/scripts/");
-			command += (" || " + moveToFailed);
-			runOxoGWorkflow.setCommand(command);
-		}
-		//The bam file will need to be indexed!
-		//runOxoGWorkflow.getCommand().addArgument("\nsamtools index /datastore/variantbam_results/minibam_"+bamType+".bam ; \n");
-		
 		String minibamName = "";
 		if (bamType == BAMType.normal)
 		{
@@ -414,6 +398,16 @@ public class OxoGWrapperWorkflow extends BaseOxoGWrapperWorkflow {
 			this.tumourMinibamPath = "/datastore/variantbam_results/"+minibamName+".bam";
 			this.filesToUpload.add(this.tumourMinibamPath);
 		}
+		
+		
+		if (!this.skipVariantBam)
+		{
+			String command = DockerCommandCreator.createVariantBamCommand(bamType, minibamName+".bam", bamPath, this.snvVCF, this.svVCF, this.indelVCF);
+			String moveToFailed = GitUtils.gitMoveCommand("running-jobs","failed-jobs",this.JSONlocation + "/" + this.JSONrepoName + "/" + this.JSONfolderName,this.JSONfileName, this.gitMoveTestMode, this.getWorkflowBaseDir() + "/scripts/");
+			command += (" || " + moveToFailed);
+			runOxoGWorkflow.setCommand(command);
+		}
+		
 		
 		this.filesToUpload.add("/datastore/variantbam_results/"+minibamName+".bai");
 		runOxoGWorkflow.addParent(parent);
@@ -551,7 +545,7 @@ public class OxoGWrapperWorkflow extends BaseOxoGWrapperWorkflow {
 			else
 			{
 				bams += file + ",";
-				bamMD5Sums += file + ".md5" + ",";	 
+				bamMD5Sums += file + ".md5" + ",";
 			}
 			
 		}
@@ -570,7 +564,7 @@ public class OxoGWrapperWorkflow extends BaseOxoGWrapperWorkflow {
 						+"ls / -lrh && \n"
 						+"cp -r /vcf /datastore/upload-prep/ \"\n");
 		
-		generateAnalysisFilesBAMs.addParent(generateAnalysisFilesVCFs);
+		generateAnalysisFilesBAMs.addParent(parentJob);
 
 		//Note: It was decided there should be two uploads: one for minibams and one for VCFs (for people who want VCFs but not minibams).
 		Job uploadResults = this.getWorkflow().createBashJob("upload results");
@@ -706,9 +700,7 @@ public class OxoGWrapperWorkflow extends BaseOxoGWrapperWorkflow {
 				Job downloadMuseVCFs = this.getVCF(downloadBroadVCFs, Pipeline.muse, this.museSNVVCFObjectID, this.museSNVIndexObjectID);
 				// Once VCFs are downloaded, download the BAMs.
 				Job downloadNormalBam = this.getBAM(downloadMuseVCFs,BAMType.normal, this.bamNormalIndexObjectID,this.bamNormalObjectID);
-				//this.normalBAMFileName = "/datastore/bam/normal/*.bam";
 				Job downloadTumourBam = this.getBAM(downloadNormalBam,BAMType.tumour, this.bamTumourIndexObjectID,this.bamTumourObjectID);
-				//this.tumourBAMFileName = "/datastore/bam/tumour/*.bam";
 				
 				// After we've downloaded all VCFs on a per-workflow basis, we also need to do a vcfcombine 
 				// on the *types* of VCFs, for the minibam generator. The per-workflow combined VCFs will

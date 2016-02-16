@@ -265,8 +265,6 @@ public abstract class BaseOxoGWrapperWorkflow extends AbstractWorkflowDataModel 
 				this.gnosMetadataUploadURL = getProperty("gnosMetadataUploadURL");
 			}
 			
-			//this.generateRulesFile();
-			
 		} catch (Exception e) {
 			throw new RuntimeException("Exception encountered during workflow init: "+e.getMessage(),e);
 		}
