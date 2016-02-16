@@ -121,6 +121,8 @@ public abstract class BaseOxoGWrapperWorkflow extends AbstractWorkflowDataModel 
 	protected String normalMinibamPath;
 	protected String tumourMinibamPath;
 	
+	protected String gnosMetadataUploadURL = "https://gtrepo-osdc-icgc.annailabs.com";
+	
 	/**
 	 * Get a property name that is mandatory
 	 * @param propName The name of the property
@@ -257,6 +259,10 @@ public abstract class BaseOxoGWrapperWorkflow extends AbstractWorkflowDataModel 
 			
 			if (hasPropertyAndNotNull("skipAnnotation")) {
 				this.skipVariantBam = Boolean.valueOf(getProperty("skipAnnotation"));
+			}
+			
+			if (hasPropertyAndNotNull("gnosMetadataUploadURL")) {
+				this.gnosMetadataUploadURL = getProperty("gnosMetadataUploadURL");
 			}
 			
 			//this.generateRulesFile();

@@ -336,13 +336,15 @@ public class OxoGWrapperWorkflow extends BaseOxoGWrapperWorkflow {
 		this.filesToUpload.add(pathToResults+this.museSNVName.replace("somatic.snv_mnv.vcf.gz", "somatic.snv_mnv.oxoG.vcf.gz.tbi") );//this.aliquotID+".MUSE_1-0rc-vcf.*.somatic.snv_mnv.oxoG.vcf.gz.tbi");
 		this.filesToUpload.add("/datastore/oxog_results/"+this.aliquotID+".gnos_files.tar");
 		
-		Job prepMutectFile = this.getWorkflow().createBashJob("prepare mutect calls file for upload");
-		prepMutectFile.setCommand("cp /datastore/oxog_workspace/mutect/sg/gather/"+this.aliquotID+".call_stats.txt /datastore/files_for_upload/"+this.aliquotID+".call_stats.txt "
+		Job prepOxoGTarAndMutectCallsforUpload = this.getWorkflow().createBashJob("prepare OxoG tar and mutect calls file for upload");
+		prepOxoGTarAndMutectCallsforUpload.setCommand(" ([ -d /datastore/files_for_upload ] || mkdir -p /datastore/files_for_upload) "
+				+ " && cp /datastore/oxog_results/"+this.aliquotID+".gnos_files.tar /datastore/files_for_upload/ "
+				+ " && cp /datastore/oxog_workspace/mutect/sg/gather/"+this.aliquotID+".call_stats.txt /datastore/files_for_upload/"+this.aliquotID+".call_stats.txt "
 				+ " && cd /datastore/files_for_upload/ && gzip -f "+this.aliquotID+".call_stats.txt && tar -cvf ./"+this.aliquotID+".call_stats.txt.gz.tar ./"+this.aliquotID+".call_stats.txt.gz");
 		this.filesToUpload.add("/datastore/files_to_upload/"+this.aliquotID+".call_stats.txt.gz.tar");
 		
-		prepMutectFile.addParent(extractOutputFiles);
-		return prepMutectFile;
+		prepOxoGTarAndMutectCallsforUpload.addParent(extractOutputFiles);
+		return prepOxoGTarAndMutectCallsforUpload;
 	}
 
 	/**
@@ -453,7 +455,7 @@ public class OxoGWrapperWorkflow extends BaseOxoGWrapperWorkflow {
 		//minibams
 		//other intermediate files?
 		
-		generateAnalysisFilesVCFs.getCommand().addArgument("[ -d /datastore/files_for_upload ] || mkdir -p /datastore/files_for_upload ; \n");
+		//generateAnalysisFilesVCFs.getCommand().addArgument("[ -d /datastore/files_for_upload ] || mkdir -p /datastore/files_for_upload ; \n");
 		
 		//Files need to be copied to the staging directory
 		String vcfs = "";
@@ -464,7 +466,7 @@ public class OxoGWrapperWorkflow extends BaseOxoGWrapperWorkflow {
 		String tars = "";
 		String tarMD5Sums = "";
 		
-		for (String file : this.filesToUpload.stream().filter(p -> p.contains(".vcf") || p.endsWith(".gnos_files.tar") ).collect(Collectors.toList()) )
+		for (String file : this.filesToUpload.stream().filter(p -> p.contains(".vcf") || p.endsWith(".tar") ).collect(Collectors.toList()) )
 		{
 			file = file.trim();
 			//md5sum test_files/tumour_minibam.bam.bai | cut -d ' ' -f 1 > test_files/tumour_minibam.bai.md5
@@ -513,7 +515,7 @@ public class OxoGWrapperWorkflow extends BaseOxoGWrapperWorkflow {
 		generateAnalysisFilesVCFs.getCommand().addArgument("\n docker run --rm --name=upload_vcfs_and_tarballs -v "+this.gnosKey+":/gnos.key -v /datastore/:/datastore/ "
 				+ " pancancer/pancancer_upload_download:1.7 /bin/bash -c \""
 				+ " perl -I /opt/gt-download-upload-wrapper/gt-download-upload-wrapper-2.0.13/lib/ /opt/vcf-uploader/vcf-uploader-2.0.9/gnos_upload_vcf.pl \\\n"
-				+ " --gto-only --key /gnos.key --upload-url https://gtrepo-dkfz.annailabs.com/ --skip-upload  "
+				+ " --gto-only --key /gnos.key --upload-url "+this.gnosMetadataUploadURL+" "
 						+ " --metadata-urls "+this.normalMetdataURL+","+this.tumourMetdataURL+" \\\n"
 						+ " --vcfs $SNV_FROM_INDEL_OXOG"+vcfs+" \\\n"
 						+ " --tarballs $SNV_FROM_INDEL_TARBALL"+tars+" \\\n"
@@ -523,8 +525,8 @@ public class OxoGWrapperWorkflow extends BaseOxoGWrapperWorkflow {
 						+ " --vcf-idx-md5sum-files $SNV_FROM_INDEL_OXOG_INDEX_MD5"+vcfIndexMD5Sums+" \\\n"
 						+ " --workflow-name OxoGWorkflow-OxoGFiltering \\\n"
 						+ " --workflow-version " + this.getVersion() + "\\\n"
-						+ " --workflow-src-url https://github.com/ICGC-TCGA-PanCancer/OxoGWrapperWorkflow --workflow-url https://github.com/ICGC-TCGA-PanCancer/OxoGWrapperWorkflow; \n"
-						+"ls / -lrh \n"
+						+ " --workflow-src-url https://github.com/ICGC-TCGA-PanCancer/OxoGWrapperWorkflow --workflow-url https://github.com/ICGC-TCGA-PanCancer/OxoGWrapperWorkflow && \n"
+						+"ls / -lrh && \n"
 						+"cp -r /vcf /datastore/upload-prep/ \"\n");
 		
 		generateAnalysisFilesVCFs.addParent(parentJob);
@@ -553,26 +555,26 @@ public class OxoGWrapperWorkflow extends BaseOxoGWrapperWorkflow {
 			}
 			
 		}
-		generateAnalysisFilesBAMs.getCommand().addArgument("\n docker run --rm --name=upload_vcfs_and_tarballs -v "+this.gnosKey+":/gnos.key -v /datastore/:/datastore/ "
+		generateAnalysisFilesBAMs.getCommand().addArgument("\n docker run --rm --name=upload_bams -v "+this.gnosKey+":/gnos.key -v /datastore/:/datastore/ "
 				+ " pancancer/pancancer_upload_download:1.7 /bin/bash -c \""
 				+ " perl -I /opt/gt-download-upload-wrapper/gt-download-upload-wrapper-2.0.13/lib/ /opt/vcf-uploader/vcf-uploader-2.0.9/gnos_upload_vcf.pl \\\n"
-				+ " --gto-only --key /gnos.key --upload-url https://gtrepo-dkfz.annailabs.com/ --skip-upload  "
+				+ " --gto-only --key /gnos.key --upload-url https://gtrepo-dkfz.annailabs.com/ --upload-url "+this.gnosMetadataUploadURL+" "
 						+ " --metadata-urls "+this.normalMetdataURL+","+this.tumourMetdataURL+" \\\n"
 						+ " --bams "+bams+" \\\n"
 						+ " --bam-bais "+bamIndicies+" \\\n"
 						+ " --bam-md5sum-files "+bamMD5Sums+" \\\n"
-						+ " --bam-bai-md5sum-files "+bamIndexMD5Sums+" \\\n"
+						+ " --bam_bai-md5sum-files "+bamIndexMD5Sums+" \\\n"
 						+ " --workflow-name OxoGWorkflow-variantbam \\\n"
 						+ " --workflow-version " + this.getVersion() + "\\\n"
-						+ " --workflow-src-url https://github.com/ICGC-TCGA-PanCancer/OxoGWrapperWorkflow --workflow-url https://github.com/ICGC-TCGA-PanCancer/OxoGWrapperWorkflow; \n"
-						+"ls / -lrh \n"
+						+ " --workflow-src-url https://github.com/ICGC-TCGA-PanCancer/OxoGWrapperWorkflow --workflow-url https://github.com/ICGC-TCGA-PanCancer/OxoGWrapperWorkflow && \n"
+						+"ls / -lrh && \n"
 						+"cp -r /vcf /datastore/upload-prep/ \"\n");
 		
 		generateAnalysisFilesBAMs.addParent(generateAnalysisFilesVCFs);
 
 		//Note: It was decided there should be two uploads: one for minibams and one for VCFs (for people who want VCFs but not minibams).
 		Job uploadResults = this.getWorkflow().createBashJob("upload results");
-		String command = "rsync -avz -e 'ssh -i "+this.uploadKey+"' /datastore/files_for_upload/ " + this.uploadURL;
+		String command = "( rsync -avz -e ssh /datastore/files_for_upload/ " + this.uploadURL + " ) ";
 		
 		String moveToFailed = GitUtils.gitMoveCommand("uploading-jobs","failed-jobs",this.JSONlocation + "/" + this.JSONrepoName + "/" + this.JSONfolderName,this.JSONfileName, this.gitMoveTestMode, this.getWorkflowBaseDir() + "/scripts/");
 		command += (" || " + moveToFailed);
