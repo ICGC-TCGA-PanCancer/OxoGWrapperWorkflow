@@ -52,6 +52,7 @@ public class DockerCommandCreator {
 		containerCommandArgs.add("-l /snv.vcf");
 		containerCommandArgs.add("-l /sv.vcf");
 		containerCommandArgs.add("-l /indel.vcf");
+		containerCommandArgs.add("-r /rules.txt");
 		//UGLY!! - rethink this whole DockerComandCreator...
 		containerCommandArgs.add(" && samtools index  /outdir/"+outputFileName);
 
