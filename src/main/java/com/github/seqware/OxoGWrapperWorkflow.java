@@ -318,7 +318,7 @@ public class OxoGWrapperWorkflow extends BaseOxoGWrapperWorkflow {
 		}
 		runOxoGWorkflow.addParent(parent);
 		Job extractOutputFiles = this.getWorkflow().createBashJob("extract oxog output files from tar");
-		extractOutputFiles.setCommand("cd /datastore/oxog_results && tar -xvkf ./"+this.aliquotID+".gnos_files.tar && sudo chmod a+rw -R /datastore/oxog_results/ ");
+		extractOutputFiles.setCommand("cd /datastore/oxog_results && sudo chmod a+rw -R /datastore/oxog_results/ && tar -xvkf ./"+this.aliquotID+".gnos_files.tar  ");
 		extractOutputFiles.addParent(runOxoGWorkflow);
 		String pathToResults = "/datastore/oxog_results/cga/fh/pcawg_pipeline/jobResults_pipette/jobs/"+this.aliquotID+"/links_for_gnos/annotate_failed_sites_to_vcfs/";
 		this.filesToUpload.add(pathToResults+this.broadSNVName.replace("somatic.snv_mnv.vcf.gz", "somatic.snv_mnv.oxoG.vcf.gz")) ;
