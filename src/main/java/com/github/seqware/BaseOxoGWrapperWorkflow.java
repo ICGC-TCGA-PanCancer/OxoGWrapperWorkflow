@@ -106,7 +106,7 @@ public abstract class BaseOxoGWrapperWorkflow extends AbstractWorkflowDataModel 
 	protected boolean skipUpload = false;
 	
 	//Path to reference file usd for normalization, *relative* to /datastore/refdata
-	protected String refFile = "pcawg/genome.fa";
+	protected String refFile = "public/Homo_sapiens_assembly19.fasta";
 	protected String tumourBamGnosID;
 	protected String normalBamGnosID;
 	protected String uploadKey;
