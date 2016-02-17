@@ -33,7 +33,7 @@ public class DockerCommandCreator {
 		return sb.toString();
 	}
 
-	static String createVariantBamCommand(BAMType bamType, String outputFileName, String bamPath, String snvVCF, String svVCF, String indelVCF) {
+	static String createVariantBamCommand(BAMType bamType, String outputFileName, String bamPath, String snvVCF, String svVCF, String indelVCF, int svPadding, int snvPadding, int indelPadding) {
 		String command = "";
 
 		Map<String, String> mountedObjects = new HashMap<String, String>(6);
@@ -52,7 +52,9 @@ public class DockerCommandCreator {
 		containerCommandArgs.add("-l /snv.vcf");
 		containerCommandArgs.add("-l /sv.vcf");
 		containerCommandArgs.add("-l /indel.vcf");
-		containerCommandArgs.add("-r /rules.txt");
+		//Rules file seems to be having problems (variant doesn't recognize the \n between each line. weird).
+		//So just do the rules in-line and separate them with a "%".
+		containerCommandArgs.add("-r 'pad["+svPadding+"];mlregion@/sv.vcf%pad["+snvPadding+"];mlregion@/snv.vcf%pad["+indelPadding+"]mlregion@/indel.vcf' ");
 		//UGLY!! - rethink this whole DockerComandCreator...
 		containerCommandArgs.add(" && samtools index  /outdir/"+outputFileName);
 
