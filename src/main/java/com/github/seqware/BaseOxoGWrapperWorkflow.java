@@ -215,7 +215,7 @@ public abstract class BaseOxoGWrapperWorkflow extends AbstractWorkflowDataModel 
 			this.tumourBamGnosID= this.getMandatoryProperty(JSONUtils.BAM_TUMOUR_GNOS_ID);
 			
 			this.uploadKey= this.getMandatoryProperty("uploadKey");
-			this.uploadKey= this.getMandatoryProperty("gnosKey");
+			this.gnosKey= this.getMandatoryProperty("gnosKey");
 			
 			if (hasPropertyAndNotNull("gitMoveTestMode")) {
 				this.gitMoveTestMode = Boolean.valueOf(getProperty("gitMoveTestMode"));
