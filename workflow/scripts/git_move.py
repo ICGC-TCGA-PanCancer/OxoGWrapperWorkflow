@@ -24,14 +24,16 @@ src_dir = args[2];
 dest_dir = args[3];
 file_name = args[4];
 test_mode = args[5];
-ip_address = args[6];
+#if len(args) >= 7: 
+#    ip_address = args[6];
 
 # Need to inject the host IP address into the JSON. And the current timestamp.
-with open(os.path.join(repo_location, src_dir , file_name),'r+') as jsonFile:
-    data = json.load(jsonFile);
-    data['host_ip'] = ip_address;
-    data['transition_to_'+dest_dir+'_time'] = datetime.datetime.now().isoformat();
-    json.dump(data, jsonFile);
+#if ip_address is not None:
+#    with open(os.path.join(repo_location, src_dir , file_name),'r+') as jsonFile:
+#        data = json.load(jsonFile);
+#        data['host_ip'] = ip_address;
+#        data['transition_to_'+dest_dir+'_time'] = datetime.datetime.now().isoformat();
+#        json.dump(data, jsonFile);
 
 # TODO: There should be something in here to set the git config username and email. If a workflow is retried, the values set previously
 # will have been lost since they were set in a different docker container.
@@ -53,7 +55,7 @@ for i in range(10): # try 10 times. If there are MANY clients trying to check-in
 
     print ("git mv attempt #"+str(i));
     
-    if os.path.isfile(repo_location+"/"+src_dir+"/"+file_name):
+    if os.path.isfile(os.path.join(repo_location, src_dir , file_name)):
 
         command = 'cd {} ; '.format(repo_location) + \
                   'git checkout master ; ' + \
