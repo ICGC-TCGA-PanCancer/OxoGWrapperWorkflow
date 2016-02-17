@@ -38,24 +38,28 @@ test_mode = args[5];
 # TODO: There should be something in here to set the git config username and email. If a workflow is retried, the values set previously
 # will have been lost since they were set in a different docker container.
 
+full_path_to_src = os.path.join(repo_location, src_dir, file_name)
+full_path_to_dest = os.path.join(repo_location, dest_dir, file_name)
+
+print("Getting ready to move "+full_path_to_src+" to "+full_path_to_dest);
+
 move_command = '';
+
 if test_mode:
     print ("In test mode - file will only be moved locally.");
-    move_command = 'mv {} {}'.format(os.path.join(repo_location, src_dir , file_name),
-                                            os.path.join(repo_location, dest_dir , file_name));
+
+    move_command = 'mv {} {}'.format(full_path_to_src, full_path_to_dest);
 else:
     print ("In \"live\" mode - files will be moved in git");
-    move_command = 'git mv {} {} && '.format(os.path.join(repo_location, src_dir , file_name),
-                                            os.path.join(repo_location, dest_dir , file_name)) + \
-                  'git commit -m \'{} to {}: {} \' && '.format(src_dir,
-                        dest_dir, file_name) + \
+    move_command = 'git mv {} {} && '.format(full_path_to_src, full_path_to_dest) + \
+                  'git commit -m \'{} to {}: {} \' && '.full_path_to_dest + \
                   'git push';
     
 for i in range(10): # try 10 times. If there are MANY clients trying to check-in at once this might be necessary. 
 
     print ("git mv attempt #"+str(i));
     
-    if os.path.isfile(os.path.join(repo_location, src_dir , file_name)):
+    if os.path.isfile(full_path_to_src):
 
         command = 'cd {} ; '.format(repo_location) + \
                   'git checkout master ; ' + \
