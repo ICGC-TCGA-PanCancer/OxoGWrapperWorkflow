@@ -592,25 +592,35 @@ public class OxoGWrapperWorkflow extends BaseOxoGWrapperWorkflow {
 
 	private Job runAnnotator(String inputType, String workflowName, String vcfPath, String tumourBamPath, String normalBamPath, Job ...parents)
 	{
-		Job annotatorJob = this.getWorkflow().createBashJob("run annotator for "+workflowName+" "+inputType);
 		String outDir = "/datastore/files_for_upload/";
+		String containerName = "pcawg-annotator_"+workflowName+"_"+inputType;
+		String commandName ="run annotator for "+workflowName+" "+inputType; 
 		if (vcfPath.contains("extracted-snvs"))
 		{
 			outDir+= "snvs_from_indels/";
+			containerName += "_SNVs-from-INDELs";
+			commandName += "_SNVs-from-INDELs";
 		}
 		String command = "";
 		String annotatedFileName = this.aliquotID+"_annotated_"+workflowName+"_"+inputType+".vcf";
+		
+		Job annotatorJob = this.getWorkflow().createBashJob(commandName);
 		if (!this.skipAnnotation)
 		{
+			// The "[ -f ${vcfPath} ]..." exists to handle cases where there is an SNV extracted from an INDEL.
+			// We have to have a condition that checks at script-run time because we don't know if it will exist 
+			// when the workflow engine first builds the scripts.
+			// Also, the call to the ljdursi/pcawg-annotate container looks a little weird, (inside parens and redirected to a file),
+			// but that seems to be the easiest way to get the capture the outpuyt from it. 
 			command = "( ([ -f "+vcfPath+" ] \\\n"
-							+ " && (docker run --rm --name=pcawg-annotator_"+workflowName+"_"+inputType+" -v "+vcfPath+":/input.vcf "
+							+ " && (docker run --rm --name="+containerName+" -v "+vcfPath+":/input.vcf "
 							+ " -v "+tumourBamPath+":/tumour_minibam.bam "
 							+ " -v "+normalBamPath+":/normal_minibam.bam "
 							+ " ljdursi/pcawg-annotate  "
 							+ " "+inputType+" /input.vcf /normal_minibam.bam /tumour_minibam.bam ) > "+outDir+"/"+annotatedFileName+" ) \\\n"
 							+ " && ( docker run --rm --name=zip_and_index_annotated_"+workflowName+"_"+inputType+" "
 							+ " -v "+outDir+":/outdir/"
-							+ " -v /outdir/"+this.aliquotID+"_annotated_"+inputType+".vcf:/input.vcf "
+							+ " -v "+outDir+annotatedFileName+":/input.vcf "
 							+ " compbio/ngseasy-base:a1.0-002 /bin/bash -c \""
 							+ " bgzip -f -c /input.vcf > /outdir/"+annotatedFileName+".gz && "
 							+ " tabix -p vcf /outdir/"+annotatedFileName+".gz ; "
