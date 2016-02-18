@@ -19,6 +19,7 @@ public class OxoGWrapperWorkflow extends BaseOxoGWrapperWorkflow {
 
 	/**
 	 * Generates a rules file that is used for the variant program that produces minibams.
+	 * NOTE: currently injecting the rules inline in the call to variantbam so the rules file won't actually be used...
 	 * @throws URISyntaxException
 	 * @throws IOException
 	 */
@@ -415,7 +416,7 @@ public class OxoGWrapperWorkflow extends BaseOxoGWrapperWorkflow {
 		{
 			String command = DockerCommandCreator.createVariantBamCommand(bamType, minibamName+".bam", bamPath, this.snvVCF, this.svVCF, this.indelVCF, this.svPadding, this.snvPadding, this.indelPadding);
 			
-			command = "( " + command + " ) \\\n && ( cp /datastore/variantbam_results/"+minibamName+".bam /datastore/files_for_upload/ && cp /datastore/variantbam_results/"+minibamName+".bam.bai ) \\\n";
+			command = "( " + command + " ) ";//\\\n && ( cp /datastore/variantbam_results/"+minibamName+".bam /datastore/files_for_upload/ && cp /datastore/variantbam_results/"+minibamName+".bam.bai ) \\\n";
 			
 			String moveToFailed = GitUtils.gitMoveCommand("running-jobs","failed-jobs",this.JSONlocation + "/" + this.JSONrepoName + "/" + this.JSONfolderName,this.JSONfileName, this.gitMoveTestMode, this.getWorkflowBaseDir() + "/scripts/");
 			command += (" || " + moveToFailed);
@@ -423,8 +424,8 @@ public class OxoGWrapperWorkflow extends BaseOxoGWrapperWorkflow {
 		}
 		
 		
-		this.filesForUpload.add("/datastore/files_for_upload/"+minibamName+".bam.bai");
-		this.filesForUpload.add("/datastore/files_for_upload/"+minibamName+".bam");
+		this.filesForUpload.add("/datastore/variantbam_results/"+minibamName+".bam.bai");
+		this.filesForUpload.add("/datastore/variantbam_results/"+minibamName+".bam");
 		runOxoGWorkflow.addParent(parent);
 		
 		//Job getLogs = this.getOxoGLogs(runOxoGWorkflow);
@@ -459,7 +460,7 @@ public class OxoGWrapperWorkflow extends BaseOxoGWrapperWorkflow {
 		// Will need to run gtupload to generate the analysis.xml and manifest files (but not actually upload). 
 		// The tar file contains all results.
 		Job generateAnalysisFilesVCFs = this.getWorkflow().createBashJob("generate_analysis_files_for_VCF_upload");
-		
+		String moveToFailed = GitUtils.gitMoveCommand("uploading-jobs","failed-jobs",this.JSONlocation + "/" + this.JSONrepoName + "/" + this.JSONfolderName,this.JSONfileName, this.gitMoveTestMode, this.getWorkflowBaseDir() + "/scripts/");
 		//Files to upload:
 		//OxoG files
 		//minibams
@@ -522,7 +523,7 @@ public class OxoGWrapperWorkflow extends BaseOxoGWrapperWorkflow {
 															+ "        SNV_FROM_INDEL_OXOG_MD5=$SNV_FROM_INDEL_OXOG_MD5,$f.md5\n"
 															+ "    fi\n"
 															+ "done\n");
-		generateAnalysisFilesVCFs.getCommand().addArgument("\n docker run --rm --name=upload_vcfs_and_tarballs -v /datastore/upload-prep/:/vcf/ -v /datastore/credentials/"+this.gnosKey+":/gnos.key -v /datastore/:/datastore/ "
+		generateAnalysisFilesVCFs.getCommand().addArgument("\n docker run --rm --name=upload_vcfs_and_tarballs -v /datastore/vcf-upload-prep/:/vcf/ -v /datastore/credentials/"+this.gnosKey+":/gnos.key -v /datastore/:/datastore/ "
 				+ " pancancer/pancancer_upload_download:1.7 /bin/bash -c \""
 				+ " perl -I /opt/gt-download-upload-wrapper/gt-download-upload-wrapper-2.0.13/lib/ /opt/vcf-uploader/vcf-uploader-2.0.9/gnos_upload_vcf.pl \\\n"
 				+ " --gto-only --key /gnos.key --upload-url "+this.gnosMetadataUploadURL+" "
@@ -538,6 +539,13 @@ public class OxoGWrapperWorkflow extends BaseOxoGWrapperWorkflow {
 						+ " --workflow-src-url https://github.com/ICGC-TCGA-PanCancer/OxoGWrapperWorkflow --workflow-url https://github.com/ICGC-TCGA-PanCancer/OxoGWrapperWorkflow  \"\n");
 		
 		generateAnalysisFilesVCFs.addParent(parentJob);
+		
+		//copy the analaysis.xml, manifest.xml *.gto files to /datastore/files_for_upload
+		generateAnalysisFilesVCFs.getCommand().addArgument("cp /datastore/vcf-upload-prep/*/*/manifest.xml /datastore/files_for_upload/manifest.xml "
+															+ "&& cp /datastore/vcf-upload-prep/*/*/analysis.xml /datastore/files_for_upload/analysis.xml"
+															+ "&& cp /datastore/vcf-upload-prep/*/*/*.gto /datastore/files_for_upload/\n");
+		//get the UUID that was submitted with the metadata
+		//copyGTUploadFiles.getCommand().addArgument("VCF_UUID=$(grep server_path /datastore/files_for_upload/manifest.xml  | sed 's/.*server_path=\\\"\\(.*\\)\\\" .*/\1/g')\n");
 		
 		Job generateAnalysisFilesBAMs = this.getWorkflow().createBashJob("generate_analysis_files_for_BAM_upload");
 		
@@ -564,7 +572,7 @@ public class OxoGWrapperWorkflow extends BaseOxoGWrapperWorkflow {
 			}
 			
 		}
-		generateAnalysisFilesBAMs.getCommand().addArgument("\n docker run --rm --name=upload_bams -v /datastore/upload-prep/:/vcf/ -v /datastore/credentials/"+this.gnosKey+":/gnos.key -v /datastore/:/datastore/ "
+		generateAnalysisFilesBAMs.getCommand().addArgument("\n docker run --rm --name=upload_bams -v /datastore/bam-upload-prep/:/vcf/ -v /datastore/credentials/"+this.gnosKey+":/gnos.key -v /datastore/:/datastore/ "
 				+ " pancancer/pancancer_upload_download:1.7 /bin/bash -c \""
 				+ " perl -I /opt/gt-download-upload-wrapper/gt-download-upload-wrapper-2.0.13/lib/ /opt/vcf-uploader/vcf-uploader-2.0.9/gnos_upload_vcf.pl \\\n"
 				+ " --gto-only --key /gnos.key --upload-url "+this.gnosMetadataUploadURL+" "
@@ -576,20 +584,34 @@ public class OxoGWrapperWorkflow extends BaseOxoGWrapperWorkflow {
 						+ " --workflow-name OxoGWorkflow-variantbam \\\n"
 						+ " --workflow-version " + this.getVersion() + " \\\n"
 						+ " --workflow-src-url https://github.com/ICGC-TCGA-PanCancer/OxoGWrapperWorkflow --workflow-url https://github.com/ICGC-TCGA-PanCancer/OxoGWrapperWorkflow  \"\n");
-		
+		generateAnalysisFilesBAMs.getCommand().addArgument("\n cp /datastore/bam-upload-prep/*/*/manifest.xml /datastore/variantbam_results/manifest.xml "
+															+ "&& cp /datastore/bam-upload-prep/*/*/analysis.xml /datastore/variantbam_results/analysis.xml"
+															+ "&& cp /datastore/bam-upload-prep/*/*/*.gto /datastore/variantbam_results/");
 		generateAnalysisFilesBAMs.addParent(parentJob);
 
-		//Note: It was decided there should be two uploads: one for minibams and one for VCFs (for people who want VCFs but not minibams).
-		Job uploadResults = this.getWorkflow().createBashJob("upload results");
-		String command = "( rsync -avz -e ssh /datastore/files_for_upload/ " + this.uploadURL + " ) ";
+		//TODO: get the analysis.xml and manifest.xml and *.gto files into the correct places. 
 		
-		String moveToFailed = GitUtils.gitMoveCommand("uploading-jobs","failed-jobs",this.JSONlocation + "/" + this.JSONrepoName + "/" + this.JSONfolderName,this.JSONfileName, this.gitMoveTestMode, this.getWorkflowBaseDir() + "/scripts/");
-		command += (" || " + moveToFailed);
+		
+		String gnosServer = this.gnosMetadataUploadURL.replace("http://", "").replace("https://", "").replace("/", "");
+		//Note: It was decided there should be two uploads: one for minibams and one for VCFs (for people who want VCFs but not minibams).
+		Job uploadVCFResults = this.getWorkflow().createBashJob("upload VCF results");
+		String uploadVCFCommand = "VCF_UUID=$(grep server_path /datastore/files_for_upload/manifest.xml  | sed 's/.*server_path=\\\"\\(.*\\)\\\" .*/\1/g')\n"
+								+ "( rsync -avz -e 'ssh -i /datastore/credentials/rsync.key' /datastore/files_for_upload/ " + this.uploadURL+ "/"+gnosServer + "/$VCF_UUID ) ";
+		uploadVCFCommand += (" || " + moveToFailed);
+		uploadVCFResults.setCommand(uploadVCFCommand);
+		uploadVCFResults.addParent(generateAnalysisFilesVCFs);
 
-		uploadResults.setCommand(command);
-		uploadResults.addParent(generateAnalysisFilesVCFs);
-		uploadResults.addParent(generateAnalysisFilesBAMs);
-		return uploadResults;
+		
+		Job uploadBAMResults = this.getWorkflow().createBashJob("upload BAM results");
+		String uploadBAMcommand = "BAM_UUID=$(grep server_path /datastore/variantbam_results/manifest.xml  | sed 's/.*server_path=\\\"\\(.*\\)\\\" .*/\1/g')\n"
+								+ "( rsync -avz -e 'ssh -i /datastore/credentials/rsync.key' /datastore/variantbam_results/ " + this.uploadURL+ "/"+gnosServer + "/$BAM_UUID ) ";
+		uploadBAMcommand += (" || " + moveToFailed);
+		uploadBAMResults.setCommand(uploadBAMcommand);
+		uploadBAMResults.addParent(generateAnalysisFilesBAMs);
+
+
+		uploadBAMResults.addParent(uploadVCFResults);
+		return uploadBAMResults;
 	}
 	
 
