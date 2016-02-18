@@ -78,7 +78,11 @@ for i in range(10): # try 10 times. If there are MANY clients trying to check-in
         out, err = process.communicate()
     
         if process.returncode == 0 :
-            break  # succeeded
+            if dest_dir == 'failed-jobs':
+                print ("moved to failed, exiting script with error code 1 to interrupt workflow!");
+                sys.exit(1);
+            else:
+                sys.exit(0);  # succeeded
         else:
             print('Error while moving the file: '+file_name+'.\nError message: {}\n\nRetrying...'.format(err))
             if not test_mode:
