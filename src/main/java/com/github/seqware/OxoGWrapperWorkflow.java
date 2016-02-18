@@ -184,7 +184,7 @@ public class OxoGWrapperWorkflow extends BaseOxoGWrapperWorkflow {
 		filesForUpload.add(outDir+"/"+normalizedINDELName+".tbi");
 		
 		Job extractSNVFromIndel = this.getWorkflow().createBashJob("extracting SNVs from "+workflowName+" INDEL");
-		extractSNVFromIndel.setCommand("docker run --rm --name extract_"+workflowName+"_snv_from_normalized_indels "
+		extractSNVFromIndel.setCommand("sudo chmod a+rw -R "+outDir+" ;\\\n docker run --rm --name extract_"+workflowName+"_snv_from_normalized_indels "
 										+ " -v "+outDir+"/"+":/workdir/:rw "
 										+ "compbio/ngseasy-base:a1.0-002 /bin/bash -c \" \\\n"
 											+ " bgzip -d -c /workdir/"+normalizedINDELName+" > /workdir/"+workflowName+"_somatic.indel.bcftools-norm.vcf \\\n"
@@ -478,7 +478,7 @@ public class OxoGWrapperWorkflow extends BaseOxoGWrapperWorkflow {
 		{
 			file = file.trim();
 			//md5sum test_files/tumour_minibam.bam.bai | cut -d ' ' -f 1 > test_files/tumour_minibam.bai.md5
-			generateAnalysisFilesVCFs.getCommand().addArgument("md5sum "+file+" | cut -d ' ' -f 1 > "+file+".md5 && \n");
+			generateAnalysisFilesVCFs.getCommand().addArgument("md5sum "+file+" | cut -d ' ' -f 1 > "+file+".md5 ; \n");
 			
 			if (file.endsWith(".tar"))
 			{
@@ -500,7 +500,7 @@ public class OxoGWrapperWorkflow extends BaseOxoGWrapperWorkflow {
 		//This ugliness is here because of the OxoG results on SNVs from INDELs. We won't know until the workflow actually runs if there are any SNVs from INDELs.
 		//So we need to build up the list of files to upload using a bash script that will be evaluated at runtime rather
 		//than Java code that gets evaluated when the workflow is built.
-		generateAnalysisFilesVCFs.getCommand().addArgument("SNV_FROM_INDEL_OXOG=\'\'\n"
+		generateAnalysisFilesVCFs.getCommand().addArgument("\nSNV_FROM_INDEL_OXOG=\'\'\n"
 															+ "SNV_FROM_INDEL_OXOG_INDEX=\'\'\n"
 															+ "SNV_FROM_INDEL_OXOG_MD5=\'\'\n"
 															+ "SNV_FROM_INDEL_OXOG_INDEX_MD5=\'\'\n"
@@ -519,7 +519,7 @@ public class OxoGWrapperWorkflow extends BaseOxoGWrapperWorkflow {
 															+ "        SNV_FROM_INDEL_OXOG=$SNV_FROM_INDEL_OXOG,$f\n"
 															+ "        SNV_FROM_INDEL_OXOG_MD5=$SNV_FROM_INDEL_OXOG_MD5,$f.md5\n"
 															+ "    fi\n"
-															+ "done");
+															+ "done\n");
 		generateAnalysisFilesVCFs.getCommand().addArgument("\n docker run --rm --name=upload_vcfs_and_tarballs -v /datastore/upload-prep/:/vcf/ -v "+this.gnosKey+":/gnos.key -v /datastore/:/datastore/ "
 				+ " pancancer/pancancer_upload_download:1.7 /bin/bash -c \""
 				+ " perl -I /opt/gt-download-upload-wrapper/gt-download-upload-wrapper-2.0.13/lib/ /opt/vcf-uploader/vcf-uploader-2.0.9/gnos_upload_vcf.pl \\\n"
@@ -548,7 +548,7 @@ public class OxoGWrapperWorkflow extends BaseOxoGWrapperWorkflow {
 		{
 			file = file.trim();
 			//md5sum test_files/tumour_minibam.bam.bai | cut -d ' ' -f 1 > test_files/tumour_minibam.bai.md5
-			generateAnalysisFilesBAMs.getCommand().addArgument(" md5sum "+file+" | cut -d ' ' -f 1 > "+file+".md5 && \n");
+			generateAnalysisFilesBAMs.getCommand().addArgument(" md5sum "+file+" | cut -d ' ' -f 1 > "+file+".md5 ; \n");
 			
 			if (file.contains(".bai") )
 			{
