@@ -160,17 +160,17 @@ public class OxoGWrapperWorkflow extends BaseOxoGWrapperWorkflow {
 		// TODO: Many of these steps below could probably be combined into a single Job
 		// that makes runs a single docker container, but executes multiple commands.
 		Job bcfToolsNormJob = this.getWorkflow().createBashJob("normalize "+workflowName+" Indels");
-		String runBCFToolsNormCommand = "docker run --rm --name normalize_indel_"+workflowName+" "
+		String runBCFToolsNormCommand = "( docker run --rm --name normalize_indel_"+workflowName+" "
 					+ " -v "+outDir+"/"+vcfName+":/datastore/datafile.vcf.gz "
 					+ " -v "+outDir+"/"+":/outdir/:rw "
 					+ " -v /datastore/refdata/:/ref/"
 					+ " compbio/ngseasy-base:a1.0-002 /bin/bash -c \""
 						+ " bgzip -d -c /datastore/datafile.vcf.gz \\\n"
-						+ " | sed -e s/\\\"$(echo -e '\\t\\t')\\\"/\\\"$(echo -e '\\t')\\\".\\\"$(echo -e '\\t')\\\"./g -e s/\\\"$(echo -e '\\t')\\\"$/\\\"$(echo -e '\\t')\\\"./g \\\n"
+						+ " | sed -e s/\\\"$(echo -e '\\t\\t')\\\"/\\\"$(echo -e '\\t')\\\".\\\"$(echo -e '\\t')\\\"./g -e s/\\\"$(echo -e '\\t')\\\"$/\\\"$(echo -e '\\t')\\\"./g -e 's/\\(##.*\\);$/\\1/g' \\\n"
 						+ "> /outdir/"+fixedIndel+" && \\\n"
 						+ " bcftools norm -c w -m -any -Oz -f /ref/"+this.refFile+"  /outdir/"+fixedIndel+" "  
 						+ " > /outdir/"+normalizedINDELName
-						+ " && tabix -f -p vcf /outdir/"+normalizedINDELName + "\"";
+						+ " && tabix -f -p vcf /outdir/"+normalizedINDELName + "\" ) ";
 		
 		String moveToFailed = GitUtils.gitMoveCommand("running-jobs","failed-jobs",this.JSONlocation + "/" + this.JSONrepoName + "/" + this.JSONfolderName,this.JSONfileName, this.gitMoveTestMode, this.getWorkflowBaseDir() + "/scripts/");				 
 		runBCFToolsNormCommand += (" || " + moveToFailed );
@@ -184,15 +184,17 @@ public class OxoGWrapperWorkflow extends BaseOxoGWrapperWorkflow {
 		filesForUpload.add(outDir+"/"+normalizedINDELName+".tbi");
 		
 		Job extractSNVFromIndel = this.getWorkflow().createBashJob("extracting SNVs from "+workflowName+" INDEL");
-		extractSNVFromIndel.setCommand("sudo chmod a+rw -R "+outDir+" ;\\\n docker run --rm --name extract_"+workflowName+"_snv_from_normalized_indels "
+		String extractSNVFromIndelCommand = "( sudo chmod a+rw -R "+outDir+" ;\\\n docker run --rm --name extract_"+workflowName+"_snv_from_normalized_indels "
 										+ " -v "+outDir+"/"+":/workdir/:rw "
 										+ "compbio/ngseasy-base:a1.0-002 /bin/bash -c \" \\\n"
 											+ " bgzip -d -c /workdir/"+normalizedINDELName+" > /workdir/"+workflowName+"_somatic.indel.bcftools-norm.vcf \\\n"
 											+ " && grep -e '^#' -i -e '^[^#].*[[:space:]][ACTG][[:space:]][ACTG][[:space:]]' /workdir/"+workflowName+"_somatic.indel.bcftools-norm.vcf \\\n"
 											+ "> /workdir/"+extractedSNVVCFName
 											+ " && bgzip -f /workdir/"+extractedSNVVCFName
-											+ " && tabix -f -p vcf /workdir/"+extractedSNVVCFName + ".gz \" ");
+											+ " && tabix -f -p vcf /workdir/"+extractedSNVVCFName + ".gz \" ) ";
 		
+		extractSNVFromIndelCommand += (" || " + moveToFailed );
+		extractSNVFromIndel.setCommand(extractSNVFromIndelCommand);
 		extractSNVFromIndel.addParent(bcfToolsNormJob);
 		
 		switch (workflowName) {
@@ -520,7 +522,7 @@ public class OxoGWrapperWorkflow extends BaseOxoGWrapperWorkflow {
 															+ "        SNV_FROM_INDEL_OXOG_MD5=$SNV_FROM_INDEL_OXOG_MD5,$f.md5\n"
 															+ "    fi\n"
 															+ "done\n");
-		generateAnalysisFilesVCFs.getCommand().addArgument("\n docker run --rm --name=upload_vcfs_and_tarballs -v /datastore/upload-prep/:/vcf/ -v "+this.gnosKey+":/gnos.key -v /datastore/:/datastore/ "
+		generateAnalysisFilesVCFs.getCommand().addArgument("\n docker run --rm --name=upload_vcfs_and_tarballs -v /datastore/upload-prep/:/vcf/ -v /datastore/credentials/"+this.gnosKey+":/gnos.key -v /datastore/:/datastore/ "
 				+ " pancancer/pancancer_upload_download:1.7 /bin/bash -c \""
 				+ " perl -I /opt/gt-download-upload-wrapper/gt-download-upload-wrapper-2.0.13/lib/ /opt/vcf-uploader/vcf-uploader-2.0.9/gnos_upload_vcf.pl \\\n"
 				+ " --gto-only --key /gnos.key --upload-url "+this.gnosMetadataUploadURL+" "
@@ -562,7 +564,7 @@ public class OxoGWrapperWorkflow extends BaseOxoGWrapperWorkflow {
 			}
 			
 		}
-		generateAnalysisFilesBAMs.getCommand().addArgument("\n docker run --rm --name=upload_bams -v /datastore/upload-prep/:/vcf/ -v "+this.gnosKey+":/gnos.key -v /datastore/:/datastore/ "
+		generateAnalysisFilesBAMs.getCommand().addArgument("\n docker run --rm --name=upload_bams -v /datastore/upload-prep/:/vcf/ -v /datastore/credentials/"+this.gnosKey+":/gnos.key -v /datastore/:/datastore/ "
 				+ " pancancer/pancancer_upload_download:1.7 /bin/bash -c \""
 				+ " perl -I /opt/gt-download-upload-wrapper/gt-download-upload-wrapper-2.0.13/lib/ /opt/vcf-uploader/vcf-uploader-2.0.9/gnos_upload_vcf.pl \\\n"
 				+ " --gto-only --key /gnos.key --upload-url "+this.gnosMetadataUploadURL+" "
