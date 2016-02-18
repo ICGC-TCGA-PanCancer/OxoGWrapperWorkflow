@@ -705,7 +705,7 @@ public class OxoGWrapperWorkflow extends BaseOxoGWrapperWorkflow {
 			
 			// indicate job is in downloading stage.
 			String pathToScripts = this.getWorkflowBaseDir() + "/scripts";
-			Job move2download = GitUtils.gitMove("queued-jobs", "downloading-jobs", this.getWorkflow(), this.JSONlocation, this.JSONrepoName, this.JSONfolderName, this.GITname, this.GITemail, this.gitMoveTestMode, this.JSONfileName, pathToScripts ,copy);
+			Job move2download = GitUtils.gitMove("queued-jobs", "downloading-jobs", this.getWorkflow(), this.JSONlocation, this.JSONrepoName, this.JSONfolderName, this.GITname, this.GITemail, this.gitMoveTestMode, this.JSONfileName, pathToScripts ,pullRepo);
 			Job move2running;
 			if (!skipDownload) {
 				//Download jobs. VCFs downloading serial. Trying to download all in parallel seems to put too great a strain on the system 
