@@ -45,12 +45,12 @@ if [[ $VCFFORDOCKER != "" ]] ; then
                 -v /datastore/bam/:/datafiles/BAM/ \
             	${VCFFORDOCKER} \
             	-v /datastore/oxog_results_extracted_snvs/:/cga/fh/pcawg_pipeline/jobResults_pipette/results:rw \
-          oxog /cga/fh/pcawg_pipeline/pipelines/run_one_pipeline.bash pcawg /cga/fh/pcawg_pipeline/pipelines/oxog_pipeline.py \
+        oxog /bin/bash -c "/cga/fh/pcawg_pipeline/pipelines/run_one_pipeline.bash pcawg /cga/fh/pcawg_pipeline/pipelines/oxog_pipeline.py \
                 ${ALIQUOTID} \
                 /datafiles/BAM/${BAM1} \
                 /datafiles/BAM/${BAM2} \
                 ${OXOQSCORE} \
-            	${VCFFOROXOG}
+            	${VCFFOROXOG} "
             	
 	cd /datastore/oxog_results_extracted_snvs && tar -xkfv ./${ALIQUOTID}.gnos_files.tar 
 	[ -d /datastore/files_to_upload/snvs_from_indels ] || mkdir -p /datastore/files_to_upload/snvs_from_indels
