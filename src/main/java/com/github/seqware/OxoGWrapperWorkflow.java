@@ -201,15 +201,15 @@ public class OxoGWrapperWorkflow extends BaseOxoGWrapperWorkflow {
 		switch (workflowName) {
 			case sanger:
 				this.sangerNormalizedIndelVCFName = outDir + "/"+normalizedINDELName;
-				this.sangerExtractedSNVVCFName = outDir + "/"+extractedSNVVCFName;
+				this.sangerExtractedSNVVCFName = outDir + "/"+extractedSNVVCFName+".gz";
 				break;
 			case broad:
 				this.broadNormalizedIndelVCFName = outDir + "/"+normalizedINDELName;
-				this.broadExtractedSNVVCFName = outDir + "/"+extractedSNVVCFName;
+				this.broadExtractedSNVVCFName = outDir + "/"+extractedSNVVCFName+".gz";
 				break;
 			case dkfz_embl:
 				this.dkfzEmblNormalizedIndelVCFName = outDir + "/"+normalizedINDELName;
-				this.dkfzEmblExtractedSNVVCFName = outDir + "/"+extractedSNVVCFName;
+				this.dkfzEmblExtractedSNVVCFName = outDir + "/"+extractedSNVVCFName+".gz";
 				break;
 			default:
 				// Just in case someone adds a new pipeline and then doesn't write code to handle it.
@@ -243,7 +243,7 @@ public class OxoGWrapperWorkflow extends BaseOxoGWrapperWorkflow {
 		//Create symlinks to the files in the proper directory.
 		Job prepVCFs = this.getWorkflow().createBashJob("create links to VCFs");
 		String prepCommand = "";
-		prepCommand+="\n ( sudo mkdir /datastore/merged_vcfs/ && sudo chmod a+rw /datastore/merged_vcfs && \\\n"
+		prepCommand+="\n ( ( [ -d /datastore/merged_vcfs ] || sudo mkdir /datastore/merged_vcfs/ ) && sudo chmod a+rw /datastore/merged_vcfs && \\\n"
 		+"\n ln -s /datastore/vcf/"+Pipeline.sanger+"/"+this.sangerGnosID+"/"+this.sangerSNVName+" /datastore/vcf/"+Pipeline.sanger+"_snv.vcf && \\\n"
 		+" ln -s /datastore/vcf/"+Pipeline.broad+"/"+this.broadGnosID+"/"+this.broadSNVName+" /datastore/vcf/"+Pipeline.broad+"_snv.vcf && \\\n"
 		+" ln -s /datastore/vcf/"+Pipeline.dkfz_embl+"/"+this.dkfzemblGnosID+"/"+this.dkfzEmblSNVName+" /datastore/vcf/"+Pipeline.dkfz_embl+"_snv.vcf && \\\n"
@@ -371,7 +371,8 @@ public class OxoGWrapperWorkflow extends BaseOxoGWrapperWorkflow {
 
 			String extractionCommand = this.getWorkflowBaseDir()+"/scripts/run_oxog_extracted_SNVs.sh "+
 					vcf1+" "+vcf2+" "+vcf3+" "+
-					this.normalBAMFileName+" "+this.tumourBAMFileName+" "+
+					" tumour/" + this.tumourBamGnosID + "/" + this.tumourBAMFileName+  
+					" normal/" +this.normalBamGnosID + "/" +  this.normalBAMFileName+ 
 					this.aliquotID+" "+
 					this.oxoQScore;
 			
@@ -523,7 +524,7 @@ public class OxoGWrapperWorkflow extends BaseOxoGWrapperWorkflow {
 															+ "        SNV_FROM_INDEL_OXOG_MD5=$SNV_FROM_INDEL_OXOG_MD5,$f.md5\n"
 															+ "    fi\n"
 															+ "done\n");
-		generateAnalysisFilesVCFs.getCommand().addArgument("\n docker run --rm --name=upload_vcfs_and_tarballs -v /datastore/vcf-upload-prep/:/vcf/ -v /datastore/credentials/"+this.gnosKey+":/gnos.key -v /datastore/:/datastore/ "
+		generateAnalysisFilesVCFs.getCommand().addArgument("\n docker run --rm --name=upload_vcfs_and_tarballs -v /datastore/vcf-upload-prep/:/vcf/ -v "+this.gnosKey+":/gnos.key -v /datastore/:/datastore/ "
 				+ " pancancer/pancancer_upload_download:1.7 /bin/bash -c \""
 				+ " perl -I /opt/gt-download-upload-wrapper/gt-download-upload-wrapper-2.0.13/lib/ /opt/vcf-uploader/vcf-uploader-2.0.9/gnos_upload_vcf.pl \\\n"
 				+ " --gto-only --key /gnos.key --upload-url "+this.gnosMetadataUploadURL+" "
@@ -572,7 +573,7 @@ public class OxoGWrapperWorkflow extends BaseOxoGWrapperWorkflow {
 			}
 			
 		}
-		generateAnalysisFilesBAMs.getCommand().addArgument("\n docker run --rm --name=upload_bams -v /datastore/bam-upload-prep/:/vcf/ -v /datastore/credentials/"+this.gnosKey+":/gnos.key -v /datastore/:/datastore/ "
+		generateAnalysisFilesBAMs.getCommand().addArgument("\n docker run --rm --name=upload_bams -v /datastore/bam-upload-prep/:/vcf/ -v "+this.gnosKey+":/gnos.key -v /datastore/:/datastore/ "
 				+ " pancancer/pancancer_upload_download:1.7 /bin/bash -c \""
 				+ " perl -I /opt/gt-download-upload-wrapper/gt-download-upload-wrapper-2.0.13/lib/ /opt/vcf-uploader/vcf-uploader-2.0.9/gnos_upload_vcf.pl \\\n"
 				+ " --gto-only --key /gnos.key --upload-url "+this.gnosMetadataUploadURL+" "
@@ -589,14 +590,12 @@ public class OxoGWrapperWorkflow extends BaseOxoGWrapperWorkflow {
 															+ "&& cp /datastore/bam-upload-prep/*/*/*.gto /datastore/variantbam_results/");
 		generateAnalysisFilesBAMs.addParent(parentJob);
 
-		//TODO: get the analysis.xml and manifest.xml and *.gto files into the correct places. 
-		
-		
+	
 		String gnosServer = this.gnosMetadataUploadURL.replace("http://", "").replace("https://", "").replace("/", "");
 		//Note: It was decided there should be two uploads: one for minibams and one for VCFs (for people who want VCFs but not minibams).
 		Job uploadVCFResults = this.getWorkflow().createBashJob("upload VCF results");
 		String uploadVCFCommand = "VCF_UUID=$(grep server_path /datastore/files_for_upload/manifest.xml  | sed 's/.*server_path=\\\"\\(.*\\)\\\" .*/\1/g')\n"
-								+ "( rsync -avz -e 'ssh -i /datastore/credentials/rsync.key' /datastore/files_for_upload/ " + this.uploadURL+ "/"+gnosServer + "/$VCF_UUID ) ";
+								+ "( rsync -avz -e 'ssh -i "+this.uploadKey+"' /datastore/files_for_upload/ " + this.uploadURL+ "/"+gnosServer + "/$VCF_UUID ) ";
 		uploadVCFCommand += (" || " + moveToFailed);
 		uploadVCFResults.setCommand(uploadVCFCommand);
 		uploadVCFResults.addParent(generateAnalysisFilesVCFs);
@@ -604,7 +603,7 @@ public class OxoGWrapperWorkflow extends BaseOxoGWrapperWorkflow {
 		
 		Job uploadBAMResults = this.getWorkflow().createBashJob("upload BAM results");
 		String uploadBAMcommand = "BAM_UUID=$(grep server_path /datastore/variantbam_results/manifest.xml  | sed 's/.*server_path=\\\"\\(.*\\)\\\" .*/\1/g')\n"
-								+ "( rsync -avz -e 'ssh -i /datastore/credentials/rsync.key' /datastore/variantbam_results/ " + this.uploadURL+ "/"+gnosServer + "/$BAM_UUID ) ";
+								+ "( rsync -avz -e 'ssh -i "+this.uploadKey+"' /datastore/variantbam_results/ " + this.uploadURL+ "/"+gnosServer + "/$BAM_UUID ) ";
 		uploadBAMcommand += (" || " + moveToFailed);
 		uploadBAMResults.setCommand(uploadBAMcommand);
 		uploadBAMResults.addParent(generateAnalysisFilesBAMs);
