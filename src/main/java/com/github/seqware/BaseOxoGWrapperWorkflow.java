@@ -105,7 +105,7 @@ public abstract class BaseOxoGWrapperWorkflow extends AbstractWorkflowDataModel 
 	protected boolean skipDownload = false;
 	protected boolean skipUpload = false;
 	
-	//Path to reference file usd for normalization, *relative* to /datastore/refdata
+	//Path to reference file usd for normalization, *relative* to /refdata/
 	protected String refFile = "public/Homo_sapiens_assembly19.fasta";
 	protected String tumourBamGnosID;
 	protected String normalBamGnosID;

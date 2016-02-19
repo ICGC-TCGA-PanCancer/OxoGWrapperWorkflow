@@ -164,7 +164,7 @@ public class OxoGWrapperWorkflow extends BaseOxoGWrapperWorkflow {
 		String runBCFToolsNormCommand = "( docker run --rm --name normalize_indel_"+workflowName+" "
 					+ " -v "+outDir+"/"+vcfName+":/datastore/datafile.vcf.gz "
 					+ " -v "+outDir+"/"+":/outdir/:rw "
-					+ " -v /datastore/refdata/:/ref/"
+					+ " -v /refdata/:/ref/"
 					+ " compbio/ngseasy-base:a1.0-002 /bin/bash -c \""
 						+ " bgzip -d -c /datastore/datafile.vcf.gz \\\n"
 						+ " | sed -e s/\\\"$(echo -e '\\t\\t')\\\"/\\\"$(echo -e '\\t')\\\".\\\"$(echo -e '\\t')\\\"./g -e s/\\\"$(echo -e '\\t')\\\"$/\\\"$(echo -e '\\t')\\\"./g -e 's/\\(##.*\\);$/\\1/g' \\\n"
@@ -298,7 +298,7 @@ public class OxoGWrapperWorkflow extends BaseOxoGWrapperWorkflow {
 
 		if (!skipOxoG)
 		{
-			String oxogMounts = " -v /datastore/refdata/:/cga/fh/pcawg_pipeline/refdata/ \\\n"
+			String oxogMounts = " -v /refdata/:/cga/fh/pcawg_pipeline/refdata/ \\\n"
 					+ " -v /datastore/oxog_workspace/:/cga/fh/pcawg_pipeline/jobResults_pipette/jobs/"+this.aliquotID+"/:rw \\\n" 
 					+ " -v /datastore/bam/:/datafiles/BAM/ \\\n"
 					+ " -v /datastore/vcf/"+Pipeline.broad+"/"+this.broadGnosID+"/"+"/:/datafiles/VCF/"+Pipeline.broad+"/ \\\n"
