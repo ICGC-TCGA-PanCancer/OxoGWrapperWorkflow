@@ -1,9 +1,9 @@
 #! /bin/bash
-
+set -e
 VCF1=$1
 VCF2=$2
 VCF3=$3
-# MAKE SURE THAT TUMOUR IS BAM1
+# MAKE SURE THAT TUMOUR IS BAM1!
 BAM1=$4
 BAM2=$5
 
@@ -59,3 +59,4 @@ if [[ $VCFFORDOCKER != "" ]] ; then
 else
 	echo "There were NO SNVs extracted from INDELs to run OxoG on."
 fi
+set +e
