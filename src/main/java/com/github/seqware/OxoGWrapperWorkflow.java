@@ -159,7 +159,7 @@ public class OxoGWrapperWorkflow extends BaseOxoGWrapperWorkflow {
 		String extractedSNVVCFName = this.aliquotID+ "_"+ workflowName+"_somatic.indel.bcftools-norm.extracted-snvs.vcf";
 		String fixedIndel = vcfName.replace("indel.", "indel.fixed.");
 		Job bcfToolsNormJob = this.getWorkflow().createBashJob("normalize "+workflowName+" Indels");
-		String runBCFToolsNormCommand = "(sudo chmod a+rw -R /datastore/vcf/ && docker run --rm --name normalize_indel_"+workflowName+" "
+		String runBCFToolsNormCommand = "sudo chmod a+rw -R /datastore/vcf/ && ( docker run --rm --name normalize_indel_"+workflowName+" "
 					+ " -v "+outDir+"/"+vcfName+":/datastore/datafile.vcf.gz "
 					+ " -v "+outDir+"/"+":/outdir/:rw "
 					+ " -v /refdata/:/ref/"
@@ -413,7 +413,7 @@ public class OxoGWrapperWorkflow extends BaseOxoGWrapperWorkflow {
 		{
 			String command = DockerCommandCreator.createVariantBamCommand(bamType, minibamName+".bam", bamPath, this.snvVCF, this.svVCF, this.indelVCF, this.svPadding, this.snvPadding, this.indelPadding);
 			
-			command = "(sudo chmod a+rw -R /datastore/variantbam_results/ && " + command + " ) ";//\\\n && ( cp /datastore/variantbam_results/"+minibamName+".bam /datastore/files_for_upload/ && cp /datastore/variantbam_results/"+minibamName+".bam.bai ) \\\n";
+			command = "(( [ -d /datastore/variantbam_results/ ] || mkdir /datastore/variantbam_results ) && sudo chmod a+rw -R /datastore/variantbam_results/ && " + command + " ) ";//\\\n && ( cp /datastore/variantbam_results/"+minibamName+".bam /datastore/files_for_upload/ && cp /datastore/variantbam_results/"+minibamName+".bam.bai ) \\\n";
 			
 			String moveToFailed = GitUtils.gitMoveCommand("running-jobs","failed-jobs",this.JSONlocation + "/" + this.JSONrepoName + "/" + this.JSONfolderName,this.JSONfileName, this.gitMoveTestMode, this.getWorkflowBaseDir() + "/scripts/");
 			command += (" || " + moveToFailed);
