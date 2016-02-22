@@ -61,7 +61,11 @@ for i in range(10): # try 10 times. If there are MANY clients trying to check-in
     
     if os.path.isfile(full_path_to_src):
 
-        command = 'cd {} ; '.format(repo_location) + \
+        if test_mode:
+            command = 'cd {} ; '.format(repo_location) + \
+                  move_command;
+        else:
+            command = 'cd {} ; '.format(repo_location) + \
                   'git checkout master ; ' + \
                   'git reset --hard origin/master ; ' + \
                   'git pull ; ' + \
