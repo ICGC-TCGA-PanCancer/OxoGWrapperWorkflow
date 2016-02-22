@@ -56,7 +56,7 @@ else:
                   'git push';
     
 for i in range(10): # try 10 times. If there are MANY clients trying to check-in at once this might be necessary. 
-
+    exit_code = 0;
     print ("git mv attempt #"+str(i));
     
     if os.path.isfile(full_path_to_src):
@@ -84,16 +84,23 @@ for i in range(10): # try 10 times. If there are MANY clients trying to check-in
         if process.returncode == 0 :
             if dest_dir == 'failed-jobs':
                 print ("moved to failed, exiting script with error code 1 to interrupt workflow!");
-                sys.exit(1);
+                exit_code = 1;
             else:
-                sys.exit(0);  # succeeded
+                # succeeded
+                exit_code = 0;
+            sys.exit(exit_code);
         else:
             print('Error while moving the file: '+file_name+'.\nError message: {}\n\nRetrying...'.format(err))
             if not test_mode:
                 # Only retry if we're not in test mode.
                 time.sleep(randint(1,15))  # pause a few seconds before retry
             else:
-                sys.exit(1);
+                exit_code = 1
+                sys.exit(exit_code);
     else:
         print ("File "+file_name+" was not in "+repo_location+"/"+src_dir+"/"+" but that might not be an error. Please check that another process hasn't already moved the file.");
-        sys.exit(0);
+        if dest_dir == 'failed-jobs':
+            exit_code = 1;
+        else:
+            exit_code = 0;
+        sys.exit(exit_code);
