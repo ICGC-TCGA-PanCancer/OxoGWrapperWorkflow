@@ -158,10 +158,8 @@ public class OxoGWrapperWorkflow extends BaseOxoGWrapperWorkflow {
 		String normalizedINDELName = this.aliquotID+ "_"+ workflowName+"_somatic.indel.bcftools-norm.vcf.gz";
 		String extractedSNVVCFName = this.aliquotID+ "_"+ workflowName+"_somatic.indel.bcftools-norm.extracted-snvs.vcf";
 		String fixedIndel = vcfName.replace("indel.", "indel.fixed.");
-		// TODO: Many of these steps below could probably be combined into a single Job
-		// that makes runs a single docker container, but executes multiple commands.
 		Job bcfToolsNormJob = this.getWorkflow().createBashJob("normalize "+workflowName+" Indels");
-		String runBCFToolsNormCommand = "( docker run --rm --name normalize_indel_"+workflowName+" "
+		String runBCFToolsNormCommand = "(sudo chmod a+rw -R /datastore/vcf/ && docker run --rm --name normalize_indel_"+workflowName+" "
 					+ " -v "+outDir+"/"+vcfName+":/datastore/datafile.vcf.gz "
 					+ " -v "+outDir+"/"+":/outdir/:rw "
 					+ " -v /refdata/:/ref/"
@@ -248,11 +246,9 @@ public class OxoGWrapperWorkflow extends BaseOxoGWrapperWorkflow {
 		+" ln -s /datastore/vcf/"+Pipeline.broad+"/"+this.broadGnosID+"/"+this.broadSNVName+" /datastore/vcf/"+Pipeline.broad+"_snv.vcf && \\\n"
 		+" ln -s /datastore/vcf/"+Pipeline.dkfz_embl+"/"+this.dkfzemblGnosID+"/"+this.dkfzEmblSNVName+" /datastore/vcf/"+Pipeline.dkfz_embl+"_snv.vcf && \\\n"
 		+" ln -s /datastore/vcf/"+Pipeline.muse+"/"+this.museGnosID+"/"+this.museSNVName+" /datastore/vcf/"+Pipeline.muse+"_snv.vcf && \\\n"
-
 		+" ln -s "+this.sangerNormalizedIndelVCFName+" /datastore/vcf/"+Pipeline.sanger+"_indel.vcf && \\\n"
 		+" ln -s "+this.broadNormalizedIndelVCFName+" /datastore/vcf/"+Pipeline.broad+"_indel.vcf && \\\n"
 		+" ln -s "+this.dkfzEmblNormalizedIndelVCFName+" /datastore/vcf/"+Pipeline.dkfz_embl+"_indel.vcf && \\\n"
-
 		+" ln -s /datastore/vcf/"+Pipeline.sanger+"/"+this.sangerGnosID+"/"+this.sangerSVName+" /datastore/vcf/"+Pipeline.sanger+"_sv.vcf && \\\n"
 		+" ln -s /datastore/vcf/"+Pipeline.broad+"/"+this.broadGnosID+"/"+this.broadSVName+" /datastore/vcf/"+Pipeline.broad+"_sv.vcf && \\\n"
 		+" ln -s /datastore/vcf/"+Pipeline.dkfz_embl+"/"+this.dkfzemblGnosID+"/"+this.dkfzEmblSVName+" /datastore/vcf/"+Pipeline.dkfz_embl+"_sv.vcf ) ";
@@ -417,7 +413,7 @@ public class OxoGWrapperWorkflow extends BaseOxoGWrapperWorkflow {
 		{
 			String command = DockerCommandCreator.createVariantBamCommand(bamType, minibamName+".bam", bamPath, this.snvVCF, this.svVCF, this.indelVCF, this.svPadding, this.snvPadding, this.indelPadding);
 			
-			command = "( " + command + " ) ";//\\\n && ( cp /datastore/variantbam_results/"+minibamName+".bam /datastore/files_for_upload/ && cp /datastore/variantbam_results/"+minibamName+".bam.bai ) \\\n";
+			command = "(sudo chmod a+rw -R /datastore/variantbam_results/ && " + command + " ) ";//\\\n && ( cp /datastore/variantbam_results/"+minibamName+".bam /datastore/files_for_upload/ && cp /datastore/variantbam_results/"+minibamName+".bam.bai ) \\\n";
 			
 			String moveToFailed = GitUtils.gitMoveCommand("running-jobs","failed-jobs",this.JSONlocation + "/" + this.JSONrepoName + "/" + this.JSONfolderName,this.JSONfileName, this.gitMoveTestMode, this.getWorkflowBaseDir() + "/scripts/");
 			command += (" || " + moveToFailed);
@@ -425,8 +421,8 @@ public class OxoGWrapperWorkflow extends BaseOxoGWrapperWorkflow {
 		}
 		
 		
-		this.filesForUpload.add("/datastore/variantbam_results/"+minibamName+".bam.bai");
-		this.filesForUpload.add("/datastore/variantbam_results/"+minibamName+".bam");
+		//this.filesForUpload.add("/datastore/variantbam_results/"+minibamName+".bam.bai");
+		//this.filesForUpload.add("/datastore/variantbam_results/"+minibamName+".bam");
 		runOxoGWorkflow.addParent(parent);
 		
 		//Job getLogs = this.getOxoGLogs(runOxoGWorkflow);
@@ -554,7 +550,7 @@ public class OxoGWrapperWorkflow extends BaseOxoGWrapperWorkflow {
 		String bamIndicies = "";
 		String bamMD5Sums = "";
 		String bamIndexMD5Sums = "";
-		generateAnalysisFilesBAMs.getCommand().addArgument("sudo chmod a+rw -R /datastore/files_for_upload/ &&\n");
+		generateAnalysisFilesBAMs.getCommand().addArgument("sudo chmod a+rw -R /datastore/variantbam_results/ &&\n");
 		for (String file : this.filesForUpload.stream().filter(p -> p.contains(".bam") || p.contains(".bai") ).collect(Collectors.toList()) )
 		{
 			file = file.trim();
@@ -594,16 +590,20 @@ public class OxoGWrapperWorkflow extends BaseOxoGWrapperWorkflow {
 		String gnosServer = this.gnosMetadataUploadURL.replace("http://", "").replace("https://", "").replace("/", "");
 		//Note: It was decided there should be two uploads: one for minibams and one for VCFs (for people who want VCFs but not minibams).
 		Job uploadVCFResults = this.getWorkflow().createBashJob("upload VCF results");
-		String uploadVCFCommand = "VCF_UUID=$(grep server_path /datastore/files_for_upload/manifest.xml  | sed 's/.*server_path=\\\"\\(.*\\)\\\" .*/\1/g')\n"
-								+ "( rsync -avz -e 'ssh -i "+this.uploadKey+"' /datastore/files_for_upload/ " + this.uploadURL+ "/"+gnosServer + "/$VCF_UUID ) ";
+		String uploadVCFCommand = "sudo chmod 0600 /datastore/credentials/rsync.key\n"
+								+ "UPLOAD_PATH=echo "+this.uploadURL+" | sed 's/\\(.*\\)\\:\\(.*\\)/\\2/g'"
+								+ "VCF_UUID=$(grep server_path /datastore/files_for_upload/manifest.xml  | sed 's/.*server_path=\\\"\\(.*\\)\\\" .*/\\1/g')\n"
+								+ "( rsync -avz -e 'ssh -i "+this.uploadKey+"' --rsync-path=\"mkdir -p $UPLOAD_PATH/"+gnosServer+"/$VCF_UUID && rsync\" /datastore/files_for_upload/ " + this.uploadURL+ "/"+gnosServer + "/$VCF_UUID ) ";
 		uploadVCFCommand += (" || " + moveToFailed);
 		uploadVCFResults.setCommand(uploadVCFCommand);
 		uploadVCFResults.addParent(generateAnalysisFilesVCFs);
 
 		
 		Job uploadBAMResults = this.getWorkflow().createBashJob("upload BAM results");
-		String uploadBAMcommand = "BAM_UUID=$(grep server_path /datastore/variantbam_results/manifest.xml  | sed 's/.*server_path=\\\"\\(.*\\)\\\" .*/\1/g')\n"
-								+ "( rsync -avz -e 'ssh -i "+this.uploadKey+"' /datastore/variantbam_results/ " + this.uploadURL+ "/"+gnosServer + "/$BAM_UUID ) ";
+		String uploadBAMcommand = "sudo chmod 0600 /datastore/credentials/rsync.key\n"
+								+ "UPLOAD_PATH=echo "+this.uploadURL+" | sed 's/\\(.*\\)\\:\\(.*\\)/\\2/g'"
+								+ "BAM_UUID=$(grep server_path /datastore/files_for_upload/manifest.xml  | sed 's/.*server_path=\\\"\\(.*\\)\\\" .*/\\1/g')\n"
+								+ "( rsync -avz -e 'ssh -i "+this.uploadKey+"' --rsync-path=\"mkdir -p $UPLOAD_PATH/"+gnosServer+"/$BAM_UUID && rsync\" /datastore/variantbam_results/ " + this.uploadURL+ "/"+gnosServer + "/$BAM_UUID ) ";
 		uploadBAMcommand += (" || " + moveToFailed);
 		uploadBAMResults.setCommand(uploadBAMcommand);
 		uploadBAMResults.addParent(generateAnalysisFilesBAMs);
