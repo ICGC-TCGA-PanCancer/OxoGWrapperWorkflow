@@ -367,9 +367,9 @@ public class OxoGWrapperWorkflow extends BaseOxoGWrapperWorkflow {
 
 			String extractionCommand = this.getWorkflowBaseDir()+"/scripts/run_oxog_extracted_SNVs.sh "+
 					vcf1+" "+vcf2+" "+vcf3+" "+
-					" tumour/" + this.tumourBamGnosID + "/" + this.tumourBAMFileName+  
-					" normal/" +this.normalBamGnosID + "/" +  this.normalBAMFileName+ 
-					this.aliquotID+" "+
+					" tumour/" + this.tumourBamGnosID + "/" + this.tumourBAMFileName +  
+					" normal/" + this.normalBamGnosID + "/" + this.normalBAMFileName + 
+					" " + this.aliquotID + " " + 
 					this.oxoQScore;
 			
 			String moveToFailed = GitUtils.gitMoveCommand("running-jobs","failed-jobs",this.JSONlocation + "/" + this.JSONrepoName + "/" + this.JSONfolderName,this.JSONfileName, this.gitMoveTestMode, this.getWorkflowBaseDir() + "/scripts/");
