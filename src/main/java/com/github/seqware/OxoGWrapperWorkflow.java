@@ -149,11 +149,11 @@ public class OxoGWrapperWorkflow extends BaseOxoGWrapperWorkflow {
 	{
 		Job passFilter = this.getWorkflow().createBashJob("pass filter "+workflowName);
 		String moveToFailed = GitUtils.gitMoveCommand("downloading-jobs","failed-jobs",this.JSONlocation + "/" + this.JSONrepoName + "/" + this.JSONfolderName,this.JSONfileName, this.gitMoveTestMode, this.getWorkflowBaseDir() + "/scripts/");
-		passFilter.setCommand("( for f in $(ls /datastore/vcf/"+workflowName+"/*/*.vcf.gz) ; do \n"
+		passFilter.setCommand("( for f in $(ls /datastore/vcf/"+workflowName+"/*/*.vcf.gz | grep -v pass | tr '\\n' ' ' ) ; do \n"
 							+ "    echo \"processing $f\" \n"
-							+ "    bgzip -f -d -c | grep -Po \"^#.*$|([^\t]*\t){6}PASS.*\" > ${f/.vcf.gz/}.pass-filtered.vcf \n"
+							+ "    bgzip -d -c $f | grep -Po \"^#.*$|([^\t]*\t){6}PASS.*\" > ${f/.vcf.gz/}.pass-filtered.vcf \n"
 							+ "    bgzip -f ${f/.vcf.gz/}.pass-filtered.vcf \n"
-							+ "    #bgzip -f -d -c | grep -Pv \"^#.*$|([^\t]*\t){6}PASS.*\" > ${f/.vcf.gz/}.non-pass-filtered.vcf \n"
+							+ "    #bgzip -d -c $f | grep -Pv \"^#.*$|([^\t]*\t){6}PASS.*\" > ${f/.vcf.gz/}.non-pass-filtered.vcf \n"
 							+ "    #bgzip -f ${f/.vcf.gz/}.non-pass-filtered.vcf \n"
 							+ "done) || "+moveToFailed);
 		
@@ -730,8 +730,8 @@ public class OxoGWrapperWorkflow extends BaseOxoGWrapperWorkflow {
 		Job museSNVAnnotatorJob = this.runAnnotator("SNV","muse",museOxogSNVFileName, this.tumourMinibamPath, this.normalMinibamPath, dfkzEmblSNVAnnotatorJob);
 
 		Job broadSNVFromIndelAnnotatorJob = this.runAnnotator("SNV","broad", broadOxoGSNVFromIndelFileName, this.tumourMinibamPath, this.normalMinibamPath, parents);
-		Job dfkzEmblSNVFromIndelAnnotatorJob = this.runAnnotator("SNV","dkfz_embl", sangerOxoGSNVFromIndelFileName, this.tumourMinibamPath, this.normalMinibamPath, broadSNVFromIndelAnnotatorJob);
-		Job sangerSNVFromIndelAnnotatorJob = this.runAnnotator("SNV","sanger", dkfzEmblOxoGSNVFromIndelFileName, this.tumourMinibamPath, this.normalMinibamPath, dfkzEmblSNVFromIndelAnnotatorJob);
+		Job dfkzEmblSNVFromIndelAnnotatorJob = this.runAnnotator("SNV","dkfz_embl", dkfzEmblOxoGSNVFromIndelFileName, this.tumourMinibamPath, this.normalMinibamPath, broadSNVFromIndelAnnotatorJob);
+		Job sangerSNVFromIndelAnnotatorJob = this.runAnnotator("SNV","sanger", sangerOxoGSNVFromIndelFileName, this.tumourMinibamPath, this.normalMinibamPath, dfkzEmblSNVFromIndelAnnotatorJob);
 		
 		finalAnnotatorJobs.add(sangerSNVFromIndelAnnotatorJob);
 		finalAnnotatorJobs.add(sangerSNVAnnotatorJob);
