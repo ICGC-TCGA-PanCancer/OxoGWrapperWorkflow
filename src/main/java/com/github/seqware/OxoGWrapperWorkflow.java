@@ -630,7 +630,7 @@ public class OxoGWrapperWorkflow extends BaseOxoGWrapperWorkflow {
 		String uploadVCFCommand = "sudo chmod 0600 /datastore/credentials/rsync.key\n"
 								+ "UPLOAD_PATH=$( echo \""+this.uploadURL+"\" | sed 's/\\(.*\\)\\:\\(.*\\)/\\2/g' )\n"
 								+ "VCF_UUID=$(grep server_path /datastore/files_for_upload/manifest.xml  | sed 's/.*server_path=\\\"\\(.*\\)\\\" .*/\\1/g')\n"
-								+ "( rsync -avz -e 'ssh -i "+this.uploadKey+"' --rsync-path=\"mkdir -p $UPLOAD_PATH/"+gnosServer+"/$VCF_UUID && rsync\" /datastore/files_for_upload/ " + this.uploadURL+ "/"+gnosServer + "/$VCF_UUID ) ";
+								+ "( rsync -avz -e 'ssh-o UserKnownHostsFile=/datastore/credentials/known_hosts -o IdentitiesOnly=yes -o BatchMode=yes -o PasswordAuthentication=no -o PreferredAuthentications=publickey -i "+this.uploadKey+"' --rsync-path=\"mkdir -p $UPLOAD_PATH/"+gnosServer+"/$VCF_UUID && rsync\" /datastore/files_for_upload/ " + this.uploadURL+ "/"+gnosServer + "/$VCF_UUID ) ";
 		uploadVCFCommand += (" || " + moveToFailed);
 		uploadVCFResults.setCommand(uploadVCFCommand);
 		uploadVCFResults.addParent(generateAnalysisFilesVCFs);
@@ -639,8 +639,8 @@ public class OxoGWrapperWorkflow extends BaseOxoGWrapperWorkflow {
 		Job uploadBAMResults = this.getWorkflow().createBashJob("upload BAM results");
 		String uploadBAMcommand = "sudo chmod 0600 /datastore/credentials/rsync.key\n"
 								+ "UPLOAD_PATH=$( echo \""+this.uploadURL+"\" | sed 's/\\(.*\\)\\:\\(.*\\)/\\2/g' )\n"
-								+ "BAM_UUID=$(grep server_path /datastore/files_for_upload/manifest.xml  | sed 's/.*server_path=\\\"\\(.*\\)\\\" .*/\\1/g')\n"
-								+ "( rsync -avz -e 'ssh -i "+this.uploadKey+"' --rsync-path=\"mkdir -p $UPLOAD_PATH/"+gnosServer+"/$BAM_UUID && rsync\" /datastore/variantbam_results/ " + this.uploadURL+ "/"+gnosServer + "/$BAM_UUID ) ";
+								+ "BAM_UUID=$(grep server_path /datastore/variantbam_results/manifest.xml  | sed 's/.*server_path=\\\"\\(.*\\)\\\" .*/\\1/g')\n"
+								+ "( rsync -avz -e 'ssh -o UserKnownHostsFile=/datastore/credentials/known_hosts -o IdentitiesOnly=yes -o BatchMode=yes -o PasswordAuthentication=no -o PreferredAuthentications=publickey -i "+this.uploadKey+"' --rsync-path=\"mkdir -p $UPLOAD_PATH/"+gnosServer+"/$BAM_UUID && rsync\" /datastore/variantbam_results/ " + this.uploadURL+ "/"+gnosServer + "/$BAM_UUID ) ";
 		uploadBAMcommand += (" || " + moveToFailed);
 		uploadBAMResults.setCommand(uploadBAMcommand);
 		uploadBAMResults.addParent(generateAnalysisFilesBAMs);
