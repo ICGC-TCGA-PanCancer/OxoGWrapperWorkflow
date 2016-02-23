@@ -145,19 +145,52 @@ public class OxoGWrapperWorkflow extends BaseOxoGWrapperWorkflow {
 		return getVCFJob;
 	}
 
+	private Job passFilterWorkflow(Pipeline workflowName, Job ... parents)
+	{
+		Job passFilter = this.getWorkflow().createBashJob("pass filter "+workflowName);
+		String moveToFailed = GitUtils.gitMoveCommand("downloading-jobs","failed-jobs",this.JSONlocation + "/" + this.JSONrepoName + "/" + this.JSONfolderName,this.JSONfileName, this.gitMoveTestMode, this.getWorkflowBaseDir() + "/scripts/");
+		passFilter.setCommand("( for f in $(ls /datastore/vcf/"+workflowName+"/*/*.vcf.gz) ; do \n"
+							+ "    echo \"processing $f\" \n"
+							+ "    bgzip -f -d -c | grep -Po \"^#.*$|([^\t]*\t){6}PASS.*\" > ${f/.vcf.gz/}.pass-filtered.vcf \n"
+							+ "    bgzip -f ${f/.vcf.gz/}.pass-filtered.vcf \n"
+							+ "    #bgzip -f -d -c | grep -Pv \"^#.*$|([^\t]*\t){6}PASS.*\" > ${f/.vcf.gz/}.non-pass-filtered.vcf \n"
+							+ "    #bgzip -f ${f/.vcf.gz/}.non-pass-filtered.vcf \n"
+							+ "done) || "+moveToFailed);
+		
+		//update all filenames to include ".pass-filtered."
+		this.sangerSNVName = this.sangerSNVName.replace(".vcf.gz", ".pass-filtered.vcf.gz");
+		this.sangerIndelName = this.sangerIndelName.replace(".vcf.gz", ".pass-filtered.vcf.gz");
+		this.sangerSVName = this.sangerSVName.replace(".vcf.gz", ".pass-filtered.vcf.gz");
+		
+		this.broadSNVName = this.broadSNVName.replace(".vcf.gz", ".pass-filtered.vcf.gz");
+		this.broadIndelName = this.broadIndelName.replace(".vcf.gz", ".pass-filtered.vcf.gz");
+		this.broadSVName = this.broadSVName.replace(".vcf.gz", ".pass-filtered.vcf.gz");
+		
+		this.dkfzEmblSNVName = this.dkfzEmblSNVName.replace(".vcf.gz", ".pass-filtered.vcf.gz");
+		this.dkfzEmblIndelName = this.dkfzEmblIndelName.replace(".vcf.gz", ".pass-filtered.vcf.gz");
+		this.dkfzEmblSVName = this.dkfzEmblSVName.replace(".vcf.gz", ".pass-filtered.vcf.gz");
+		
+		for (Job parent : parents)
+		{
+			passFilter.addParent(parent);
+		}
+		
+		return passFilter;
+	}
+	
 	/**
-	 * Pre-processes VCFs. Normalizes INDELs and extracts SNVs from normalized INDELs.
+	 * Pre-processes INDEL VCFs. Normalizes INDELs and extracts SNVs from normalized INDELs.
 	 * @param parent
 	 * @param workflowName The name of the workflow whose files will be pre-processed.
 	 * @param vcfName The name of the INDEL VCF to normalize.
 	 * @return
 	 */
-	private Job preProcessVCF(Job parent, Pipeline workflowName, String vcfName )
+	private Job preProcessIndelVCF(Job parent, Pipeline workflowName, String vcfName )
 	{
 		String outDir = "/datastore/vcf/"+workflowName;
 		String normalizedINDELName = this.aliquotID+ "_"+ workflowName+"_somatic.indel.bcftools-norm.vcf.gz";
 		String extractedSNVVCFName = this.aliquotID+ "_"+ workflowName+"_somatic.indel.bcftools-norm.extracted-snvs.vcf";
-		String fixedIndel = vcfName.replace("indel.", "indel.fixed.");
+		String fixedIndel = vcfName.replace("indel.", "indel.fixed.").replace(".gz", ""); //...because the fixed indel will not be a gz file - at least not immediately.
 		Job bcfToolsNormJob = this.getWorkflow().createBashJob("normalize "+workflowName+" Indels");
 		String runBCFToolsNormCommand = "sudo chmod a+rw -R /datastore/vcf/ && ( docker run --rm --name normalize_indel_"+workflowName+" "
 					+ " -v "+outDir+"/"+vcfName+":/datastore/datafile.vcf.gz "
@@ -169,6 +202,8 @@ public class OxoGWrapperWorkflow extends BaseOxoGWrapperWorkflow {
 						+ "> /outdir/"+fixedIndel+" && \\\n"
 						+ " bcftools norm -c w -m -any -Oz -f /ref/"+this.refFile+"  /outdir/"+fixedIndel+" "  
 						+ " > /outdir/"+normalizedINDELName
+						+ " && bgzip -f /outdir/"+fixedIndel
+						+ " && tabix -f -p vcf /outdir/"+fixedIndel+".gz "
 						+ " && tabix -f -p vcf /outdir/"+normalizedINDELName + "\" ) ";
 		
 		String moveToFailed = GitUtils.gitMoveCommand("running-jobs","failed-jobs",this.JSONlocation + "/" + this.JSONrepoName + "/" + this.JSONfolderName,this.JSONfileName, this.gitMoveTestMode, this.getWorkflowBaseDir() + "/scripts/");				 
@@ -759,10 +794,15 @@ public class OxoGWrapperWorkflow extends BaseOxoGWrapperWorkflow {
 				move2running = GitUtils.gitMove("downloading-jobs", "running-jobs", this.getWorkflow(), this.JSONlocation, this.JSONrepoName, this.JSONfolderName, this.GITname, this.GITemail, this.gitMoveTestMode, this.JSONfileName , pathToScripts,move2download);
 			}
 
+			Job sangerPassFilter = this.passFilterWorkflow(Pipeline.sanger, move2running);
+			Job broadPassFilter = this.passFilterWorkflow(Pipeline.broad, move2running);
+			Job dkfzemblPassFilter = this.passFilterWorkflow(Pipeline.dkfz_embl, move2running);
+			// No, we're not going to filter the Muse SNV file.
+			
 			// OxoG will run after move2running. Move2running will run after all the jobs that perform input file downloads and file preprocessing have finished.  
-			Job sangerPreprocessVCF = this.preProcessVCF(move2running, Pipeline.sanger,"/"+ this.sangerGnosID +"/"+ this.sangerIndelName);
-			Job dkfzEmblPreprocessVCF = this.preProcessVCF(move2running, Pipeline.dkfz_embl, "/"+ this.dkfzemblGnosID +"/"+ this.dkfzEmblIndelName);
-			Job broadPreprocessVCF = this.preProcessVCF(move2running, Pipeline.broad, "/"+ this.broadGnosID +"/"+ this.broadIndelName);
+			Job sangerPreprocessVCF = this.preProcessIndelVCF(sangerPassFilter, Pipeline.sanger,"/"+ this.sangerGnosID +"/"+ this.sangerIndelName);
+			Job dkfzEmblPreprocessVCF = this.preProcessIndelVCF(dkfzemblPassFilter, Pipeline.dkfz_embl, "/"+ this.dkfzemblGnosID +"/"+ this.dkfzEmblIndelName);
+			Job broadPreprocessVCF = this.preProcessIndelVCF(broadPassFilter, Pipeline.broad, "/"+ this.broadGnosID +"/"+ this.broadIndelName);
 			
 			Job combineVCFsByType = this.combineVCFsByType( sangerPreprocessVCF, dkfzEmblPreprocessVCF, broadPreprocessVCF);
 			
