@@ -149,11 +149,13 @@ public class OxoGWrapperWorkflow extends BaseOxoGWrapperWorkflow {
 	{
 		Job passFilter = this.getWorkflow().createBashJob("pass filter "+workflowName);
 		String moveToFailed = GitUtils.gitMoveCommand("downloading-jobs","failed-jobs",this.JSONlocation + "/" + this.JSONrepoName + "/" + this.JSONfolderName,this.JSONfileName, this.gitMoveTestMode, this.getWorkflowBaseDir() + "/scripts/");
+		//If we were processing MUSE files we would also need to filter for tier* but we're NOT processing MUSE files so 
+		//we don't need to worry about that for now.
 		passFilter.setCommand("( for f in $(ls /datastore/vcf/"+workflowName+"/*/*.vcf.gz | grep -v pass | tr '\\n' ' ' ) ; do \n"
 							+ "    echo \"processing $f\" \n"
-							+ "    bgzip -d -c $f | grep -Po \"^#.*$|([^\t]*\t){6}PASS.*\" > ${f/.vcf.gz/}.pass-filtered.vcf \n"
+							+ "    bgzip -d -c $f | grep -Po \"^#.*$|([^\t]*\t){6}(PASS|\\.).*\" > ${f/.vcf.gz/}.pass-filtered.vcf \n"
 							+ "    bgzip -f ${f/.vcf.gz/}.pass-filtered.vcf \n"
-							+ "    #bgzip -d -c $f | grep -Pv \"^#.*$|([^\t]*\t){6}PASS.*\" > ${f/.vcf.gz/}.non-pass-filtered.vcf \n"
+							+ "    #bgzip -d -c $f | grep -Pv \"^#.*$|([^\t]*\t){6}(PASS|\\.).*\" > ${f/.vcf.gz/}.non-pass-filtered.vcf \n"
 							+ "    #bgzip -f ${f/.vcf.gz/}.non-pass-filtered.vcf \n"
 							+ "done) || "+moveToFailed);
 		
@@ -456,7 +458,7 @@ public class OxoGWrapperWorkflow extends BaseOxoGWrapperWorkflow {
 		}
 		
 		
-		//this.filesForUpload.add("/datastore/variantbam_results/"+minibamName+".bam.bai");
+		this.filesForUpload.add("/datastore/variantbam_results/"+minibamName+".bam.bai");
 		//this.filesForUpload.add("/datastore/variantbam_results/"+minibamName+".bam");
 		runOxoGWorkflow.addParent(parent);
 		
@@ -574,8 +576,8 @@ public class OxoGWrapperWorkflow extends BaseOxoGWrapperWorkflow {
 		
 		//copy the analaysis.xml, manifest.xml *.gto files to /datastore/files_for_upload
 		generateAnalysisFilesVCFs.getCommand().addArgument("cp /datastore/vcf-upload-prep/*/*/manifest.xml /datastore/files_for_upload/manifest.xml "
-															+ "&& cp /datastore/vcf-upload-prep/*/*/analysis.xml /datastore/files_for_upload/analysis.xml"
-															+ "&& cp /datastore/vcf-upload-prep/*/*/*.gto /datastore/files_for_upload/\n");
+															+ " && cp /datastore/vcf-upload-prep/*/*/analysis.xml /datastore/files_for_upload/analysis.xml "
+															+ " && cp /datastore/vcf-upload-prep/*/*/*.gto /datastore/files_for_upload/\n");
 		//get the UUID that was submitted with the metadata
 		//copyGTUploadFiles.getCommand().addArgument("VCF_UUID=$(grep server_path /datastore/files_for_upload/manifest.xml  | sed 's/.*server_path=\\\"\\(.*\\)\\\" .*/\1/g')\n");
 		
@@ -617,8 +619,8 @@ public class OxoGWrapperWorkflow extends BaseOxoGWrapperWorkflow {
 						+ " --workflow-version " + this.getVersion() + " \\\n"
 						+ " --workflow-src-url https://github.com/ICGC-TCGA-PanCancer/OxoGWrapperWorkflow --workflow-url https://github.com/ICGC-TCGA-PanCancer/OxoGWrapperWorkflow  \"\n");
 		generateAnalysisFilesBAMs.getCommand().addArgument("\n cp /datastore/bam-upload-prep/*/*/manifest.xml /datastore/variantbam_results/manifest.xml "
-															+ "&& cp /datastore/bam-upload-prep/*/*/analysis.xml /datastore/variantbam_results/analysis.xml"
-															+ "&& cp /datastore/bam-upload-prep/*/*/*.gto /datastore/variantbam_results/");
+															+ " && cp /datastore/bam-upload-prep/*/*/analysis.xml /datastore/variantbam_results/analysis.xml "
+															+ " && cp /datastore/bam-upload-prep/*/*/*.gto /datastore/variantbam_results/");
 		generateAnalysisFilesBAMs.addParent(parentJob);
 
 	
@@ -626,7 +628,7 @@ public class OxoGWrapperWorkflow extends BaseOxoGWrapperWorkflow {
 		//Note: It was decided there should be two uploads: one for minibams and one for VCFs (for people who want VCFs but not minibams).
 		Job uploadVCFResults = this.getWorkflow().createBashJob("upload VCF results");
 		String uploadVCFCommand = "sudo chmod 0600 /datastore/credentials/rsync.key\n"
-								+ "UPLOAD_PATH=echo "+this.uploadURL+" | sed 's/\\(.*\\)\\:\\(.*\\)/\\2/g'"
+								+ "UPLOAD_PATH=echo \""+this.uploadURL+"\" | sed 's/\\(.*\\)\\:\\(.*\\)/\\2/g'\n"
 								+ "VCF_UUID=$(grep server_path /datastore/files_for_upload/manifest.xml  | sed 's/.*server_path=\\\"\\(.*\\)\\\" .*/\\1/g')\n"
 								+ "( rsync -avz -e 'ssh -i "+this.uploadKey+"' --rsync-path=\"mkdir -p $UPLOAD_PATH/"+gnosServer+"/$VCF_UUID && rsync\" /datastore/files_for_upload/ " + this.uploadURL+ "/"+gnosServer + "/$VCF_UUID ) ";
 		uploadVCFCommand += (" || " + moveToFailed);
@@ -636,7 +638,7 @@ public class OxoGWrapperWorkflow extends BaseOxoGWrapperWorkflow {
 		
 		Job uploadBAMResults = this.getWorkflow().createBashJob("upload BAM results");
 		String uploadBAMcommand = "sudo chmod 0600 /datastore/credentials/rsync.key\n"
-								+ "UPLOAD_PATH=echo "+this.uploadURL+" | sed 's/\\(.*\\)\\:\\(.*\\)/\\2/g'"
+								+ "UPLOAD_PATH=echo \""+this.uploadURL+"\" | sed 's/\\(.*\\)\\:\\(.*\\)/\\2/g'\n"
 								+ "BAM_UUID=$(grep server_path /datastore/files_for_upload/manifest.xml  | sed 's/.*server_path=\\\"\\(.*\\)\\\" .*/\\1/g')\n"
 								+ "( rsync -avz -e 'ssh -i "+this.uploadKey+"' --rsync-path=\"mkdir -p $UPLOAD_PATH/"+gnosServer+"/$BAM_UUID && rsync\" /datastore/variantbam_results/ " + this.uploadURL+ "/"+gnosServer + "/$BAM_UUID ) ";
 		uploadBAMcommand += (" || " + moveToFailed);
