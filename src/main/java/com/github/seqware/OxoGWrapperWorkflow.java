@@ -190,8 +190,8 @@ public class OxoGWrapperWorkflow extends BaseOxoGWrapperWorkflow {
 	private Job preProcessIndelVCF(Job parent, Pipeline workflowName, String vcfName )
 	{
 		String outDir = "/datastore/vcf/"+workflowName;
-		String normalizedINDELName = this.aliquotID+ "_"+ workflowName+"_somatic.indel.bcftools-norm.vcf.gz";
-		String extractedSNVVCFName = this.aliquotID+ "_"+ workflowName+"_somatic.indel.bcftools-norm.extracted-snvs.vcf";
+		String normalizedINDELName = this.aliquotID+ "_"+ workflowName+"_somatic.indel.pass-filtered.bcftools-norm.vcf.gz";
+		String extractedSNVVCFName = this.aliquotID+ "_"+ workflowName+"_somatic.indel.pass-filtered.bcftools-norm.extracted-snvs.vcf";
 		String fixedIndel = vcfName.replace("indel.", "indel.fixed.").replace(".gz", ""); //...because the fixed indel will not be a gz file - at least not immediately.
 		Job bcfToolsNormJob = this.getWorkflow().createBashJob("normalize "+workflowName+" Indels");
 		String runBCFToolsNormCommand = "sudo chmod a+rw -R /datastore/vcf/ && ( docker run --rm --name normalize_indel_"+workflowName+" "
@@ -201,7 +201,7 @@ public class OxoGWrapperWorkflow extends BaseOxoGWrapperWorkflow {
 					+ " compbio/ngseasy-base:a1.0-002 /bin/bash -c \""
 						+ " bgzip -d -c /datastore/datafile.vcf.gz \\\n"
 						+ " | sed -e s/\\\"$(echo -e '\\t\\t')\\\"/\\\"$(echo -e '\\t')\\\".\\\"$(echo -e '\\t')\\\"./g -e s/\\\"$(echo -e '\\t')\\\"$/\\\"$(echo -e '\\t')\\\"./g -e 's/\\(##.*\\);$/\\1/g' \\\n"
-						+ "> /outdir/"+fixedIndel+" && \\\n"
+						+ " > /outdir/"+fixedIndel+" && \\\n"
 						+ " bcftools norm -c w -m -any -Oz -f /ref/"+this.refFile+"  /outdir/"+fixedIndel+" "  
 						+ " > /outdir/"+normalizedINDELName
 						+ " && bgzip -f /outdir/"+fixedIndel
@@ -358,27 +358,27 @@ public class OxoGWrapperWorkflow extends BaseOxoGWrapperWorkflow {
 		extractOutputFiles.addParent(runOxoGWorkflow);
 		String pathToResults = "/datastore/oxog_results/cga/fh/pcawg_pipeline/jobResults_pipette/jobs/"+this.aliquotID+"/links_for_gnos/annotate_failed_sites_to_vcfs/";
 		String pathToUploadDir = "/datastore/files_for_upload/";
-		this.filesForUpload.add(pathToUploadDir + this.broadSNVName.replace("somatic.snv_mnv.vcf.gz", "somatic.snv_mnv.oxoG.vcf.gz")) ;
-		this.filesForUpload.add(pathToUploadDir + this.dkfzEmblSNVName.replace("somatic.snv_mnv.vcf.gz","somatic.snv_mnv.oxoG.vcf.gz")) ;
-		this.filesForUpload.add(pathToUploadDir + this.sangerSNVName.replace("somatic.snv_mnv.vcf.gz", "somatic.snv_mnv.oxoG.vcf.gz"))  ;
-		this.filesForUpload.add(pathToUploadDir + this.museSNVName.replace("somatic.snv_mnv.vcf.gz", "somatic.snv_mnv.oxoG.vcf.gz") );
-		this.filesForUpload.add(pathToUploadDir + this.broadSNVName.replace("somatic.snv_mnv.vcf.gz", "somatic.snv_mnv.oxoG.vcf.gz.tbi")) ;
-		this.filesForUpload.add(pathToUploadDir + this.dkfzEmblSNVName.replace("somatic.snv_mnv.vcf.gz","somatic.snv_mnv.oxoG.vcf.gz.tbi")) ;
-		this.filesForUpload.add(pathToUploadDir + this.sangerSNVName.replace("somatic.snv_mnv.vcf.gz", "somatic.snv_mnv.oxoG.vcf.gz.tbi"))  ;
-		this.filesForUpload.add(pathToUploadDir + this.museSNVName.replace("somatic.snv_mnv.vcf.gz", "somatic.snv_mnv.oxoG.vcf.gz.tbi") );
+		this.filesForUpload.add(pathToUploadDir + this.broadSNVName.replace(".vcf.gz", ".oxoG.vcf.gz")) ;
+		this.filesForUpload.add(pathToUploadDir + this.dkfzEmblSNVName.replace(".vcf.gz",".oxoG.vcf.gz")) ;
+		this.filesForUpload.add(pathToUploadDir + this.sangerSNVName.replace(".vcf.gz", ".oxoG.vcf.gz"))  ;
+		this.filesForUpload.add(pathToUploadDir + this.museSNVName.replace(".vcf.gz", ".oxoG.vcf.gz"));
+		this.filesForUpload.add(pathToUploadDir + this.broadSNVName.replace(".vcf.gz", ".oxoG.vcf.gz.tbi")) ;
+		this.filesForUpload.add(pathToUploadDir + this.dkfzEmblSNVName.replace(".vcf.gz",".oxoG.vcf.gz.tbi")) ;
+		this.filesForUpload.add(pathToUploadDir + this.sangerSNVName.replace(".vcf.gz", ".oxoG.vcf.gz.tbi"))  ;
+		this.filesForUpload.add(pathToUploadDir + this.museSNVName.replace(".vcf.gz", ".oxoG.vcf.gz.tbi"));
 		this.filesForUpload.add("/datastore/oxog_results/" + this.aliquotID + ".gnos_files.tar");
 		
 		Job prepOxoGTarAndMutectCallsforUpload = this.getWorkflow().createBashJob("prepare OxoG tar and mutect calls file for upload");
 		prepOxoGTarAndMutectCallsforUpload.setCommand("( ([ -d /datastore/files_for_upload ] || mkdir -p /datastore/files_for_upload) "
 				+ " && cp /datastore/oxog_results/"+this.aliquotID+".gnos_files.tar /datastore/files_for_upload/ \\\n"
-				+ " && cp "+pathToResults+this.broadSNVName.replace("somatic.snv_mnv.vcf.gz", "somatic.snv_mnv.oxoG.vcf.gz")+" "+pathToUploadDir+" \\\n"
-				+ " && cp "+pathToResults+this.dkfzEmblSNVName.replace("somatic.snv_mnv.vcf.gz", "somatic.snv_mnv.oxoG.vcf.gz")+" "+pathToUploadDir+" \\\n"
-				+ " && cp "+pathToResults+this.sangerSNVName.replace("somatic.snv_mnv.vcf.gz", "somatic.snv_mnv.oxoG.vcf.gz")+" "+pathToUploadDir+" \\\n"
-				+ " && cp "+pathToResults+this.museSNVName.replace("somatic.snv_mnv.vcf.gz", "somatic.snv_mnv.oxoG.vcf.gz")+" "+pathToUploadDir+" \\\n"
-				+ " && cp "+pathToResults+this.broadSNVName.replace("somatic.snv_mnv.vcf.gz", "somatic.snv_mnv.oxoG.vcf.gz.tbi")+" "+pathToUploadDir+" \\\n"
-				+ " && cp "+pathToResults+this.dkfzEmblSNVName.replace("somatic.snv_mnv.vcf.gz", "somatic.snv_mnv.oxoG.vcf.gz.tbi")+" "+pathToUploadDir+" \\\n"
-				+ " && cp "+pathToResults+this.sangerSNVName.replace("somatic.snv_mnv.vcf.gz", "somatic.snv_mnv.oxoG.vcf.gz.tbi")+" "+pathToUploadDir+" \\\n"
-				+ " && cp "+pathToResults+this.museSNVName.replace("somatic.snv_mnv.vcf.gz", "somatic.snv_mnv.oxoG.vcf.gz.tbi")+" "+pathToUploadDir+" \\\n"
+				+ " && cp " + pathToResults + this.broadSNVName.replace(".vcf.gz", ".oxoG.vcf.gz")+" "+pathToUploadDir+" \\\n"
+				+ " && cp " + pathToResults + this.dkfzEmblSNVName.replace(".vcf.gz", ".oxoG.vcf.gz")+" "+pathToUploadDir+" \\\n"
+				+ " && cp " + pathToResults + this.sangerSNVName.replace(".vcf.gz", ".oxoG.vcf.gz")+" "+pathToUploadDir+" \\\n"
+				+ " && cp " + pathToResults + this.museSNVName.replace(".vcf.gz", ".oxoG.vcf.gz")+" "+pathToUploadDir+" \\\n"
+				+ " && cp " + pathToResults + this.broadSNVName.replace(".vcf.gz", ".oxoG.vcf.gz.tbi")+" "+pathToUploadDir+" \\\n"
+				+ " && cp " + pathToResults + this.dkfzEmblSNVName.replace(".vcf.gz", ".oxoG.vcf.gz.tbi")+" "+pathToUploadDir+" \\\n"
+				+ " && cp " + pathToResults + this.sangerSNVName.replace(".vcf.gz", ".oxoG.vcf.gz.tbi")+" "+pathToUploadDir+" \\\n"
+				+ " && cp " + pathToResults + this.museSNVName.replace(".vcf.gz", ".oxoG.vcf.gz.tbi")+" "+pathToUploadDir+" \\\n"
 				+ " && cp /datastore/oxog_workspace/mutect/sg/gather/"+this.aliquotID+".call_stats.txt /datastore/files_for_upload/"+this.aliquotID+".call_stats.txt \\\n"
 				+ " && cd /datastore/files_for_upload/ && gzip -f "+this.aliquotID+".call_stats.txt && tar -cvf ./"+this.aliquotID+".call_stats.txt.gz.tar ./"+this.aliquotID+".call_stats.txt.gz ) || "+moveToFailed);
 		this.filesForUpload.add("/datastore/files_for_upload/"+this.aliquotID+".call_stats.txt.gz.tar");
@@ -437,12 +437,14 @@ public class OxoGWrapperWorkflow extends BaseOxoGWrapperWorkflow {
 			minibamName = this.normalBAMFileName.replace(".bam", "_minibam");
 			this.normalMinibamPath = "/datastore/variantbam_results/"+minibamName+".bam";
 			this.filesForUpload.add(this.normalMinibamPath);
+			this.filesForUpload.add(this.normalMinibamPath+".bai");
 		}
 		else
 		{
 			minibamName = this.tumourBAMFileName.replace(".bam", "_minibam");
 			this.tumourMinibamPath = "/datastore/variantbam_results/"+minibamName+".bam";
 			this.filesForUpload.add(this.tumourMinibamPath);
+			this.filesForUpload.add(this.tumourMinibamPath+".bai");
 		}
 		
 		
@@ -456,14 +458,11 @@ public class OxoGWrapperWorkflow extends BaseOxoGWrapperWorkflow {
 			command += (" || " + moveToFailed);
 			runOxoGWorkflow.setCommand(command);
 		}
-		
-		
-		this.filesForUpload.add("/datastore/variantbam_results/"+minibamName+".bam.bai");
+		//this.filesForUpload.add("/datastore/variantbam_results/"+minibamName+".bam.bai");
 		//this.filesForUpload.add("/datastore/variantbam_results/"+minibamName+".bam");
 		runOxoGWorkflow.addParent(parent);
 		
 		//Job getLogs = this.getOxoGLogs(runOxoGWorkflow);
-
 		return runOxoGWorkflow;
 	}
 	
@@ -630,7 +629,8 @@ public class OxoGWrapperWorkflow extends BaseOxoGWrapperWorkflow {
 		String uploadVCFCommand = "sudo chmod 0600 /datastore/credentials/rsync.key\n"
 								+ "UPLOAD_PATH=$( echo \""+this.uploadURL+"\" | sed 's/\\(.*\\)\\:\\(.*\\)/\\2/g' )\n"
 								+ "VCF_UUID=$(grep server_path /datastore/files_for_upload/manifest.xml  | sed 's/.*server_path=\\\"\\(.*\\)\\\" .*/\\1/g')\n"
-								+ "( rsync -avz -e 'ssh-o UserKnownHostsFile=/datastore/credentials/known_hosts -o IdentitiesOnly=yes -o BatchMode=yes -o PasswordAuthentication=no -o PreferredAuthentications=publickey -i "+this.uploadKey+"' --rsync-path=\"mkdir -p $UPLOAD_PATH/"+gnosServer+"/$VCF_UUID && rsync\" /datastore/files_for_upload/ " + this.uploadURL+ "/"+gnosServer + "/$VCF_UUID ) ";
+								+ "( rsync -avz -e 'ssh-o UserKnownHostsFile=/datastore/credentials/known_hosts -o IdentitiesOnly=yes -o BatchMode=yes -o PasswordAuthentication=no -o PreferredAuthentications=publickey -i "+this.uploadKey+"'"
+										+ " --rsync-path=\"mkdir -p $UPLOAD_PATH/"+gnosServer+"/$VCF_UUID && rsync\" /datastore/files_for_upload/ " + this.uploadURL+ "/"+gnosServer + "/$VCF_UUID ) ";
 		uploadVCFCommand += (" || " + moveToFailed);
 		uploadVCFResults.setCommand(uploadVCFCommand);
 		uploadVCFResults.addParent(generateAnalysisFilesVCFs);
@@ -640,7 +640,8 @@ public class OxoGWrapperWorkflow extends BaseOxoGWrapperWorkflow {
 		String uploadBAMcommand = "sudo chmod 0600 /datastore/credentials/rsync.key\n"
 								+ "UPLOAD_PATH=$( echo \""+this.uploadURL+"\" | sed 's/\\(.*\\)\\:\\(.*\\)/\\2/g' )\n"
 								+ "BAM_UUID=$(grep server_path /datastore/variantbam_results/manifest.xml  | sed 's/.*server_path=\\\"\\(.*\\)\\\" .*/\\1/g')\n"
-								+ "( rsync -avz -e 'ssh -o UserKnownHostsFile=/datastore/credentials/known_hosts -o IdentitiesOnly=yes -o BatchMode=yes -o PasswordAuthentication=no -o PreferredAuthentications=publickey -i "+this.uploadKey+"' --rsync-path=\"mkdir -p $UPLOAD_PATH/"+gnosServer+"/$BAM_UUID && rsync\" /datastore/variantbam_results/ " + this.uploadURL+ "/"+gnosServer + "/$BAM_UUID ) ";
+								+ "( rsync -avz -e 'ssh -o UserKnownHostsFile=/datastore/credentials/known_hosts -o IdentitiesOnly=yes -o BatchMode=yes -o PasswordAuthentication=no -o PreferredAuthentications=publickey -i "+this.uploadKey+"'"
+										+ " --rsync-path=\"mkdir -p $UPLOAD_PATH/"+gnosServer+"/$BAM_UUID && rsync\" /datastore/variantbam_results/ " + this.uploadURL+ "/"+gnosServer + "/$BAM_UUID ) ";
 		uploadBAMcommand += (" || " + moveToFailed);
 		uploadBAMResults.setCommand(uploadBAMcommand);
 		uploadBAMResults.addParent(generateAnalysisFilesBAMs);
@@ -711,11 +712,11 @@ public class OxoGWrapperWorkflow extends BaseOxoGWrapperWorkflow {
 	private List<Job> doAnnotations(Job ... parents)
 	{
 		List<Job> finalAnnotatorJobs = new ArrayList<Job>(3);
-		
-		String broadOxogSNVFileName = filesForUpload.stream().filter(p -> p.contains("broad-mutect") && p.endsWith("somatic.snv_mnv.oxoG.vcf.gz")).collect(Collectors.toList()).get(0);
-		String sangerOxogSNVFileName = filesForUpload.stream().filter(p -> p.contains("svcp_") && p.endsWith("somatic.snv_mnv.oxoG.vcf.gz")).collect(Collectors.toList()).get(0);
-		String museOxogSNVFileName = filesForUpload.stream().filter(p -> p.contains("MUSE") && p.endsWith("somatic.snv_mnv.oxoG.vcf.gz")).collect(Collectors.toList()).get(0);
-		String dkfzEmbleOxogSNVFileName = filesForUpload.stream().filter(p -> p.contains("dkfz-snvCalling") && p.endsWith("somatic.snv_mnv.oxoG.vcf.gz")).collect(Collectors.toList()).get(0);
+		System.out.println(filesForUpload);
+		String broadOxogSNVFileName = filesForUpload.stream().filter(p -> p.contains("broad-mutect") && p.endsWith("somatic.snv_mnv.pass-filtered.oxoG.vcf.gz")).collect(Collectors.toList()).get(0);
+		String sangerOxogSNVFileName = filesForUpload.stream().filter(p -> p.contains("svcp_") && p.endsWith("somatic.snv_mnv.pass-filtered.oxoG.vcf.gz")).collect(Collectors.toList()).get(0);
+		String museOxogSNVFileName = filesForUpload.stream().filter(p -> p.contains("MUSE") && p.endsWith("somatic.snv_mnv.pass-filtered.oxoG.vcf.gz")).collect(Collectors.toList()).get(0);
+		String dkfzEmbleOxogSNVFileName = filesForUpload.stream().filter(p -> p.contains("dkfz-snvCalling") && p.endsWith("somatic.snv_mnv.pass-filtered.oxoG.vcf.gz")).collect(Collectors.toList()).get(0);
 		
 		String broadOxoGSNVFromIndelFileName = broadOxogSNVFileName.replace("/oxog_results/", "/oxog_results_extracted_snvs/");
 		String sangerOxoGSNVFromIndelFileName = sangerOxogSNVFileName.replace("/oxog_results/", "/oxog_results_extracted_snvs/");
