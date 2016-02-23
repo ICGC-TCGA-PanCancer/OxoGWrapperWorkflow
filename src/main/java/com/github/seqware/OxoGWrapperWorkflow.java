@@ -311,13 +311,13 @@ public class OxoGWrapperWorkflow extends BaseOxoGWrapperWorkflow {
 					+ " /datafiles/VCF/"+Pipeline.dkfz_embl+"/" + this.dkfzEmblSNVName  + " \\\n"
 					+ " /datafiles/VCF/"+Pipeline.muse+"/" + this.museSNVName + " \\\n"
 					+ " /datafiles/VCF/"+Pipeline.broad+"/" + this.broadSNVName  ;
-			runOxoGWorkflow.setCommand("(docker run --rm --name=\"oxog_filter\" "+oxogMounts+" oxog /bin/bash -c \"" + oxogCommand+ "\" ) || "+moveToFailed);
+			runOxoGWorkflow.setCommand("((docker run --rm --name=\"oxog_filter\" "+oxogMounts+" oxog /bin/bash -c \"" + oxogCommand+ "\" ) || echo \"OxoG Exit Code: $?\"  ) || "+moveToFailed);
 			
 			
 		}
 		runOxoGWorkflow.addParent(parent);
 		Job extractOutputFiles = this.getWorkflow().createBashJob("extract oxog output files from tar");
-		extractOutputFiles.setCommand("cd /datastore/oxog_results && sudo chmod a+rw -R /datastore/oxog_results/ && tar -xvkf ./"+this.aliquotID+".gnos_files.tar  ");
+		extractOutputFiles.setCommand("(cd /datastore/oxog_results && sudo chmod a+rw -R /datastore/oxog_results/ && tar -xvkf ./"+this.aliquotID+".gnos_files.tar  ) || "+moveToFailed);
 		extractOutputFiles.addParent(runOxoGWorkflow);
 		String pathToResults = "/datastore/oxog_results/cga/fh/pcawg_pipeline/jobResults_pipette/jobs/"+this.aliquotID+"/links_for_gnos/annotate_failed_sites_to_vcfs/";
 		String pathToUploadDir = "/datastore/files_for_upload/";
@@ -332,7 +332,7 @@ public class OxoGWrapperWorkflow extends BaseOxoGWrapperWorkflow {
 		this.filesForUpload.add("/datastore/oxog_results/" + this.aliquotID + ".gnos_files.tar");
 		
 		Job prepOxoGTarAndMutectCallsforUpload = this.getWorkflow().createBashJob("prepare OxoG tar and mutect calls file for upload");
-		prepOxoGTarAndMutectCallsforUpload.setCommand(" ([ -d /datastore/files_for_upload ] || mkdir -p /datastore/files_for_upload) "
+		prepOxoGTarAndMutectCallsforUpload.setCommand("( ([ -d /datastore/files_for_upload ] || mkdir -p /datastore/files_for_upload) "
 				+ " && cp /datastore/oxog_results/"+this.aliquotID+".gnos_files.tar /datastore/files_for_upload/ \\\n"
 				+ " && cp "+pathToResults+this.broadSNVName.replace("somatic.snv_mnv.vcf.gz", "somatic.snv_mnv.oxoG.vcf.gz")+" "+pathToUploadDir+" \\\n"
 				+ " && cp "+pathToResults+this.dkfzEmblSNVName.replace("somatic.snv_mnv.vcf.gz", "somatic.snv_mnv.oxoG.vcf.gz")+" "+pathToUploadDir+" \\\n"
@@ -343,7 +343,7 @@ public class OxoGWrapperWorkflow extends BaseOxoGWrapperWorkflow {
 				+ " && cp "+pathToResults+this.sangerSNVName.replace("somatic.snv_mnv.vcf.gz", "somatic.snv_mnv.oxoG.vcf.gz.tbi")+" "+pathToUploadDir+" \\\n"
 				+ " && cp "+pathToResults+this.museSNVName.replace("somatic.snv_mnv.vcf.gz", "somatic.snv_mnv.oxoG.vcf.gz.tbi")+" "+pathToUploadDir+" \\\n"
 				+ " && cp /datastore/oxog_workspace/mutect/sg/gather/"+this.aliquotID+".call_stats.txt /datastore/files_for_upload/"+this.aliquotID+".call_stats.txt \\\n"
-				+ " && cd /datastore/files_for_upload/ && gzip -f "+this.aliquotID+".call_stats.txt && tar -cvf ./"+this.aliquotID+".call_stats.txt.gz.tar ./"+this.aliquotID+".call_stats.txt.gz");
+				+ " && cd /datastore/files_for_upload/ && gzip -f "+this.aliquotID+".call_stats.txt && tar -cvf ./"+this.aliquotID+".call_stats.txt.gz.tar ./"+this.aliquotID+".call_stats.txt.gz ) || "+moveToFailed);
 		this.filesForUpload.add("/datastore/files_for_upload/"+this.aliquotID+".call_stats.txt.gz.tar");
 		
 		prepOxoGTarAndMutectCallsforUpload.addParent(extractOutputFiles);
