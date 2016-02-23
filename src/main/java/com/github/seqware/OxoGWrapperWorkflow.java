@@ -628,7 +628,7 @@ public class OxoGWrapperWorkflow extends BaseOxoGWrapperWorkflow {
 		//Note: It was decided there should be two uploads: one for minibams and one for VCFs (for people who want VCFs but not minibams).
 		Job uploadVCFResults = this.getWorkflow().createBashJob("upload VCF results");
 		String uploadVCFCommand = "sudo chmod 0600 /datastore/credentials/rsync.key\n"
-								+ "UPLOAD_PATH=echo \""+this.uploadURL+"\" | sed 's/\\(.*\\)\\:\\(.*\\)/\\2/g'\n"
+								+ "UPLOAD_PATH=$( echo \""+this.uploadURL+"\" | sed 's/\\(.*\\)\\:\\(.*\\)/\\2/g' )\n"
 								+ "VCF_UUID=$(grep server_path /datastore/files_for_upload/manifest.xml  | sed 's/.*server_path=\\\"\\(.*\\)\\\" .*/\\1/g')\n"
 								+ "( rsync -avz -e 'ssh -i "+this.uploadKey+"' --rsync-path=\"mkdir -p $UPLOAD_PATH/"+gnosServer+"/$VCF_UUID && rsync\" /datastore/files_for_upload/ " + this.uploadURL+ "/"+gnosServer + "/$VCF_UUID ) ";
 		uploadVCFCommand += (" || " + moveToFailed);
@@ -638,7 +638,7 @@ public class OxoGWrapperWorkflow extends BaseOxoGWrapperWorkflow {
 		
 		Job uploadBAMResults = this.getWorkflow().createBashJob("upload BAM results");
 		String uploadBAMcommand = "sudo chmod 0600 /datastore/credentials/rsync.key\n"
-								+ "UPLOAD_PATH=echo \""+this.uploadURL+"\" | sed 's/\\(.*\\)\\:\\(.*\\)/\\2/g'\n"
+								+ "UPLOAD_PATH=$( echo \""+this.uploadURL+"\" | sed 's/\\(.*\\)\\:\\(.*\\)/\\2/g' )\n"
 								+ "BAM_UUID=$(grep server_path /datastore/files_for_upload/manifest.xml  | sed 's/.*server_path=\\\"\\(.*\\)\\\" .*/\\1/g')\n"
 								+ "( rsync -avz -e 'ssh -i "+this.uploadKey+"' --rsync-path=\"mkdir -p $UPLOAD_PATH/"+gnosServer+"/$BAM_UUID && rsync\" /datastore/variantbam_results/ " + this.uploadURL+ "/"+gnosServer + "/$BAM_UUID ) ";
 		uploadBAMcommand += (" || " + moveToFailed);
@@ -821,7 +821,7 @@ public class OxoGWrapperWorkflow extends BaseOxoGWrapperWorkflow {
 			{
 				// indicate job is in uploading stage.
 				//Job move2uploading = GitUtils.gitMove("running-jobs", "uploading-jobs", this.getWorkflow(), this.JSONlocation, this.JSONrepoName, this.JSONfolderName, this.GITname, this.GITemail, this.gitMoveTestMode, this.JSONfileName, pathToScripts , indelAnnotatorJob, snvAnnotatorJob, snvFromIndelAnnotatorJob, oxoG, oxoGSnvsFromIndels, normalVariantBam, tumourVariantBam);
-				Job move2uploading = this.gitMove( "uploading-jobs", "completed-jobs", annotationJobs.toArray(new Job[annotationJobs.size()]));
+				Job move2uploading = this.gitMove( "running-jobs", "uploading-jobs", annotationJobs.toArray(new Job[annotationJobs.size()]));
 				Job uploadResults = doUpload(move2uploading);
 				// indicate job is complete.
 				this.gitMove( "uploading-jobs", "completed-jobs", uploadResults);
@@ -829,7 +829,7 @@ public class OxoGWrapperWorkflow extends BaseOxoGWrapperWorkflow {
 			else
 			{
 				//GitUtils.gitMove( "running-jobs", "completed-jobs", this.getWorkflow(), this.JSONlocation, this.JSONrepoName, this.JSONfolderName, this.GITname, this.GITemail, this.gitMoveTestMode, this.JSONfileName ,pathToScripts,  indelAnnotatorJob, snvAnnotatorJob, snvFromIndelAnnotatorJob, oxoG, oxoGSnvsFromIndels, normalVariantBam, tumourVariantBam);
-				this.gitMove( "uploading-jobs", "completed-jobs",annotationJobs.toArray(new Job[annotationJobs.size()]));
+				this.gitMove( "running-jobs", "completed-jobs",annotationJobs.toArray(new Job[annotationJobs.size()]));
 			}
 	
 		}
