@@ -53,8 +53,8 @@ if [[ $VCFFORDOCKER != "" ]] ; then
             	${VCFFOROXOG} "
             	
 	cd /datastore/oxog_results_extracted_snvs && tar -xkfv ./${ALIQUOTID}.gnos_files.tar 
-	[ -d /datastore/files_to_upload/snvs_from_indels ] || mkdir -p /datastore/files_to_upload/snvs_from_indels
-	cp /datastore/oxog_results_extracted_snvs/cga/fh/pcawg_pipeline/jobResults_pipette/jobs/${ALIQUOTID}/links_for_gnos/annotate_failed_sites_to_vcfs/*.vcf.* /datastore/files_to_upload/snvs_from_indels/
+	[ -d /datastore/files_for_upload/snvs_from_indels ] || mkdir -p /datastore/files_for_upload/snvs_from_indels
+	cp /datastore/oxog_results_extracted_snvs/cga/fh/pcawg_pipeline/jobResults_pipette/jobs/${ALIQUOTID}/links_for_gnos/annotate_failed_sites_to_vcfs/*.vcf.* /datastore/files_for_upload/snvs_from_indels/
 	
 else
 	echo "There were NO SNVs extracted from INDELs to run OxoG on."
