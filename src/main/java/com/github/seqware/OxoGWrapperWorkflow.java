@@ -704,7 +704,7 @@ public class OxoGWrapperWorkflow extends BaseOxoGWrapperWorkflow {
 		System.out.println(filesForUpload);
 		String broadOxogSNVFileName = filesForUpload.stream().filter(p -> p.contains("broad-mutect") && p.endsWith("somatic.snv_mnv.pass-filtered.oxoG.vcf.gz")).collect(Collectors.toList()).get(0);
 		String sangerOxogSNVFileName = filesForUpload.stream().filter(p -> p.contains("svcp_") && p.endsWith("somatic.snv_mnv.pass-filtered.oxoG.vcf.gz")).collect(Collectors.toList()).get(0);
-		String museOxogSNVFileName = filesForUpload.stream().filter(p -> p.contains("MUSE") && p.endsWith("somatic.snv_mnv.pass-filtered.oxoG.vcf.gz")).collect(Collectors.toList()).get(0);
+		String museOxogSNVFileName = filesForUpload.stream().filter(p -> p.contains("MUSE") && p.endsWith("somatic.snv_mnv.oxoG.vcf.gz")).collect(Collectors.toList()).get(0);
 		String dkfzEmbleOxogSNVFileName = filesForUpload.stream().filter(p -> p.contains("dkfz-snvCalling") && p.endsWith("somatic.snv_mnv.pass-filtered.oxoG.vcf.gz")).collect(Collectors.toList()).get(0);
 		
 		String broadOxoGSNVFromIndelFileName = broadOxogSNVFileName.replace("/oxog_results/", "/oxog_results_extracted_snvs/");
