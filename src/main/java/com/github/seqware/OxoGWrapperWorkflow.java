@@ -232,8 +232,8 @@ public class OxoGWrapperWorkflow extends BaseOxoGWrapperWorkflow {
 		String extractSNVFromIndelCommand = /*"( sudo chmod a+rw -R "+outDir+" ;\\\n docker run --rm --name extract_"+workflowName+"_snv_from_normalized_indels "
 										+ " -v "+outDir+"/"+":/workdir/:rw "
 										+ "compbio/ngseasy-base:a1.0-002 /bin/bash -c \" \\\n"
-											+ */"( bgzip -d -c "+outDir+"/"+normalizedINDELName+" > /workdir/"+workflowName+"_somatic.indel.bcftools-norm.vcf \\\n"
-											+ " && grep -e '^#' -i -e '^[^#].*[[:space:]][ACTG][[:space:]][ACTG][[:space:]]' /workdir/"+workflowName+"_somatic.indel.bcftools-norm.vcf \\\n"
+											+ */"( bgzip -d -c "+outDir+"/"+normalizedINDELName+" > "+outDir+"/"+normalizedINDELName+"_somatic.indel.bcftools-norm.vcf \\\n"
+											+ " && grep -e '^#' -i -e '^[^#].*[[:space:]][ACTG][[:space:]][ACTG][[:space:]]' "+outDir+"/"+normalizedINDELName+"_somatic.indel.bcftools-norm.vcf \\\n"
 											+ "> "+outDir+"/"+extractedSNVVCFName
 											+ " && bgzip -f "+outDir+"/"+extractedSNVVCFName
 											+ " && tabix -f -p vcf "+outDir+"/"+extractedSNVVCFName + ".gz  ) ";
