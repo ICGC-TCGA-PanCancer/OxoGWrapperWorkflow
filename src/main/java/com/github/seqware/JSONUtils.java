@@ -16,8 +16,9 @@ public abstract class JSONUtils {
 
 	static final String OXOQ_SCORE = "OxoQScore";
 
-	// ugh... so many constants. There's probably a more elegant way to do this, seeing as most 
-	// of them follow a pattern. Just don't have time to fix that right now.
+	// ugh... so many constants. There's probably a more elegant way to do this,
+	// seeing as most of them follow a pattern. Just don't have time to fix that
+	// right now.
 	static final String BROAD_SNV_VCF_OBJECT_ID = "broad_snv_data_object_id";
 	static final String BROAD_SNV_VCF_NAME = "broad_snv_data_file_name";
 	static final String DKFZEMBL_SNV_VCF_OBJECT_ID = "dkfz_embl_snv_data_object_id";
@@ -73,6 +74,7 @@ public abstract class JSONUtils {
 
 	static final String ALIQUOT_ID = "aliquotID";
 	static final String SUBMITTER_DONOR_ID = "submitterDonorID";
+	static final String SUBMITTER_SPECIMENT_ID = "submitterSpecimenID";
 	static final String PROJECT_CODE = "projectCode";
 
 	static final String GNOS_ID = "gnosID";
@@ -216,6 +218,10 @@ public abstract class JSONUtils {
 			// Get donor ID
 			String submitterDonorID = (String) (parsedJSON.read("$.submitter_donor_id", String.class));
 			results.put(SUBMITTER_DONOR_ID, submitterDonorID);
+
+			// Get specimen ID
+			String submitterSpecimentID = (String) (parsedJSON.read("$.normal.submitter_specimen_id", String.class));
+			results.put(SUBMITTER_SPECIMENT_ID, submitterSpecimentID);
 
 			// Get project code
 			String projectCode = (String) (parsedJSON.read("$.project_code", String.class));
