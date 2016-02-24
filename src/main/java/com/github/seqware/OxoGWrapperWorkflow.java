@@ -159,18 +159,7 @@ public class OxoGWrapperWorkflow extends BaseOxoGWrapperWorkflow {
 							+ "    #bgzip -f ${f/.vcf.gz/}.non-pass-filtered.vcf \n"
 							+ "done) || "+moveToFailed);
 		
-		//update all filenames to include ".pass-filtered."
-		this.sangerSNVName = this.sangerSNVName.replace(".vcf.gz", ".pass-filtered.vcf.gz");
-		this.sangerIndelName = this.sangerIndelName.replace(".vcf.gz", ".pass-filtered.vcf.gz");
-		this.sangerSVName = this.sangerSVName.replace(".vcf.gz", ".pass-filtered.vcf.gz");
 		
-		this.broadSNVName = this.broadSNVName.replace(".vcf.gz", ".pass-filtered.vcf.gz");
-		this.broadIndelName = this.broadIndelName.replace(".vcf.gz", ".pass-filtered.vcf.gz");
-		this.broadSVName = this.broadSVName.replace(".vcf.gz", ".pass-filtered.vcf.gz");
-		
-		this.dkfzEmblSNVName = this.dkfzEmblSNVName.replace(".vcf.gz", ".pass-filtered.vcf.gz");
-		this.dkfzEmblIndelName = this.dkfzEmblIndelName.replace(".vcf.gz", ".pass-filtered.vcf.gz");
-		this.dkfzEmblSVName = this.dkfzEmblSVName.replace(".vcf.gz", ".pass-filtered.vcf.gz");
 		
 		for (Job parent : parents)
 		{
@@ -801,6 +790,19 @@ public class OxoGWrapperWorkflow extends BaseOxoGWrapperWorkflow {
 			Job broadPassFilter = this.passFilterWorkflow(Pipeline.broad, move2running);
 			Job dkfzemblPassFilter = this.passFilterWorkflow(Pipeline.dkfz_embl, move2running);
 			// No, we're not going to filter the Muse SNV file.
+			
+			//update all filenames to include ".pass-filtered."
+			this.sangerSNVName = this.sangerSNVName.replace(".vcf.gz", ".pass-filtered.vcf.gz");
+			this.sangerIndelName = this.sangerIndelName.replace(".vcf.gz", ".pass-filtered.vcf.gz");
+			this.sangerSVName = this.sangerSVName.replace(".vcf.gz", ".pass-filtered.vcf.gz");
+			
+			this.broadSNVName = this.broadSNVName.replace(".vcf.gz", ".pass-filtered.vcf.gz");
+			this.broadIndelName = this.broadIndelName.replace(".vcf.gz", ".pass-filtered.vcf.gz");
+			this.broadSVName = this.broadSVName.replace(".vcf.gz", ".pass-filtered.vcf.gz");
+			
+			this.dkfzEmblSNVName = this.dkfzEmblSNVName.replace(".vcf.gz", ".pass-filtered.vcf.gz");
+			this.dkfzEmblIndelName = this.dkfzEmblIndelName.replace(".vcf.gz", ".pass-filtered.vcf.gz");
+			this.dkfzEmblSVName = this.dkfzEmblSVName.replace(".vcf.gz", ".pass-filtered.vcf.gz");
 			
 			// OxoG will run after move2running. Move2running will run after all the jobs that perform input file downloads and file preprocessing have finished.  
 			Job sangerPreprocessVCF = this.preProcessIndelVCF(sangerPassFilter, Pipeline.sanger,"/"+ this.sangerGnosID +"/"+ this.sangerIndelName);
