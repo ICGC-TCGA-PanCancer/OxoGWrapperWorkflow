@@ -228,14 +228,15 @@ public class OxoGWrapperWorkflow extends BaseOxoGWrapperWorkflow {
 		filesForUpload.add(outDir+"/"+normalizedINDELName+".tbi");
 		
 		Job extractSNVFromIndel = this.getWorkflow().createBashJob("extracting SNVs from "+workflowName+" INDEL");
-		String extractSNVFromIndelCommand = "( sudo chmod a+rw -R "+outDir+" ;\\\n docker run --rm --name extract_"+workflowName+"_snv_from_normalized_indels "
+		//TODO: de-dockerize this since tabix and bgzip now installed inside workflow container.
+		String extractSNVFromIndelCommand = /*"( sudo chmod a+rw -R "+outDir+" ;\\\n docker run --rm --name extract_"+workflowName+"_snv_from_normalized_indels "
 										+ " -v "+outDir+"/"+":/workdir/:rw "
 										+ "compbio/ngseasy-base:a1.0-002 /bin/bash -c \" \\\n"
-											+ " bgzip -d -c /workdir/"+normalizedINDELName+" > /workdir/"+workflowName+"_somatic.indel.bcftools-norm.vcf \\\n"
+											+ */"( bgzip -d -c "+outDir+"/"+normalizedINDELName+" > /workdir/"+workflowName+"_somatic.indel.bcftools-norm.vcf \\\n"
 											+ " && grep -e '^#' -i -e '^[^#].*[[:space:]][ACTG][[:space:]][ACTG][[:space:]]' /workdir/"+workflowName+"_somatic.indel.bcftools-norm.vcf \\\n"
-											+ "> /workdir/"+extractedSNVVCFName
-											+ " && bgzip -f /workdir/"+extractedSNVVCFName
-											+ " && tabix -f -p vcf /workdir/"+extractedSNVVCFName + ".gz \" ) ";
+											+ "> "+outDir+"/"+extractedSNVVCFName
+											+ " && bgzip -f "+outDir+"/"+extractedSNVVCFName
+											+ " && tabix -f -p vcf "+outDir+"/"+extractedSNVVCFName + ".gz \" ) ";
 		
 		extractSNVFromIndelCommand += (" || " + moveToFailed );
 		extractSNVFromIndel.setCommand(extractSNVFromIndelCommand);
@@ -699,12 +700,13 @@ public class OxoGWrapperWorkflow extends BaseOxoGWrapperWorkflow {
 							+ " -v "+normalBamPath+":/normal_minibam.bam "
 							+ " ljdursi/pcawg-annotate  "
 							+ " "+inputType+" /input.vcf /normal_minibam.bam /tumour_minibam.bam ) > "+outDir+"/"+annotatedFileName+" ) \\\n"
-							+ " && ( docker run --rm --name=zip_and_index_annotated_"+workflowName+"_"+inputType+" "
-							+ " -v "+outDir+":/outdir/"
-							+ " -v "+outDir+annotatedFileName+":/input.vcf "
-							+ " compbio/ngseasy-base:a1.0-002 /bin/bash -c \""
-							+ " bgzip -f -c /input.vcf > /outdir/"+annotatedFileName+".gz && "
-							+ " tabix -p vcf /outdir/"+annotatedFileName+".gz ; "
+							//TODO: De-dockerize this, now that there is a step to explicitly install tabix into the workflow container.
+							//+ " && ( docker run --rm --name=zip_and_index_annotated_"+workflowName+"_"+inputType+" "
+							//+ " -v "+outDir+":/outdir/"
+							//+ " -v "+outDir+annotatedFileName+":/input.vcf "
+							//+ " compbio/ngseasy-base:a1.0-002 /bin/bash -c \""
+							+ " && ( bgzip -f -c "+outDir+annotatedFileName+" > "+outDir+"/"+annotatedFileName+".gz && "
+							+ " tabix -p vcf "+outDir+"/"+annotatedFileName+".gz ; "
 							+ "\" ) ) \\\n" ;
 			
 			
