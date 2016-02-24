@@ -145,6 +145,14 @@ public class OxoGWrapperWorkflow extends BaseOxoGWrapperWorkflow {
 		return getVCFJob;
 	}
 
+	/**
+	 * Perform filtering on all VCF files for a given workflow.
+	 * Filtering involves removing lines that are not "PASS" or "."
+	 * Output files will have ".pass-filtered." in their name.
+	 * @param workflowName The workflow to PASS filter
+	 * @param parents List of parent jobs.
+	 * @return
+	 */
 	private Job passFilterWorkflow(Pipeline workflowName, Job ... parents)
 	{
 		Job passFilter = this.getWorkflow().createBashJob("pass filter "+workflowName);
@@ -159,14 +167,25 @@ public class OxoGWrapperWorkflow extends BaseOxoGWrapperWorkflow {
 							+ "    #bgzip -f ${f/.vcf.gz/}.non-pass-filtered.vcf \n"
 							+ "done) || "+moveToFailed);
 		
-		
-		
 		for (Job parent : parents)
 		{
 			passFilter.addParent(parent);
 		}
 		
 		return passFilter;
+	}
+	
+	/*
+	 * Yes, install tabix as a part of the workflow. It's not in the seqware_whitestar or seqware_whitestar_pancancer container, so
+	 * install it here.
+	 */
+	private Job installTabix(Job parent)
+	{
+		Job installTabixJob = this.getWorkflow().createBashJob("install tabix and bgzip");
+		
+		installTabixJob.setCommand("sudo apt-get install tabix");
+		
+		return installTabixJob;
 	}
 	
 	/**
@@ -256,6 +275,7 @@ public class OxoGWrapperWorkflow extends BaseOxoGWrapperWorkflow {
 	enum VCFType{
 		sv, snv, indel
 	}
+	
 	/**
 	 * This will combine VCFs from different workflows by the same type. All INDELs will be combined into a new output file,
 	 * all SVs will be combined into a new file, all SNVs will be combined into a new file. 
@@ -641,6 +661,16 @@ public class OxoGWrapperWorkflow extends BaseOxoGWrapperWorkflow {
 	}
 	
 
+	/**
+	 * Runs Jonathan Dursi's Annotator tool on a input for a workflow.
+	 * @param inputType - The typ of input, can be "SNV" or "indel" 
+	 * @param workflowName - The name of the workflow to annotate.
+	 * @param vcfPath - The path to the VCF to use as input to the annotator.
+	 * @param tumourBamPath - The path to the tumour minibam (the output of variantbam).
+	 * @param normalBamPath - The path to the normal minibam (the output of variantbam).
+	 * @param parents - List of parent jobs.
+	 * @return
+	 */
 	private Job runAnnotator(String inputType, String workflowName, String vcfPath, String tumourBamPath, String normalBamPath, Job ...parents)
 	{
 		String outDir = "/datastore/files_for_upload/";
@@ -692,12 +722,20 @@ public class OxoGWrapperWorkflow extends BaseOxoGWrapperWorkflow {
 		return annotatorJob;
 	}
 
+	/*
+	 * Wrapper function to GitUtils.giveMove 
+	 */
 	private Job gitMove(String src, String dest, Job ...parents) throws Exception
 	{
 		String pathToScripts = this.getWorkflowBaseDir() + "/scripts";
 		return GitUtils.gitMove(src, dest, this.getWorkflow(), this.JSONlocation, this.JSONrepoName, this.JSONfolderName, this.GITname, this.GITemail, this.gitMoveTestMode, this.JSONfileName, pathToScripts , (parents));
 	}
 	
+	/**
+	 * Does all annotations for the workflow.
+	 * @param parents
+	 * @return
+	 */
 	private List<Job> doAnnotations(Job ... parents)
 	{
 		List<Job> finalAnnotatorJobs = new ArrayList<Job>(3);
@@ -749,11 +787,11 @@ public class OxoGWrapperWorkflow extends BaseOxoGWrapperWorkflow {
 			Job pullRepo = GitUtils.pullRepo(this.getWorkflow(), this.GITPemFile, this.JSONrepo, this.JSONrepoName, this.JSONlocation);
 			pullRepo.addParent(copy);
 			
-			
+			Job installTabix = this.installTabix(pullRepo);
 			
 			// indicate job is in downloading stage.
 			String pathToScripts = this.getWorkflowBaseDir() + "/scripts";
-			Job move2download = GitUtils.gitMove("queued-jobs", "downloading-jobs", this.getWorkflow(), this.JSONlocation, this.JSONrepoName, this.JSONfolderName, this.GITname, this.GITemail, this.gitMoveTestMode, this.JSONfileName, pathToScripts ,pullRepo);
+			Job move2download = GitUtils.gitMove("queued-jobs", "downloading-jobs", this.getWorkflow(), this.JSONlocation, this.JSONrepoName, this.JSONfolderName, this.GITname, this.GITemail, this.gitMoveTestMode, this.JSONfileName, pathToScripts ,installTabix);
 			Job move2running;
 			if (!skipDownload) {
 				//Download jobs. VCFs downloading serial. Trying to download all in parallel seems to put too great a strain on the system 
