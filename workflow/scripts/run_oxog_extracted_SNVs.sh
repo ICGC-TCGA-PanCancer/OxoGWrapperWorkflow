@@ -38,8 +38,8 @@ if [[ $VCFFORDOCKER != "" ]] ; then
 	echo "mount-options for VCF files snippet:  $VCFFORDOCKER"
 	echo "VCF files for OxoG: $VCFFOROXOG "
 
-
-    sudo docker run --rm --name="oxog_container_snv_from_indel" \
+	set -x
+    docker run --rm --name="oxog_container_snv_from_indel" \
                 -v /refdata/:/cga/fh/pcawg_pipeline/refdata/ \
                 -v /datastore/oxog_workspace_extracted_snvs/:/cga/fh/pcawg_pipeline/jobResults_pipette/jobs/${ALIQUOTID}/:rw \
                 -v /datastore/bam/:/datafiles/BAM/ \
@@ -51,11 +51,14 @@ if [[ $VCFFORDOCKER != "" ]] ; then
                 /datafiles/BAM/${BAM2} \
                 ${OXOQSCORE} \
             	${VCFFOROXOG} "
-            	
-	cd /datastore/oxog_results_extracted_snvs && tar -xkfv ./${ALIQUOTID}.gnos_files.tar 
-	[ -d /datastore/files_for_upload/snvs_from_indels ] || mkdir -p /datastore/files_for_upload/snvs_from_indels
-	cp /datastore/oxog_results_extracted_snvs/cga/fh/pcawg_pipeline/jobResults_pipette/jobs/${ALIQUOTID}/links_for_gnos/annotate_failed_sites_to_vcfs/*.vcf.* /datastore/files_for_upload/snvs_from_indels/
+	set +x
 	
+    # extract results from tarball
+	cd /datastore/oxog_results_extracted_snvs && tar -xkfv ./${ALIQUOTID}.gnos_files.tar 
+	[ -d /datastore/files_for_upload/snvs_from_indels ] || sudo mkdir -p /datastore/files_for_upload/snvs_from_indels
+	# copy resutls to upload dir 
+	cp /datastore/oxog_results_extracted_snvs/cga/fh/pcawg_pipeline/jobResults_pipette/jobs/${ALIQUOTID}/links_for_gnos/annotate_failed_sites_to_vcfs/*.vcf.* /datastore/files_for_upload/snvs_from_indels/
+	cp /datastore/oxog_results_extracted_snvs/${ALIQUOTID}.gnos_files.tar /datastore/files_for_upload/snvs_from_indels/${ALIQUOTID}.snvs_from_indels.gnos_files.tar
 else
 	echo "There were NO SNVs extracted from INDELs to run OxoG on."
 fi
