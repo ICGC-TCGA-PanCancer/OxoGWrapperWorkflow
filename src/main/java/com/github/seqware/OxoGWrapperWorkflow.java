@@ -228,11 +228,7 @@ public class OxoGWrapperWorkflow extends BaseOxoGWrapperWorkflow {
 		filesForUpload.add(outDir+"/"+normalizedINDELName+".tbi");
 		
 		Job extractSNVFromIndel = this.getWorkflow().createBashJob("extracting SNVs from "+workflowName+" INDEL");
-		//TODO: de-dockerize this since tabix and bgzip now installed inside workflow container.
-		String extractSNVFromIndelCommand = /*"( sudo chmod a+rw -R "+outDir+" ;\\\n docker run --rm --name extract_"+workflowName+"_snv_from_normalized_indels "
-										+ " -v "+outDir+"/"+":/workdir/:rw "
-										+ "compbio/ngseasy-base:a1.0-002 /bin/bash -c \" \\\n"
-											+ */"( bgzip -d -c "+outDir+"/"+normalizedINDELName+" > "+outDir+"/"+normalizedINDELName+"_somatic.indel.bcftools-norm.vcf \\\n"
+		String extractSNVFromIndelCommand = "( bgzip -d -c "+outDir+"/"+normalizedINDELName+" > "+outDir+"/"+normalizedINDELName+"_somatic.indel.bcftools-norm.vcf \\\n"
 											+ " && grep -e '^#' -i -e '^[^#].*[[:space:]][ACTG][[:space:]][ACTG][[:space:]]' "+outDir+"/"+normalizedINDELName+"_somatic.indel.bcftools-norm.vcf \\\n"
 											+ "> "+outDir+"/"+extractedSNVVCFName
 											+ " && bgzip -f "+outDir+"/"+extractedSNVVCFName
@@ -543,6 +539,17 @@ public class OxoGWrapperWorkflow extends BaseOxoGWrapperWorkflow {
 			}
 		}
 		
+		String vcfDescription="These are the OxoG-filtered (with an OxoQ Score of "+this.oxoQScore+") and Annotated VCFs for specimen "+this.specimenID+" from donor "+this.donorID+" from the core variant calling workflows."
+				+ " The results consist of one or more VCF files plus optional tar.gz files that contain additional file types."
+				+ " This uses the "+this.getName()+" workflow, version "+this.getVersion()+" available at "+this.workflowURL+"."
+				+ " This workflow can be created from source, see "+this.workflowSourceURL+"."
+				+ " For a complete change log see "+this.changelogURL+"."
+				+ " Note the 'ANALYSIS_TYPE' is 'REFERENCE_ASSEMBLY' but a better term to describe this analysis is 'SEQUENCE_VARIATION' as defined by the EGA's SRA 1.5 schema."
+				+ " Please note the reference used for alignment was hs37d, see ftp://ftp.1000genomes.ebi.ac.uk/vol1/ftp/technical/reference/phase2_reference_assembly_sequence/README_human_reference_20110707 for more information."
+				+ " Briefly this is the integrated reference sequence from the GRCh37 primary assembly (chromosomal plus unlocalized and unplaced contigs),"
+				+ " the rCRS mitochondrial sequence (AC:NC_012920), Human herpesvirus 4 type 1 (AC:NC_007605) and the concatenated decoy sequences (hs37d5cs.fa.gz)."
+				+ " Variant calls may not be present for all contigs in this reference.";
+		
 		//This ugliness is here because of the OxoG results on SNVs from INDELs. We won't know until the workflow actually runs if there are any SNVs from INDELs.
 		//So we need to build up the list of files to upload using a bash script that will be evaluated at runtime rather
 		//than Java code that gets evaluated when the workflow is built.
@@ -567,7 +574,9 @@ public class OxoGWrapperWorkflow extends BaseOxoGWrapperWorkflow {
 															+ "    fi\n"
 															+ "done\n");
 		generateAnalysisFilesVCFs.getCommand().addArgument("\n docker run --rm --name=upload_vcfs_and_tarballs -v /datastore/vcf-upload-prep/:/vcf/ -v "+this.gnosKey+":/gnos.key -v /datastore/:/datastore/ "
-				+ " pancancer/pancancer_upload_download:1.7 /bin/bash -c \""
+				+ " pancancer/pancancer_upload_download:1.7 /bin/bash -c \" cat << DESCRIPTIONFILE > /vcf/description.txt\n"
+				+ vcfDescription
+				+ "\nDESCRIPTIONFILE"
 				+ " perl -I /opt/gt-download-upload-wrapper/gt-download-upload-wrapper-2.0.13/lib/ /opt/vcf-uploader/vcf-uploader-2.0.9/gnos_upload_vcf.pl \\\n"
 				+ " --gto-only --key /gnos.key --upload-url "+this.gnosMetadataUploadURL+" "
 						+ " --metadata-urls "+this.normalMetdataURL+","+this.tumourMetdataURL+" \\\n"
@@ -578,6 +587,7 @@ public class OxoGWrapperWorkflow extends BaseOxoGWrapperWorkflow {
 						+ " --vcf-md5sum-files $SNV_FROM_INDEL_OXOG_MD5"+vcfMD5Sums+" \\\n"
 						+ " --vcf-idx-md5sum-files $SNV_FROM_INDEL_OXOG_INDEX_MD5"+vcfIndexMD5Sums+" \\\n"
 						+ " --workflow-name OxoGWorkflow-OxoGFiltering \\\n"
+						+ " --description-file /vcf/description.txt \\\n"
 						+ " --workflow-version " + this.getVersion() + " \\\n"
 						+ " --workflow-src-url https://github.com/ICGC-TCGA-PanCancer/OxoGWrapperWorkflow --workflow-url https://github.com/ICGC-TCGA-PanCancer/OxoGWrapperWorkflow  \"\n");
 		
@@ -615,8 +625,23 @@ public class OxoGWrapperWorkflow extends BaseOxoGWrapperWorkflow {
 			}
 			
 		}
+		
+		String bamDescription="These are minibams created for donor "+this.donorID+" by extracing from WG BAMs reads around variants called by any of the core variant calling workflows."
+							+ " Specifically, the window sizes are SNV+/-"+this.snvPadding+"bp, indel+/-"+this.indelPadding+"bp, SV+/-"+this.svPadding+"bp."
+							+ " The results consist of one or more BAM files plus optional tar.gz files that contain additional file types."
+							+ " This uses the "+this.getName()+" workflow, version "+this.getVersion()+" available at "+this.workflowURL+"."
+							+ " This workflow can be created from source, see "+this.workflowSourceURL+"."
+							+ " For a complete change log see "+this.changelogURL+"."
+							+ " Note the 'ANALYSIS_TYPE' is 'REFERENCE_ASSEMBLY' but a better term to describe this analysis is 'SEQUENCE_VARIATION' as defined by the EGA's SRA 1.5 schema."
+							+ " Please note the reference used for alignment was hs37d, see ftp://ftp.1000genomes.ebi.ac.uk/vol1/ftp/technical/reference/phase2_reference_assembly_sequence/README_human_reference_20110707 for more information."
+							+ " Briefly this is the integrated reference sequence from the GRCh37 primary assembly (chromosomal plus unlocalized and unplaced contigs),"
+							+ " the rCRS mitochondrial sequence (AC:NC_012920), Human herpesvirus 4 type 1 (AC:NC_007605) and the concatenated decoy sequences (hs37d5cs.fa.gz)."
+							+ " Variant calls may not be present for all contigs in this reference.";
+		
 		generateAnalysisFilesBAMs.getCommand().addArgument("\n docker run --rm --name=upload_bams -v /datastore/bam-upload-prep/:/vcf/ -v "+this.gnosKey+":/gnos.key -v /datastore/:/datastore/ "
-				+ " pancancer/pancancer_upload_download:1.7 /bin/bash -c \""
+				+ " pancancer/pancancer_upload_download:1.7 /bin/bash -c \"cat << DESCRIPTIONFILE > /vcf/description.txt\n"
+				+ bamDescription
+				+ "\nDESCRIPTIONFILE"
 				+ " perl -I /opt/gt-download-upload-wrapper/gt-download-upload-wrapper-2.0.13/lib/ /opt/vcf-uploader/vcf-uploader-2.0.9/gnos_upload_vcf.pl \\\n"
 				+ " --gto-only --key /gnos.key --upload-url "+this.gnosMetadataUploadURL+" "
 						+ " --metadata-urls "+this.normalMetdataURL+","+this.tumourMetdataURL+" \\\n"
@@ -625,6 +650,7 @@ public class OxoGWrapperWorkflow extends BaseOxoGWrapperWorkflow {
 						+ " --bam-md5sum-files "+bamMD5Sums+" \\\n"
 						+ " --bam_bai-md5sum-files "+bamIndexMD5Sums+" \\\n"
 						+ " --workflow-name OxoGWorkflow-variantbam \\\n"
+						+ " --description-file /vcf/description.txt \\\n"
 						+ " --workflow-version " + this.getVersion() + " \\\n"
 						+ " --workflow-src-url https://github.com/ICGC-TCGA-PanCancer/OxoGWrapperWorkflow --workflow-url https://github.com/ICGC-TCGA-PanCancer/OxoGWrapperWorkflow  \"\n");
 		generateAnalysisFilesBAMs.getCommand().addArgument("\n cp /datastore/bam-upload-prep/*/*/manifest.xml /datastore/variantbam_results/manifest.xml "
@@ -700,11 +726,6 @@ public class OxoGWrapperWorkflow extends BaseOxoGWrapperWorkflow {
 							+ " -v "+normalBamPath+":/normal_minibam.bam "
 							+ " ljdursi/pcawg-annotate  "
 							+ " "+inputType+" /input.vcf /normal_minibam.bam /tumour_minibam.bam ) > "+outDir+"/"+annotatedFileName+" ) \\\n"
-							//TODO: De-dockerize this, now that there is a step to explicitly install tabix into the workflow container.
-							//+ " && ( docker run --rm --name=zip_and_index_annotated_"+workflowName+"_"+inputType+" "
-							//+ " -v "+outDir+":/outdir/"
-							//+ " -v "+outDir+annotatedFileName+":/input.vcf "
-							//+ " compbio/ngseasy-base:a1.0-002 /bin/bash -c \""
 							+ " && ( bgzip -f -c "+outDir+annotatedFileName+" > "+outDir+"/"+annotatedFileName+".gz && "
 							+ " tabix -p vcf "+outDir+"/"+annotatedFileName+".gz ; "
 							+ " ) ) \\\n" ;
