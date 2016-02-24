@@ -236,7 +236,7 @@ public class OxoGWrapperWorkflow extends BaseOxoGWrapperWorkflow {
 											+ " && grep -e '^#' -i -e '^[^#].*[[:space:]][ACTG][[:space:]][ACTG][[:space:]]' /workdir/"+workflowName+"_somatic.indel.bcftools-norm.vcf \\\n"
 											+ "> "+outDir+"/"+extractedSNVVCFName
 											+ " && bgzip -f "+outDir+"/"+extractedSNVVCFName
-											+ " && tabix -f -p vcf "+outDir+"/"+extractedSNVVCFName + ".gz \" ) ";
+											+ " && tabix -f -p vcf "+outDir+"/"+extractedSNVVCFName + ".gz  ) ";
 		
 		extractSNVFromIndelCommand += (" || " + moveToFailed );
 		extractSNVFromIndel.setCommand(extractSNVFromIndelCommand);
@@ -707,7 +707,7 @@ public class OxoGWrapperWorkflow extends BaseOxoGWrapperWorkflow {
 							//+ " compbio/ngseasy-base:a1.0-002 /bin/bash -c \""
 							+ " && ( bgzip -f -c "+outDir+annotatedFileName+" > "+outDir+"/"+annotatedFileName+".gz && "
 							+ " tabix -p vcf "+outDir+"/"+annotatedFileName+".gz ; "
-							+ "\" ) ) \\\n" ;
+							+ " ) ) \\\n" ;
 			
 			
 			String moveToFailed = GitUtils.gitMoveCommand("running-jobs","failed-jobs",this.JSONlocation + "/" + this.JSONrepoName + "/" + this.JSONfolderName,this.JSONfileName, this.gitMoveTestMode, this.getWorkflowBaseDir() + "/scripts/");
