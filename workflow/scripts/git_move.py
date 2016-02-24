@@ -18,12 +18,12 @@ import datetime
 #Example uage:
 #python git_move.py /datastore/gitroot/oxog-opts/aws-jobs/ queued-jobs downloading-jobs SomeJobFile.json False  
 
-args = sys.argv;
-repo_location = args[1];
-src_dir = args[2];
-dest_dir = args[3];
-file_name = args[4];
-test_mode = args[5];
+args = sys.argv
+repo_location = args[1]
+src_dir = args[2]
+dest_dir = args[3]
+file_name = args[4]
+test_mode = args[5]
 #if len(args) >= 7: 
 #    ip_address = args[6];
 
@@ -41,54 +41,48 @@ test_mode = args[5];
 full_path_to_src = os.path.join(repo_location, src_dir, file_name)
 full_path_to_dest = os.path.join(repo_location, dest_dir, file_name)
 
-print("Getting ready to move "+full_path_to_src+" to "+full_path_to_dest);
+print("Getting ready to move "+full_path_to_src+" to "+full_path_to_dest)
 
-move_command = '';
+move_command = ''
 
 if test_mode:
-    print ("In test mode - file will only be moved locally.");
+    print ("In test mode - file will only be moved locally.")
 
-    move_command = 'mv {} {}'.format(full_path_to_src, full_path_to_dest);
+    move_command = 'mv {} {}'.format(full_path_to_src, full_path_to_dest)
 else:
-    print ("In \"live\" mode - files will be moved in git");
+    print ("In \"live\" mode - files will be moved in git")
     move_command = 'git mv {} {} && '.format(full_path_to_src, full_path_to_dest) + \
                   'git commit -m \'{} to {}: {} \' && '.full_path_to_dest + \
-                  'git push';
+                  'git push'
     
 for i in range(10): # try 10 times. If there are MANY clients trying to check-in at once this might be necessary. 
-    exit_code = 0;
-    print ("git mv attempt #"+str(i));
+    exit_code = 0
+    print ("git mv attempt #"+str(i))
     
     if os.path.isfile(full_path_to_src):
-
         if test_mode:
             command = 'cd {} ; '.format(repo_location) + \
-                  move_command;
+                  move_command
         else:
             command = 'cd {} ; '.format(repo_location) + \
                   'git checkout master ; ' + \
                   'git reset --hard origin/master ; ' + \
                   'git pull ; ' + \
-                  move_command;
+                  move_command
         
         
-        print("Command to execute will be:\t\n"+command+"\n\n");
-        process = subprocess.Popen(
-                command,
-                shell=True,
-                stdout=subprocess.PIPE,
-                stderr=subprocess.PIPE
-            )
+        print("Command to execute will be:\t\n"+command+"\n\n")
+        process = subprocess.Popen(command, shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE )
         out, err = process.communicate()
     
         if process.returncode == 0 :
             if dest_dir == 'failed-jobs':
-                print ("moved to failed, exiting script with error code 1 to interrupt workflow!");
-                exit_code = 1;
+                print ("moved to failed, exiting script with error code 1 to interrupt workflow!")
+                exit_code = 1
             else:
                 # succeeded
-                exit_code = 0;
-            sys.exit(exit_code);
+                exit_code = 0
+            sys.exit(exit_code)
         else:
             print('Error while moving the file: '+file_name+'.\nError message: {}\n\nRetrying...'.format(err))
             if not test_mode:
@@ -96,11 +90,12 @@ for i in range(10): # try 10 times. If there are MANY clients trying to check-in
                 time.sleep(randint(1,15))  # pause a few seconds before retry
             else:
                 exit_code = 1
-                sys.exit(exit_code);
+                sys.exit(exit_code)
     else:
-        print ("File "+file_name+" was not in "+repo_location+"/"+src_dir+"/"+" but that might not be an error. Please check that another process hasn't already moved the file.");
+        print ("Check to see if "+full_path_to_src+" is  valid file fails, BUT that might not be an error: Please check that another process (or the same process, re-trying multiple times) hasn't already moved the file.")
         if dest_dir == 'failed-jobs':
-            exit_code = 1;
+            print ("Error: Can't move to failed-jobs because source file could not be found!")
+            exit_code = 1
         else:
-            exit_code = 0;
-        sys.exit(exit_code);
+            exit_code = 0
+        sys.exit(exit_code)
