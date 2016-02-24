@@ -424,6 +424,9 @@ public class OxoGWrapperWorkflow extends BaseOxoGWrapperWorkflow {
 		// The script run_oxog_extracted_SNVs.sh will un-tar the tar file if it exists and copy the files to /datastore/files_for_upload
 		// and then ... somehow we have to include those (if they exist) in the vcf-upload script. :/
 		
+		//TODO: update filesToUpload with files under /datastore/files_for_upload/snvs_from_indels/ 
+		// /datastore/files_for_upload/snvs_from_indels/
+		
 		return oxoGOnSnvsFromIndels;
 	}
 	
@@ -665,7 +668,7 @@ public class OxoGWrapperWorkflow extends BaseOxoGWrapperWorkflow {
 		String uploadVCFCommand = "sudo chmod 0600 /datastore/credentials/rsync.key\n"
 								+ "UPLOAD_PATH=$( echo \""+this.uploadURL+"\" | sed 's/\\(.*\\)\\:\\(.*\\)/\\2/g' )\n"
 								+ "VCF_UUID=$(grep server_path /datastore/files_for_upload/manifest.xml  | sed 's/.*server_path=\\\"\\(.*\\)\\\" .*/\\1/g')\n"
-								+ "( rsync -avz -e 'ssh-o UserKnownHostsFile=/datastore/credentials/known_hosts -o IdentitiesOnly=yes -o BatchMode=yes -o PasswordAuthentication=no -o PreferredAuthentications=publickey -i "+this.uploadKey+"'"
+								+ "( rsync -avz -e 'ssh -o UserKnownHostsFile=/datastore/credentials/known_hosts -o IdentitiesOnly=yes -o BatchMode=yes -o PasswordAuthentication=no -o PreferredAuthentications=publickey -i "+this.uploadKey+"'"
 										+ " --rsync-path=\"mkdir -p $UPLOAD_PATH/"+gnosServer+"/$VCF_UUID && rsync\" /datastore/files_for_upload/ " + this.uploadURL+ "/"+gnosServer + "/$VCF_UUID ) ";
 		uploadVCFCommand += (" || " + moveToFailed);
 		uploadVCFResults.setCommand(uploadVCFCommand);
