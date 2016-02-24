@@ -129,7 +129,7 @@ sub process_file {
     chomp;
     next if (/^#/);
     # FIXME
-    next if (!/PASS/ || /tier/);
+    # next if (!/PASS/ || /tier/);
     my @a = split /\t/;
     my $payload = "$a[0]\t$a[1]\t.\t$a[3]\t$a[4]\t$a[5]\t$a[6]\t.";
     $d->{$a[0]}{$a[1]} = $payload;
