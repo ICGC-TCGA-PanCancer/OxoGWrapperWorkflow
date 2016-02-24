@@ -8,7 +8,8 @@ import net.sourceforge.seqware.pipeline.workflowV2.AbstractWorkflowDataModel;
 public abstract class BaseOxoGWrapperWorkflow extends AbstractWorkflowDataModel {
 	//ugh... so many fields. There's probably a better way to do this, just no time right now.
 	protected String oxoQScore = "";
-	// protected String donorID;
+	protected String donorID;
+	protected String specimenID;
 	protected String aliquotID;
 	protected String bamNormalObjectID;
 	protected String bamNormalIndexObjectID;
@@ -123,6 +124,14 @@ public abstract class BaseOxoGWrapperWorkflow extends AbstractWorkflowDataModel 
 	
 	protected String gnosMetadataUploadURL = "https://gtrepo-osdc-icgc.annailabs.com";
 	
+	protected String studyRefNameOverride = "icgc_pancancer_vcf";
+	
+	protected final String changelogURL = "https://github.com/ICGC-TCGA-PanCancer/OxoGWrapperWorkflow/CHANGELOG.md";
+	
+	protected final String workflowSourceURL = "https://github.com/ICGC-TCGA-PanCancer/OxoGWrapperWorkflow/";
+	
+	protected final String workflowURL = "https://github.com/ICGC-TCGA-PanCancer/OxoGWrapperWorkflow/";
+	
 	/**
 	 * Get a property name that is mandatory
 	 * @param propName The name of the property
@@ -152,6 +161,9 @@ public abstract class BaseOxoGWrapperWorkflow extends AbstractWorkflowDataModel 
 			this.JSONfileName = this.getMandatoryProperty("JSONfileName");
 			this.GITemail = this.getMandatoryProperty("GITemail");
 			this.GITname = this.getMandatoryProperty("GITname");
+			
+			this.donorID = this.getMandatoryProperty(JSONUtils.SUBMITTER_DONOR_ID);
+			this.specimenID = this.getMandatoryProperty(JSONUtils.SUBMITTER_SPECIMENT_ID);
 			
 			this.bamNormalObjectID = this.getMandatoryProperty(JSONUtils.BAM_NORMAL_OBJECT_ID);
 			this.normalMetdataURL = this.getMandatoryProperty(JSONUtils.BAM_NORMAL_METADATA_URL);
@@ -264,9 +276,15 @@ public abstract class BaseOxoGWrapperWorkflow extends AbstractWorkflowDataModel 
 			if (hasPropertyAndNotNull("gnosMetadataUploadURL")) {
 				this.gnosMetadataUploadURL = getProperty("gnosMetadataUploadURL");
 			}
+
+			if (hasPropertyAndNotNull("studyRefNameOverride")) {
+				this.studyRefNameOverride = getProperty("studyRefNameOverride");
+			}
 			
 		} catch (Exception e) {
 			throw new RuntimeException("Exception encountered during workflow init: "+e.getMessage(),e);
 		}
 	}
 }
+
+
