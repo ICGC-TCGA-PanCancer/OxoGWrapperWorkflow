@@ -314,14 +314,15 @@ public class OxoGWrapperWorkflow extends BaseOxoGWrapperWorkflow {
 				+ Pipeline.broad+"_indel.vcf "+Pipeline.sanger+"_indel.vcf "+Pipeline.dkfz_embl+"_indel.vcf " 
 				+ Pipeline.broad+"_sv.vcf "+Pipeline.sanger+"_sv.vcf "+Pipeline.dkfz_embl+"_sv.vcf "
 				+ " /datastore/vcf/ /datastore/merged_vcfs/ "
-				+ " ) || "+moveToFailed;		vcfCombineJob.setCommand(combineCommand);
-		
-		
+				+ " ) || "+moveToFailed;
+
+		vcfCombineJob.setCommand(combineCommand);
 		vcfCombineJob.addParent(prepVCFs);
+		
 		this.snvVCF = "/datastore/merged_vcfs/snv.clean.sorted.vcf";
 		this.svVCF = "/datastore/merged_vcfs/sv.clean.sorted.vcf";
 		this.indelVCF = "/datastore/merged_vcfs/indel.clean.sorted.vcf";
-		
+
 		return vcfCombineJob;
 	}
 	
@@ -385,6 +386,13 @@ public class OxoGWrapperWorkflow extends BaseOxoGWrapperWorkflow {
 				+ " && cp " + pathToResults + this.dkfzEmblSNVName.replace(".vcf.gz", ".oxoG.vcf.gz.tbi")+" "+pathToUploadDir+" \\\n"
 				+ " && cp " + pathToResults + this.sangerSNVName.replace(".vcf.gz", ".oxoG.vcf.gz.tbi")+" "+pathToUploadDir+" \\\n"
 				+ " && cp " + pathToResults + this.museSNVName.replace(".vcf.gz", ".oxoG.vcf.gz.tbi")+" "+pathToUploadDir+" \\\n"
+				// Also need to upload normalized INDELs
+				+ " && cp " + pathToResults + this.broadNormalizedIndelVCFName+" "+pathToUploadDir+" \\\n"
+				+ " && cp " + pathToResults + this.dkfzEmblNormalizedIndelVCFName+" "+pathToUploadDir+" \\\n"
+				+ " && cp " + pathToResults + this.sangerNormalizedIndelVCFName+" "+pathToUploadDir+" \\\n"
+				+ " && cp " + pathToResults + this.broadNormalizedIndelVCFName+".tbi "+pathToUploadDir+" \\\n"
+				+ " && cp " + pathToResults + this.dkfzEmblNormalizedIndelVCFName+".tbi "+pathToUploadDir+" \\\n"
+				+ " && cp " + pathToResults + this.sangerNormalizedIndelVCFName+".tbi "+pathToUploadDir+" \\\n"
 				+ " && cp /datastore/oxog_workspace/mutect/sg/gather/"+this.aliquotID+".call_stats.txt /datastore/files_for_upload/"+this.aliquotID+".call_stats.txt \\\n"
 				+ " && cd /datastore/files_for_upload/ && gzip -f "+this.aliquotID+".call_stats.txt && tar -cvf ./"+this.aliquotID+".call_stats.txt.gz.tar ./"+this.aliquotID+".call_stats.txt.gz ) || "+moveToFailed);
 		this.filesForUpload.add("/datastore/files_for_upload/"+this.aliquotID+".call_stats.txt.gz.tar");
@@ -426,7 +434,15 @@ public class OxoGWrapperWorkflow extends BaseOxoGWrapperWorkflow {
 		
 		//TODO: update filesToUpload with files under /datastore/files_for_upload/snvs_from_indels/ 
 		// /datastore/files_for_upload/snvs_from_indels/
-		
+		String pathToUploadDir = "/datastore/files_for_upload/snvs_from_indels/";
+		this.filesForUpload.add( this.broadExtractedSNVVCFName.replace("/datastore/vcf/"+Pipeline.broad+"/", pathToUploadDir).replace(".vcf.gz", ".oxoG.vcf.gz"));
+		this.filesForUpload.add( this.dkfzEmblExtractedSNVVCFName.replace("/datastore/vcf/"+Pipeline.dkfz_embl+"/", pathToUploadDir).replace(".vcf.gz",".oxoG.vcf.gz"));
+		this.filesForUpload.add( this.sangerExtractedSNVVCFName.replace("/datastore/vcf/"+Pipeline.sanger+"/", pathToUploadDir).replace(".vcf.gz", ".oxoG.vcf.gz"));
+		this.filesForUpload.add( this.broadExtractedSNVVCFName.replace("/datastore/vcf/"+Pipeline.broad+"/", pathToUploadDir).replace(".vcf.gz", ".oxoG.vcf.gz.tbi"));
+		this.filesForUpload.add( this.dkfzEmblExtractedSNVVCFName.replace("/datastore/vcf/"+Pipeline.dkfz_embl+"/", pathToUploadDir).replace(".vcf.gz",".oxoG.vcf.gz.tbi"));
+		this.filesForUpload.add( this.sangerExtractedSNVVCFName.replace("/datastore/vcf/"+Pipeline.sanger+"/", pathToUploadDir).replace(".vcf.gz", ".oxoG.vcf.gz.tbi"));
+		this.filesForUpload.add(pathToUploadDir + this.aliquotID + ".gnos_files.tar");
+
 		return oxoGOnSnvsFromIndels;
 	}
 	
