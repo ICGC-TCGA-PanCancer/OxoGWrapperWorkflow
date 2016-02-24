@@ -161,9 +161,9 @@ public class OxoGWrapperWorkflow extends BaseOxoGWrapperWorkflow {
 		//we don't need to worry about that for now.
 		passFilter.setCommand("( for f in $(ls /datastore/vcf/"+workflowName+"/*/*.vcf.gz | grep -v pass | tr '\\n' ' ' ) ; do \n"
 							+ "    echo \"processing $f\" \n"
-							+ "    bgzip -d -c $f | grep -Po \"^#.*$|([^\t]*\t){6}(PASS|\\.).*\" > ${f/.vcf.gz/}.pass-filtered.vcf \n"
+							+ "    bgzip -d -c $f | grep -Po \"^#.*$|([^\t]*\t){6}(PASS\t|\\.\t).*\" > ${f/.vcf.gz/}.pass-filtered.vcf \n"
 							+ "    bgzip -f ${f/.vcf.gz/}.pass-filtered.vcf \n"
-							+ "    #bgzip -d -c $f | grep -Pv \"^#.*$|([^\t]*\t){6}(PASS|\\.).*\" > ${f/.vcf.gz/}.non-pass-filtered.vcf \n"
+							+ "    #bgzip -d -c $f | grep -Pv \"^#.*$|([^\t]*\t){6}(PASS\t|\\.\t).*\" > ${f/.vcf.gz/}.non-pass-filtered.vcf \n"
 							+ "    #bgzip -f ${f/.vcf.gz/}.non-pass-filtered.vcf \n"
 							+ "done) || "+moveToFailed);
 		
