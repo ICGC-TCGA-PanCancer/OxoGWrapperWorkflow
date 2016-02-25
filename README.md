@@ -39,7 +39,7 @@ you can use the INIGenerator to produce an INI for you. It works like this:
 
 ```
 cd /workflows/Workflow_Bundle_OxoGWrapper_1.0_SeqWare_1.1.2/Workflow_Bundle_OxoGWrapper/1.0/
-java -cp ./classes:./lib com.github.seqware.INIGenerator ~/BTCA-SG.BTCA_donor_A153.json
+java -cp ./classes:./bin com.github.seqware.INIGenerator ~/BTCA-SG.BTCA_donor_A153.json
 ```
 
 Other fields that are useful to populate in the INI:
@@ -58,7 +58,14 @@ Other fields that are useful to populate in the INI:
 
 ### Flow Control
 
-It uses git to note state in the workflow... more details TBD.
+It uses git to note state in the workflow.
+
+To do this, a repo must be set up with a directory that contains the state-directories. When a JSON file is in a specific directory, in indicates the state that the workflow running that JSOn file is in.
+
+The JSON file for a job must first be in the `queued-jobs` directory. The workflow will then move it to the `downloading-jobs` directory. When the download phase of the workflow completes, the file is moved to the `running-jobs` directory.
+When the main processes have finished and the upload is in progress, the file will be moved to the `uploading-jobs` directory. When upload completes successfully, the file will be moved to the `completed-jobs` directory.
+If the workflow fails, the file may be moved to the `failed-jobs` directory. If you re-run a workflow on a worker manually, be aware that you'll have to move the JSON file back to the directory that the workflow expects it to be in.
+  
 
 ### Downloads
 
