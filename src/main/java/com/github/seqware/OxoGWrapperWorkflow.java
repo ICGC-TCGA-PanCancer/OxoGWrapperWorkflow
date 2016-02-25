@@ -9,6 +9,7 @@ import java.nio.file.Paths;
 import java.nio.file.StandardOpenOption;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.function.Function;
 import java.util.stream.Collectors;
 
 import net.sourceforge.seqware.pipeline.workflowV2.model.Job;
@@ -387,12 +388,12 @@ public class OxoGWrapperWorkflow extends BaseOxoGWrapperWorkflow {
 				+ " && cp " + pathToResults + this.sangerSNVName.replace(".vcf.gz", ".oxoG.vcf.gz.tbi")+" "+pathToUploadDir+" \\\n"
 				+ " && cp " + pathToResults + this.museSNVName.replace(".vcf.gz", ".oxoG.vcf.gz.tbi")+" "+pathToUploadDir+" \\\n"
 				// Also need to upload normalized INDELs
-				+ " && cp " + pathToResults + this.broadNormalizedIndelVCFName+" "+pathToUploadDir+" \\\n"
-				+ " && cp " + pathToResults + this.dkfzEmblNormalizedIndelVCFName+" "+pathToUploadDir+" \\\n"
-				+ " && cp " + pathToResults + this.sangerNormalizedIndelVCFName+" "+pathToUploadDir+" \\\n"
-				+ " && cp " + pathToResults + this.broadNormalizedIndelVCFName+".tbi "+pathToUploadDir+" \\\n"
-				+ " && cp " + pathToResults + this.dkfzEmblNormalizedIndelVCFName+".tbi "+pathToUploadDir+" \\\n"
-				+ " && cp " + pathToResults + this.sangerNormalizedIndelVCFName+".tbi "+pathToUploadDir+" \\\n"
+				+ " && cp " + this.broadNormalizedIndelVCFName+" "+pathToUploadDir+" \\\n"
+				+ " && cp " + this.dkfzEmblNormalizedIndelVCFName+" "+pathToUploadDir+" \\\n"
+				+ " && cp " + this.sangerNormalizedIndelVCFName+" "+pathToUploadDir+" \\\n"
+				+ " && cp " + this.broadNormalizedIndelVCFName+".tbi "+pathToUploadDir+" \\\n"
+				+ " && cp " + this.dkfzEmblNormalizedIndelVCFName+".tbi "+pathToUploadDir+" \\\n"
+				+ " && cp " + this.sangerNormalizedIndelVCFName+".tbi "+pathToUploadDir+" \\\n"
 				+ " && cp /datastore/oxog_workspace/mutect/sg/gather/"+this.aliquotID+".call_stats.txt /datastore/files_for_upload/"+this.aliquotID+".call_stats.txt \\\n"
 				+ " && cd /datastore/files_for_upload/ && gzip -f "+this.aliquotID+".call_stats.txt && tar -cvf ./"+this.aliquotID+".call_stats.txt.gz.tar ./"+this.aliquotID+".call_stats.txt.gz ) || "+moveToFailed);
 		this.filesForUpload.add("/datastore/files_for_upload/"+this.aliquotID+".call_stats.txt.gz.tar");
@@ -870,6 +871,10 @@ public class OxoGWrapperWorkflow extends BaseOxoGWrapperWorkflow {
 			Job broadPassFilter = this.passFilterWorkflow(Pipeline.broad, move2running);
 			Job dkfzemblPassFilter = this.passFilterWorkflow(Pipeline.dkfz_embl, move2running);
 			// No, we're not going to filter the Muse SNV file.
+			
+			//Function<String,String> f = (x) -> { return x.replace(".vcf.gz",".pass-filtered.vcf.gz"); };
+			//this.sangerSNVName = (String) f.apply(this.sangerSNVName);
+			//this.sangerIndelName = (String) f.apply(this.sangerIndelName);
 			
 			//update all filenames to include ".pass-filtered."
 			this.sangerSNVName = this.sangerSNVName.replace(".vcf.gz", ".pass-filtered.vcf.gz");
