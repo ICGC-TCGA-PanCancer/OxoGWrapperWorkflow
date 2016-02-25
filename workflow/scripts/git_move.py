@@ -23,7 +23,7 @@ repo_location = args[1]
 src_dir = args[2]
 dest_dir = args[3]
 file_name = args[4]
-test_mode = args[5]
+test_mode = (str(args[5])).lower()
 #if len(args) >= 7: 
 #    ip_address = args[6];
 
@@ -45,7 +45,7 @@ print("Getting ready to move "+full_path_to_src+" to "+full_path_to_dest)
 
 move_command = ''
 
-if test_mode:
+if test_mode == 'true' :
     print ("In test mode - file will only be moved locally.")
 
     move_command = 'mv {} {}'.format(full_path_to_src, full_path_to_dest)
