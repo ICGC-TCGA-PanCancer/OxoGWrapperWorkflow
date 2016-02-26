@@ -34,6 +34,9 @@ test_mode = (str(args[5])).lower()
 #        data['host_ip'] = ip_address;
 #        data['transition_to_'+dest_dir+'_time'] = datetime.datetime.now().isoformat();
 #        json.dump(data, jsonFile);
+# Get datetime with bash: `TZ=EST date +"%Y-%m-%d_%H:%M:%S_%Z"`
+# Get IP address with bash: hostname -i or try:
+#     ip addr show eth0 | grep "inet " | sed 's/.*inet \(.*\)\/.*/\1/g'
 
 # TODO: There should be something in here to set the git config username and email. If a workflow is retried, the values set previously
 # will have been lost since they were set in a different docker container.
@@ -52,7 +55,7 @@ if test_mode == 'true' :
 else:
     print ("In \"live\" mode - files will be moved in git")
     move_command = 'git mv {} {} && '.format(full_path_to_src, full_path_to_dest) + \
-                  'git commit -m \'{} to {}: {} \' && '.full_path_to_dest + \
+                  'git commit -m \'{} to {}: {} \' && '.format(src_dir,dest_dir,file_name) + \
                   'git push'
     
 for i in range(10): # try 10 times. If there are MANY clients trying to check-in at once this might be necessary. 
