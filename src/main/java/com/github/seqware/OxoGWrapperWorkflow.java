@@ -10,6 +10,7 @@ import java.nio.file.StandardOpenOption;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.function.Function;
+import java.util.function.Predicate;
 import java.util.stream.Collectors;
 
 import net.sourceforge.seqware.pipeline.workflowV2.model.Job;
@@ -772,11 +773,25 @@ public class OxoGWrapperWorkflow extends BaseOxoGWrapperWorkflow {
 	private List<Job> doAnnotations(Job ... parents)
 	{
 		List<Job> finalAnnotatorJobs = new ArrayList<Job>(3);
-		System.out.println(this.filesForUpload);
-		String broadOxogSNVFileName = this.filesForUpload.stream().filter(p -> p.contains("broad-mutect") && p.endsWith("somatic.snv_mnv.pass-filtered.oxoG.vcf.gz")).collect(Collectors.toList()).get(0);
-		String sangerOxogSNVFileName = this.filesForUpload.stream().filter(p -> p.contains("svcp_") && p.endsWith("somatic.snv_mnv.pass-filtered.oxoG.vcf.gz")).collect(Collectors.toList()).get(0);
-		String museOxogSNVFileName = this.filesForUpload.stream().filter(p -> p.contains("MUSE") && p.endsWith("somatic.snv_mnv.oxoG.vcf.gz")).collect(Collectors.toList()).get(0);
-		String dkfzEmbleOxogSNVFileName = this.filesForUpload.stream().filter(p -> p.contains("dkfz-snvCalling") && p.endsWith("somatic.snv_mnv.pass-filtered.oxoG.vcf.gz")).collect(Collectors.toList()).get(0);
+		//System.out.println(this.filesForUpload);
+		
+		Predicate<String> isExtractedSNV = p -> p.contains("extracted-snv") && p.endsWith(".vcf.gz");
+		final String passFilteredOxoGSuffix = "somatic.snv_mnv.pass-filtered.oxoG.vcf.gz";	
+		String broadOxogSNVFileName = this.filesForUpload.stream().filter(p -> ((p.contains("broad-mutect") && p.endsWith(passFilteredOxoGSuffix))
+																				|| (p.contains(Pipeline.broad.toString()) && isExtractedSNV.test(p) )))
+																	.collect(Collectors.toList()).get(0);
+		
+		String sangerOxogSNVFileName = this.filesForUpload.stream().filter(p -> ((p.contains("svcp_") && p.endsWith(passFilteredOxoGSuffix))
+																				|| (p.contains(Pipeline.sanger.toString()) && isExtractedSNV.test(p) )))
+																	.collect(Collectors.toList()).get(0);
+		
+		String dkfzEmbleOxogSNVFileName = this.filesForUpload.stream().filter(p -> ((p.contains("dkfz-snvCalling") && p.endsWith(passFilteredOxoGSuffix))
+																				|| (p.contains(Pipeline.dkfz_embl.toString()) && isExtractedSNV.test(p) )))
+																	.collect(Collectors.toList()).get(0);
+
+		//Remember: MUSE files do not get PASS-filtered. Also, there is no INDEL so there cannot be any SNVs extracted from INDELs.
+		String museOxogSNVFileName = this.filesForUpload.stream().filter(p -> p.contains("MUSE") && p.endsWith("somatic.snv_mnv.oxoG.vcf.gz"))
+																	.collect(Collectors.toList()).get(0);
 		
 		String broadOxoGSNVFromIndelFileName = broadOxogSNVFileName.replace("/oxog_results/", "/oxog_results_extracted_snvs/");
 		String sangerOxoGSNVFromIndelFileName = sangerOxogSNVFileName.replace("/oxog_results/", "/oxog_results_extracted_snvs/");
@@ -800,7 +815,7 @@ public class OxoGWrapperWorkflow extends BaseOxoGWrapperWorkflow {
 		finalAnnotatorJobs.add(sangerSNVAnnotatorJob);
 		finalAnnotatorJobs.add(sangerIndelAnnotatorJob);
 		finalAnnotatorJobs.add(museSNVAnnotatorJob);
-		
+		System.out.println(this.filesForUpload);
 		return finalAnnotatorJobs;
 	}
 	
