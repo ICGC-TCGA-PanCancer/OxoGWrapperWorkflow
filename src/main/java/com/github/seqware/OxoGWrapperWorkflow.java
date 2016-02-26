@@ -539,7 +539,7 @@ public class OxoGWrapperWorkflow extends BaseOxoGWrapperWorkflow {
 		String tars = "";
 		String tarMD5Sums = "";
 		
-		for (String file : this.filesForUpload.stream().filter(p -> p.contains(".vcf") || p.endsWith(".tar") ).collect(Collectors.toList()) )
+		for (String file : this.filesForUpload.stream().filter(p -> ((p.contains(".vcf") || p.endsWith(".tar")) && (! p.contains("extracted-snv"))) ).collect(Collectors.toList()) )
 		{
 			file = file.trim();
 			//md5sum test_files/tumour_minibam.bam.bai | cut -d ' ' -f 1 > test_files/tumour_minibam.bai.md5
@@ -581,7 +581,7 @@ public class OxoGWrapperWorkflow extends BaseOxoGWrapperWorkflow {
 															+ "SNV_FROM_INDEL_TARBALL_MD5=\'\'\n"
 															+ "[ -d /datastore/files_for_upload/snvs_from_indels/ ] &&  for f in $(ls /datastore/files_for_upload/snvs_from_indels/) ; do \n"
 															+ "    mv $f /datastore/files_for_upload/$f \n"
-															+ "    md5sum $f | cud -d ' ' -f 1 > $f.md5 \n"
+															+ "    md5sum $f | cut -d ' ' -f 1 > $f.md5 \n"
 															+ "    if [[ \"$f\" =~ gnos_files\\.tar ]] ; then \n"
 															+ "        SNV_FROM_INDEL_TARBALL=$f,$SNV_FROM_INDEL_TARBALL\n"
 															+ "        SNV_FROM_INDEL_TARBALL_MD5=$f.md5,$SNV_FROM_INDEL_TARBALL_MD5\n"
@@ -773,10 +773,10 @@ public class OxoGWrapperWorkflow extends BaseOxoGWrapperWorkflow {
 	private List<Job> doAnnotations(Job ... parents)
 	{
 		List<Job> finalAnnotatorJobs = new ArrayList<Job>(3);
-		//System.out.println(this.filesForUpload);
 		
 		Predicate<String> isExtractedSNV = p -> p.contains("extracted-snv") && p.endsWith(".vcf.gz");
-		final String passFilteredOxoGSuffix = "somatic.snv_mnv.pass-filtered.oxoG.vcf.gz";	
+		final String passFilteredOxoGSuffix = "somatic.snv_mnv.pass-filtered.oxoG.vcf.gz";
+		//list filtering should only ever produce one result.
 		String broadOxogSNVFileName = this.filesForUpload.stream().filter(p -> ((p.contains("broad-mutect") && p.endsWith(passFilteredOxoGSuffix))
 																				|| (p.contains(Pipeline.broad.toString()) && isExtractedSNV.test(p) )))
 																	.collect(Collectors.toList()).get(0);
@@ -815,7 +815,7 @@ public class OxoGWrapperWorkflow extends BaseOxoGWrapperWorkflow {
 		finalAnnotatorJobs.add(sangerSNVAnnotatorJob);
 		finalAnnotatorJobs.add(sangerIndelAnnotatorJob);
 		finalAnnotatorJobs.add(museSNVAnnotatorJob);
-		System.out.println(this.filesForUpload);
+
 		return finalAnnotatorJobs;
 	}
 	
@@ -884,17 +884,13 @@ public class OxoGWrapperWorkflow extends BaseOxoGWrapperWorkflow {
 			this.sangerIndelName = addPassFilteredSuffix.apply(this.sangerIndelName);
 			this.sangerSVName = addPassFilteredSuffix.apply(this.sangerSVName);
 
-//			this.sangerSNVName = this.sangerSNVName.replace(".vcf.gz", ".pass-filtered.vcf.gz");
-//			this.sangerIndelName = this.sangerIndelName.replace(".vcf.gz", ".pass-filtered.vcf.gz");
-//			this.sangerSVName = this.sangerSVName.replace(".vcf.gz", ".pass-filtered.vcf.gz");
+			this.broadSNVName = addPassFilteredSuffix.apply(this.broadSNVName);//.replace(".vcf.gz", ".pass-filtered.vcf.gz");
+			this.broadIndelName = addPassFilteredSuffix.apply(this.broadIndelName);//.replace(".vcf.gz", ".pass-filtered.vcf.gz");
+			this.broadSVName = addPassFilteredSuffix.apply(this.broadSVName);//.replace(".vcf.gz", ".pass-filtered.vcf.gz");
 			
-			this.broadSNVName = this.broadSNVName.replace(".vcf.gz", ".pass-filtered.vcf.gz");
-			this.broadIndelName = this.broadIndelName.replace(".vcf.gz", ".pass-filtered.vcf.gz");
-			this.broadSVName = this.broadSVName.replace(".vcf.gz", ".pass-filtered.vcf.gz");
-			
-			this.dkfzEmblSNVName = this.dkfzEmblSNVName.replace(".vcf.gz", ".pass-filtered.vcf.gz");
-			this.dkfzEmblIndelName = this.dkfzEmblIndelName.replace(".vcf.gz", ".pass-filtered.vcf.gz");
-			this.dkfzEmblSVName = this.dkfzEmblSVName.replace(".vcf.gz", ".pass-filtered.vcf.gz");
+			this.dkfzEmblSNVName = addPassFilteredSuffix.apply(this.dkfzEmblSNVName);//.replace(".vcf.gz", ".pass-filtered.vcf.gz");
+			this.dkfzEmblIndelName = addPassFilteredSuffix.apply(this.dkfzEmblIndelName);//.replace(".vcf.gz", ".pass-filtered.vcf.gz");
+			this.dkfzEmblSVName = addPassFilteredSuffix.apply(this.dkfzEmblSVName);//.replace(".vcf.gz", ".pass-filtered.vcf.gz");
 			
 			// OxoG will run after move2running. Move2running will run after all the jobs that perform input file downloads and file preprocessing have finished.  
 			Job sangerPreprocessVCF = this.preProcessIndelVCF(sangerPassFilter, Pipeline.sanger,"/"+ this.sangerGnosID +"/"+ this.sangerIndelName);
@@ -926,7 +922,7 @@ public class OxoGWrapperWorkflow extends BaseOxoGWrapperWorkflow {
 				//GitUtils.gitMove( "running-jobs", "completed-jobs", this.getWorkflow(), this.JSONlocation, this.JSONrepoName, this.JSONfolderName, this.GITname, this.GITemail, this.gitMoveTestMode, this.JSONfileName ,pathToScripts,  indelAnnotatorJob, snvAnnotatorJob, snvFromIndelAnnotatorJob, oxoG, oxoGSnvsFromIndels, normalVariantBam, tumourVariantBam);
 				this.gitMove( "running-jobs", "completed-jobs",annotationJobs.toArray(new Job[annotationJobs.size()]));
 			}
-	
+			System.out.println(this.filesForUpload);
 		}
 		catch (Exception e)
 		{
