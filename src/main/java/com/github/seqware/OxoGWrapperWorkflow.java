@@ -539,11 +539,13 @@ public class OxoGWrapperWorkflow extends BaseOxoGWrapperWorkflow {
 		String tars = "";
 		String tarMD5Sums = "";
 		
+		String generateAnalysisFilesVCFCommand = "";
+		
 		for (String file : this.filesForUpload.stream().filter(p -> ((p.contains(".vcf") || p.endsWith(".tar")) && (! p.contains("extracted-snv"))) ).collect(Collectors.toList()) )
 		{
 			file = file.trim();
 			//md5sum test_files/tumour_minibam.bam.bai | cut -d ' ' -f 1 > test_files/tumour_minibam.bai.md5
-			generateAnalysisFilesVCFs.getCommand().addArgument("md5sum "+file+" | cut -d ' ' -f 1 > "+file+".md5 ; \n");
+			generateAnalysisFilesVCFCommand += "md5sum "+file+" | cut -d ' ' -f 1 > "+file+".md5 ; \n";
 			
 			if (file.endsWith(".tar"))
 			{
@@ -573,7 +575,7 @@ public class OxoGWrapperWorkflow extends BaseOxoGWrapperWorkflow {
 		//This ugliness is here because of the OxoG results on SNVs from INDELs. We won't know until the workflow actually runs if there are any SNVs from INDELs.
 		//So we need to build up the list of files to upload using a bash script that will be evaluated at runtime rather
 		//than Java code that gets evaluated when the workflow is built.
-		generateAnalysisFilesVCFs.getCommand().addArgument("\nSNV_FROM_INDEL_OXOG=\'\'\n"
+		generateAnalysisFilesVCFCommand += "\nSNV_FROM_INDEL_OXOG=\'\'\n"
 															+ "SNV_FROM_INDEL_OXOG_INDEX=\'\'\n"
 															+ "SNV_FROM_INDEL_OXOG_MD5=\'\'\n"
 															+ "SNV_FROM_INDEL_OXOG_INDEX_MD5=\'\'\n"
@@ -592,8 +594,8 @@ public class OxoGWrapperWorkflow extends BaseOxoGWrapperWorkflow {
 															+ "        SNV_FROM_INDEL_OXOG=$SNV_FROM_INDEL_OXOG,$f\n"
 															+ "        SNV_FROM_INDEL_OXOG_MD5=$SNV_FROM_INDEL_OXOG_MD5,$f.md5\n"
 															+ "    fi\n"
-															+ "done\n");
-		generateAnalysisFilesVCFs.getCommand().addArgument("\n docker run --rm --name=upload_vcfs_and_tarballs -v /datastore/vcf-upload-prep/:/vcf/ -v "+this.gnosKey+":/gnos.key -v /datastore/:/datastore/ "
+															+ "done\n";
+		generateAnalysisFilesVCFCommand += "\n docker run --rm --name=upload_vcfs_and_tarballs -v /datastore/vcf-upload-prep/:/vcf/ -v "+this.gnosKey+":/gnos.key -v /datastore/:/datastore/ "
 				+ " pancancer/pancancer_upload_download:1.7 /bin/bash -c \" cat << DESCRIPTIONFILE > /vcf/description.txt\n"
 				+ vcfDescription
 				+ "\nDESCRIPTIONFILE\n"
@@ -609,29 +611,33 @@ public class OxoGWrapperWorkflow extends BaseOxoGWrapperWorkflow {
 						+ " --workflow-name OxoGWorkflow-OxoGFiltering \\\n"
 						+ " --description-file /vcf/description.txt \\\n"
 						+ " --workflow-version " + this.getVersion() + " \\\n"
-						+ " --workflow-src-url https://github.com/ICGC-TCGA-PanCancer/OxoGWrapperWorkflow --workflow-url https://github.com/ICGC-TCGA-PanCancer/OxoGWrapperWorkflow  \"\n");
+						+ " --workflow-src-url https://github.com/ICGC-TCGA-PanCancer/OxoGWrapperWorkflow --workflow-url https://github.com/ICGC-TCGA-PanCancer/OxoGWrapperWorkflow  \"\n";
 		
-		generateAnalysisFilesVCFs.addParent(parentJob);
+		
 		
 		//copy the analaysis.xml, manifest.xml *.gto files to /datastore/files_for_upload
-		generateAnalysisFilesVCFs.getCommand().addArgument("cp /datastore/vcf-upload-prep/*/*/manifest.xml /datastore/files_for_upload/manifest.xml "
+		generateAnalysisFilesVCFCommand += "cp /datastore/vcf-upload-prep/*/*/manifest.xml /datastore/files_for_upload/manifest.xml "
 															+ " && cp /datastore/vcf-upload-prep/*/*/analysis.xml /datastore/files_for_upload/analysis.xml "
-															+ " && cp /datastore/vcf-upload-prep/*/*/*.gto /datastore/files_for_upload/\n");
+															+ " && cp /datastore/vcf-upload-prep/*/*/*.gto /datastore/files_for_upload/\n";
+		generateAnalysisFilesVCFs.setCommand("( "+generateAnalysisFilesVCFCommand+ " ) || "+moveToFailed);
+		generateAnalysisFilesVCFs.addParent(parentJob);
+		
 		//get the UUID that was submitted with the metadata
 		//copyGTUploadFiles.getCommand().addArgument("VCF_UUID=$(grep server_path /datastore/files_for_upload/manifest.xml  | sed 's/.*server_path=\\\"\\(.*\\)\\\" .*/\1/g')\n");
-
+		
 		Job generateAnalysisFilesBAMs = this.getWorkflow().createBashJob("generate_analysis_files_for_BAM_upload");
 		
 		String bams = "";
 		String bamIndicies = "";
 		String bamMD5Sums = "";
 		String bamIndexMD5Sums = "";
-		generateAnalysisFilesBAMs.getCommand().addArgument("sudo chmod a+rw -R /datastore/variantbam_results/ &&\n");
+		String generateAnalysisFilesBAMsCommand = "";
+		generateAnalysisFilesBAMsCommand += "sudo chmod a+rw -R /datastore/variantbam_results/ &&\n";
 		for (String file : this.filesForUpload.stream().filter( p -> p.contains(".bam") || p.contains(".bai") ).collect(Collectors.toList()) )
 		{
 			file = file.trim();
 			//md5sum test_files/tumour_minibam.bam.bai | cut -d ' ' -f 1 > test_files/tumour_minibam.bai.md5
-			generateAnalysisFilesBAMs.getCommand().addArgument(" md5sum "+file+" | cut -d ' ' -f 1 > "+file+".md5 ; \n");
+			generateAnalysisFilesBAMsCommand += " md5sum "+file+" | cut -d ' ' -f 1 > "+file+".md5 ; \n";
 			
 			if (file.contains(".bai") )
 			{
@@ -653,7 +659,7 @@ public class OxoGWrapperWorkflow extends BaseOxoGWrapperWorkflow {
 							+ " For a complete change log see "+this.changelogURL+"."
 							+ OxoGWrapperWorkflow.DESCRIPTION_END;
 		
-		generateAnalysisFilesBAMs.getCommand().addArgument("\n docker run --rm --name=upload_bams -v /datastore/bam-upload-prep/:/vcf/ -v "+this.gnosKey+":/gnos.key -v /datastore/:/datastore/ "
+		generateAnalysisFilesBAMsCommand += "\n docker run --rm --name=upload_bams -v /datastore/bam-upload-prep/:/vcf/ -v "+this.gnosKey+":/gnos.key -v /datastore/:/datastore/ "
 				+ " pancancer/pancancer_upload_download:1.7 /bin/bash -c \"cat << DESCRIPTIONFILE > /vcf/description.txt\n"
 				+ bamDescription
 				+ "\nDESCRIPTIONFILE\n"
@@ -667,10 +673,12 @@ public class OxoGWrapperWorkflow extends BaseOxoGWrapperWorkflow {
 						+ " --workflow-name OxoGWorkflow-variantbam \\\n"
 						+ " --description-file /vcf/description.txt \\\n"
 						+ " --workflow-version " + this.getVersion() + " \\\n"
-						+ " --workflow-src-url https://github.com/ICGC-TCGA-PanCancer/OxoGWrapperWorkflow --workflow-url https://github.com/ICGC-TCGA-PanCancer/OxoGWrapperWorkflow  \"\n");
-		generateAnalysisFilesBAMs.getCommand().addArgument("\n cp /datastore/bam-upload-prep/*/*/manifest.xml /datastore/variantbam_results/manifest.xml "
+						+ " --workflow-src-url https://github.com/ICGC-TCGA-PanCancer/OxoGWrapperWorkflow --workflow-url https://github.com/ICGC-TCGA-PanCancer/OxoGWrapperWorkflow  \"\n";
+		
+		generateAnalysisFilesBAMsCommand += "\n cp /datastore/bam-upload-prep/*/*/manifest.xml /datastore/variantbam_results/manifest.xml "
 															+ " && cp /datastore/bam-upload-prep/*/*/analysis.xml /datastore/variantbam_results/analysis.xml "
-															+ " && cp /datastore/bam-upload-prep/*/*/*.gto /datastore/variantbam_results/");
+															+ " && cp /datastore/bam-upload-prep/*/*/*.gto /datastore/variantbam_results/";
+		generateAnalysisFilesBAMs.setCommand("( "+generateAnalysisFilesBAMsCommand+" ) || "+moveToFailed);
 		generateAnalysisFilesBAMs.addParent(parentJob);
 	
 		String gnosServer = this.gnosMetadataUploadURL.replace("http://", "").replace("https://", "").replace("/", "");
