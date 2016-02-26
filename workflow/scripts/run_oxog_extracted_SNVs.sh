@@ -11,24 +11,24 @@ ALIQUOTID=$6
 
 OXOQSCORE=$7
 
-NUMINDELS1=$(zcat $VCF1 | grep "^[^#]" | wc -l)
-echo "$VCF1 has $NUMINDELS1 INDELS"
-NUMINDELS2=$(zcat $VCF2 | grep "^[^#]" | wc -l)
-echo "$VCF2 has $NUMINDELS2 INDELS"
-NUMINDELS3=$(zcat $VCF3 | grep "^[^#]" | wc -l)
-echo "$VCF3 has $NUMINDELS3 INDELS"
+NUMSNVS1=$(zcat $VCF1 | grep "^[^#]" | wc -l)
+echo "$VCF1 has $NUMSNVS1 SNVs"
+NUMSNVS2=$(zcat $VCF2 | grep "^[^#]" | wc -l)
+echo "$VCF2 has $NUMSNVS2 SNVs"
+NUMSNVS3=$(zcat $VCF3 | grep "^[^#]" | wc -l)
+echo "$VCF3 has $NUMSNVS3 SNVs"
 
 VCFFORDOCKER=""
 VCFFOROXOG=""
-if (( NUMINDELS1 > 0 )) ; then
+if (( NUMSNVS1 > 0 )) ; then
         VCFFORDOCKER=" ${VCFFORDOCKER} -v ${VCF1}:/VCF1.vcf.gz "
         VCFFOROXOG=" ${VCFFOROXOG} /VCF1.vcf.gz "
 fi
-if (( NUMINDELS2 > 0 )) ; then
+if (( NUMSNVS2 > 0 )) ; then
         VCFFORDOCKER=" ${VCFFORDOCKER} -v ${VCF2}:/VCF2.vcf.gz "
         VCFFOROXOG=" ${VCFFOROXOG} /VCF2.vcf.gz "
 fi
-if (( NUMINDELS3 > 0 )) ; then
+if (( NUMSNVS3 > 0 )) ; then
         VCFFORDOCKER=" ${VCFFORDOCKER} -v ${VCF3}:/VCF3.vcf.gz "
         VCFFOROXOG=" ${VCFFOROXOG} /VCF3.vcf.gz "
 fi
