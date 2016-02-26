@@ -339,22 +339,23 @@ public class OxoGWrapperWorkflow extends BaseOxoGWrapperWorkflow {
 	private Job doOxoG(Job parent) {
 		Job runOxoGWorkflow = this.getWorkflow().createBashJob("run OxoG Filter");
 		String moveToFailed = GitUtils.gitMoveCommand("running-jobs","failed-jobs",this.JSONlocation + "/" + this.JSONrepoName + "/" + this.JSONfolderName,this.JSONfileName, this.gitMoveTestMode, this.getWorkflowBaseDir() + "/scripts/");
+		Function<String,String> getFileName = (s) -> {  return s.substring(s.lastIndexOf("/")); };
 		String extractedSnvCheck = "EXTRACTED_SNV_MOUNT=\"\"\n"
 									+ "EXTRACTED_SNV_FILES=\"\"\n"
 									+ "if (( $(zcat "+this.sangerExtractedSNVVCFName+" | grep \"^[^#]\" | wc -l) > 0 )) ; then \n"
 									+ "    echo \""+this.sangerExtractedSNVVCFName+" has SNVs.\"\n"
-									+ "    EXTRACTED_SNV_MOUNT=\"${EXTRACTED_SNV_MOUNT} -v "+this.sangerExtractedSNVVCFName+":/datafiles/VCF/"+Pipeline.sanger+"/sanger_extracted_snv.vcf.gz \"\n"
-									+ "    EXTRACTED_SNV_FILES=\"${EXTRACTED_SNV_FILES} /datafiles/VCF/"+Pipeline.sanger+"/sanger_extracted_snv.vcf.gz \"\n"
+									+ "    EXTRACTED_SNV_MOUNT=\"${EXTRACTED_SNV_MOUNT} -v "+this.sangerExtractedSNVVCFName+":/datafiles/VCF/"+Pipeline.sanger+"/"+getFileName.apply(this.sangerExtractedSNVVCFName)+" \"\n"
+									+ "    EXTRACTED_SNV_FILES=\"${EXTRACTED_SNV_FILES} /datafiles/VCF/"+Pipeline.sanger+"/"+getFileName.apply(this.sangerExtractedSNVVCFName)+" \"\n"
 									+ "fi\n  "
 									+ "if (( $(zcat "+this.broadExtractedSNVVCFName+" | grep \"^[^#]\" | wc -l) > 0 )) ; then \n"
 									+ "    echo \""+this.broadExtractedSNVVCFName+" has SNVs.\"\n"
-									+ "    EXTRACTED_SNV_MOUNT=\"${EXTRACTED_SNV_MOUNT} -v "+this.broadExtractedSNVVCFName+":/datafiles/VCF/"+Pipeline.broad+"/broad_extracted_snv.vcf.gz \"\n"
-									+ "    EXTRACTED_SNV_FILES=\"${EXTRACTED_SNV_FILES} /datafiles/VCF/"+Pipeline.broad+"/broad_extracted_snv.vcf.gz \"\n"
+									+ "    EXTRACTED_SNV_MOUNT=\"${EXTRACTED_SNV_MOUNT} -v "+this.broadExtractedSNVVCFName+":/datafiles/VCF/"+Pipeline.broad+"/"+getFileName.apply(this.broadExtractedSNVVCFName)+" \"\n"
+									+ "    EXTRACTED_SNV_FILES=\"${EXTRACTED_SNV_FILES} /datafiles/VCF/"+Pipeline.broad+"/"+getFileName.apply(this.broadExtractedSNVVCFName)+" \"\n"
 									+ "fi\n "
 									+ "if (( $(zcat "+this.dkfzEmblExtractedSNVVCFName+" | grep \"^[^#]\" | wc -l) > 0 )) ; then \n"
 									+ "    echo \""+this.dkfzEmblExtractedSNVVCFName+" has SNVs.\"\n"
-									+ "    EXTRACTED_SNV_MOUNT=\"${EXTRACTED_SNV_MOUNT} -v "+this.dkfzEmblExtractedSNVVCFName+":/datafiles/VCF/"+Pipeline.dkfz_embl+"/dkfz_embl_extracted_snv.vcf.gz \"\n"
-									+ "    EXTRACTED_SNV_FILES=\"${EXTRACTED_SNV_FILES} /datafiles/VCF/"+Pipeline.dkfz_embl+"/dkfz_embl_extracted_snv.vcf.gz \"\n"
+									+ "    EXTRACTED_SNV_MOUNT=\"${EXTRACTED_SNV_MOUNT} -v "+this.dkfzEmblExtractedSNVVCFName+":/datafiles/VCF/"+Pipeline.dkfz_embl+"/"+getFileName.apply(this.dkfzEmblExtractedSNVVCFName)+" \"\n"
+									+ "    EXTRACTED_SNV_FILES=\"${EXTRACTED_SNV_FILES} /datafiles/VCF/"+Pipeline.dkfz_embl+"/"+getFileName.apply(this.dkfzEmblExtractedSNVVCFName)+" \"\n"
 									+ "fi\n ";
 		if (!skipOxoG)
 		{
@@ -387,27 +388,43 @@ public class OxoGWrapperWorkflow extends BaseOxoGWrapperWorkflow {
 		extractOutputFiles.addParent(runOxoGWorkflow);
 		String pathToResults = "/datastore/oxog_results/cga/fh/pcawg_pipeline/jobResults_pipette/jobs/"+this.aliquotID+"/links_for_gnos/annotate_failed_sites_to_vcfs/";
 		String pathToUploadDir = "/datastore/files_for_upload/";
-		this.filesForUpload.add(pathToUploadDir + this.broadSNVName.replace(".vcf.gz", ".oxoG.vcf.gz")) ;
-		this.filesForUpload.add(pathToUploadDir + this.dkfzEmblSNVName.replace(".vcf.gz",".oxoG.vcf.gz")) ;
-		this.filesForUpload.add(pathToUploadDir + this.sangerSNVName.replace(".vcf.gz", ".oxoG.vcf.gz"))  ;
-		this.filesForUpload.add(pathToUploadDir + this.museSNVName.replace(".vcf.gz", ".oxoG.vcf.gz"));
-		this.filesForUpload.add(pathToUploadDir + this.broadSNVName.replace(".vcf.gz", ".oxoG.vcf.gz.tbi")) ;
-		this.filesForUpload.add(pathToUploadDir + this.dkfzEmblSNVName.replace(".vcf.gz",".oxoG.vcf.gz.tbi")) ;
-		this.filesForUpload.add(pathToUploadDir + this.sangerSNVName.replace(".vcf.gz", ".oxoG.vcf.gz.tbi"))  ;
-		this.filesForUpload.add(pathToUploadDir + this.museSNVName.replace(".vcf.gz", ".oxoG.vcf.gz.tbi"));
+		
+		Function<String,String> changeToOxoGSuffix = (s) -> {return s.replace(".vcf.gz", ".oxoG.vcf.gz"); };
+		Function<String,String> changeToOxoGTBISuffix = changeToOxoGSuffix.andThen((s) -> s+=".tbi"); 
+		//regular VCFs
+		this.filesForUpload.add(pathToUploadDir + changeToOxoGSuffix.apply(this.broadSNVName));
+		this.filesForUpload.add(pathToUploadDir + changeToOxoGSuffix.apply(this.dkfzEmblSNVName));
+		this.filesForUpload.add(pathToUploadDir + changeToOxoGSuffix.apply(this.sangerSNVName));
+		this.filesForUpload.add(pathToUploadDir + changeToOxoGSuffix.apply(this.museSNVName));
+		//index files
+		this.filesForUpload.add(pathToUploadDir + changeToOxoGTBISuffix.apply(this.broadSNVName));
+		this.filesForUpload.add(pathToUploadDir + changeToOxoGTBISuffix.apply(this.dkfzEmblSNVName));
+		this.filesForUpload.add(pathToUploadDir + changeToOxoGTBISuffix.apply(this.sangerSNVName));
+		this.filesForUpload.add(pathToUploadDir + changeToOxoGTBISuffix.apply(this.museSNVName));
+		//Extracted SNVs
+		this.filesForUpload.add(pathToUploadDir + changeToOxoGSuffix.apply(getFileName.apply(this.sangerExtractedSNVVCFName)));
+		this.filesForUpload.add(pathToUploadDir + changeToOxoGSuffix.apply(getFileName.apply(this.broadExtractedSNVVCFName)));
+		this.filesForUpload.add(pathToUploadDir + changeToOxoGSuffix.apply(getFileName.apply(this.dkfzEmblExtractedSNVVCFName)));
+		//index files
+		this.filesForUpload.add(pathToUploadDir + changeToOxoGTBISuffix.apply(getFileName.apply(this.sangerExtractedSNVVCFName)));
+		this.filesForUpload.add(pathToUploadDir + changeToOxoGTBISuffix.apply(getFileName.apply(this.broadExtractedSNVVCFName)));
+		this.filesForUpload.add(pathToUploadDir + changeToOxoGTBISuffix.apply(getFileName.apply(this.dkfzEmblExtractedSNVVCFName)));
+		
 		this.filesForUpload.add("/datastore/oxog_results/" + this.aliquotID + ".gnos_files.tar");
 		
 		Job prepOxoGTarAndMutectCallsforUpload = this.getWorkflow().createBashJob("prepare OxoG tar and mutect calls file for upload");
 		prepOxoGTarAndMutectCallsforUpload.setCommand("( ([ -d /datastore/files_for_upload ] || mkdir -p /datastore/files_for_upload) "
 				+ " && cp /datastore/oxog_results/"+this.aliquotID+".gnos_files.tar /datastore/files_for_upload/ \\\n"
-				+ " && cp " + pathToResults + this.broadSNVName.replace(".vcf.gz", ".oxoG.vcf.gz")+" "+pathToUploadDir+" \\\n"
+				+ " && cp " + pathToResults + "*.vcf.gz  "+pathToUploadDir+" \\\n"
+				+ " && cp " + pathToResults + "*.vcf.gz.tbi  "+pathToUploadDir+" \\\n"
+				/*+ " && cp " + pathToResults + this.broadSNVName.replace(".vcf.gz", ".oxoG.vcf.gz")+" "+pathToUploadDir+" \\\n"
 				+ " && cp " + pathToResults + this.dkfzEmblSNVName.replace(".vcf.gz", ".oxoG.vcf.gz")+" "+pathToUploadDir+" \\\n"
 				+ " && cp " + pathToResults + this.sangerSNVName.replace(".vcf.gz", ".oxoG.vcf.gz")+" "+pathToUploadDir+" \\\n"
 				+ " && cp " + pathToResults + this.museSNVName.replace(".vcf.gz", ".oxoG.vcf.gz")+" "+pathToUploadDir+" \\\n"
 				+ " && cp " + pathToResults + this.broadSNVName.replace(".vcf.gz", ".oxoG.vcf.gz.tbi")+" "+pathToUploadDir+" \\\n"
 				+ " && cp " + pathToResults + this.dkfzEmblSNVName.replace(".vcf.gz", ".oxoG.vcf.gz.tbi")+" "+pathToUploadDir+" \\\n"
-				+ " && cp " + pathToResults + this.sangerSNVName.replace(".vcf.gz", ".oxoG.vcf.gz.tbi")+" "+pathToUploadDir+" \\\n"
-				+ " && cp " + pathToResults + this.museSNVName.replace(".vcf.gz", ".oxoG.vcf.gz.tbi")+" "+pathToUploadDir+" \\\n"
+				+ " && cp " + pathToResults + this.sangerSNVName.replace(".vcf.gz", ".oxoG.vcf.gz.tbi")+" "+pathToUploadDir+" \\\n"*/
+				//+ " && cp " + pathToResults + this.museSNVNamie.replace(".vcf.gz", ".oxoG.vcf.gz.tbi")+" "+pathToUploadDir+" \\\n"
 				// Also need to upload normalized INDELs - TODO: Move to its own job, or maybe combine with the normalization job?
 				+ " && cp " + this.broadNormalizedIndelVCFName+" "+pathToUploadDir+" \\\n"
 				+ " && cp " + this.dkfzEmblNormalizedIndelVCFName+" "+pathToUploadDir+" \\\n"
@@ -424,50 +441,50 @@ public class OxoGWrapperWorkflow extends BaseOxoGWrapperWorkflow {
 		return prepOxoGTarAndMutectCallsforUpload;
 	}
 
-	/**
-	 * This will run the OxoG Filter program on the SNVs that were extracted from the INDELs, if there were any. It's possible that no SNVs will be extracted from any
-	 * INDEL files (in fact, I've been told this is the most likely scenario for most donors) in which case nothing will run. See the script scripts/run_oxog_extracted_SNVs.sh
-	 * for more details on this.
-	 * @param parent
-	 * @return
-	 */
-	private Job doOxoGSnvsFromIndels(Job parent) {
-		Job oxoGOnSnvsFromIndels = this.getWorkflow().createBashJob("running OxoG on SNVs from INDELs");
-		if (!skipOxoG)
-		{
-			String vcf1 = this.sangerExtractedSNVVCFName;
-			String vcf2 = this.broadExtractedSNVVCFName;
-			String vcf3 = this.dkfzEmblExtractedSNVVCFName;
-
-			String extractionCommand = this.getWorkflowBaseDir()+"/scripts/run_oxog_extracted_SNVs.sh "+
-					vcf1+" "+vcf2+" "+vcf3+" "+
-					" tumour/" + this.tumourBamGnosID + "/" + this.tumourBAMFileName +  
-					" normal/" + this.normalBamGnosID + "/" + this.normalBAMFileName + 
-					" " + this.aliquotID + " " + 
-					this.oxoQScore;
-			
-			String moveToFailed = GitUtils.gitMoveCommand("running-jobs","failed-jobs",this.JSONlocation + "/" + this.JSONrepoName + "/" + this.JSONfolderName,this.JSONfileName, this.gitMoveTestMode, this.getWorkflowBaseDir() + "/scripts/");
-			extractionCommand += (" || " + moveToFailed);
-			oxoGOnSnvsFromIndels.setCommand(extractionCommand);
-		}
-		oxoGOnSnvsFromIndels.addParent(parent);
-		// At workflow-build time, we won't know if there's any files to upload from this step. So...
-		// The script run_oxog_extracted_SNVs.sh will un-tar the tar file if it exists and copy the files to /datastore/files_for_upload
-		// and then ... somehow we have to include those (if they exist) in the vcf-upload script. :/
-		
-		//TODO: update filesToUpload with files under /datastore/files_for_upload/snvs_from_indels/ 
-		// /datastore/files_for_upload/snvs_from_indels/
-		String pathToUploadDir = "/datastore/files_for_upload/snvs_from_indels/";
-		this.filesForUpload.add( this.broadExtractedSNVVCFName.replace("/datastore/vcf/"+Pipeline.broad+"/", pathToUploadDir).replace(".vcf.gz", ".oxoG.vcf.gz"));
-		this.filesForUpload.add( this.dkfzEmblExtractedSNVVCFName.replace("/datastore/vcf/"+Pipeline.dkfz_embl+"/", pathToUploadDir).replace(".vcf.gz",".oxoG.vcf.gz"));
-		this.filesForUpload.add( this.sangerExtractedSNVVCFName.replace("/datastore/vcf/"+Pipeline.sanger+"/", pathToUploadDir).replace(".vcf.gz", ".oxoG.vcf.gz"));
-		this.filesForUpload.add( this.broadExtractedSNVVCFName.replace("/datastore/vcf/"+Pipeline.broad+"/", pathToUploadDir).replace(".vcf.gz", ".oxoG.vcf.gz.tbi"));
-		this.filesForUpload.add( this.dkfzEmblExtractedSNVVCFName.replace("/datastore/vcf/"+Pipeline.dkfz_embl+"/", pathToUploadDir).replace(".vcf.gz",".oxoG.vcf.gz.tbi"));
-		this.filesForUpload.add( this.sangerExtractedSNVVCFName.replace("/datastore/vcf/"+Pipeline.sanger+"/", pathToUploadDir).replace(".vcf.gz", ".oxoG.vcf.gz.tbi"));
-		this.filesForUpload.add(pathToUploadDir + this.aliquotID + ".gnos_files.tar");
-
-		return oxoGOnSnvsFromIndels;
-	}
+//	/**
+//	 * This will run the OxoG Filter program on the SNVs that were extracted from the INDELs, if there were any. It's possible that no SNVs will be extracted from any
+//	 * INDEL files (in fact, I've been told this is the most likely scenario for most donors) in which case nothing will run. See the script scripts/run_oxog_extracted_SNVs.sh
+//	 * for more details on this.
+//	 * @param parent
+//	 * @return
+//	 */
+//	private Job doOxoGSnvsFromIndels(Job parent) {
+//		Job oxoGOnSnvsFromIndels = this.getWorkflow().createBashJob("running OxoG on SNVs from INDELs");
+//		if (!skipOxoG)
+//		{
+//			String vcf1 = this.sangerExtractedSNVVCFName;
+//			String vcf2 = this.broadExtractedSNVVCFName;
+//			String vcf3 = this.dkfzEmblExtractedSNVVCFName;
+//
+//			String extractionCommand = this.getWorkflowBaseDir()+"/scripts/run_oxog_extracted_SNVs.sh "+
+//					vcf1+" "+vcf2+" "+vcf3+" "+
+//					" tumour/" + this.tumourBamGnosID + "/" + this.tumourBAMFileName +  
+//					" normal/" + this.normalBamGnosID + "/" + this.normalBAMFileName + 
+//					" " + this.aliquotID + " " + 
+//					this.oxoQScore;
+//			
+//			String moveToFailed = GitUtils.gitMoveCommand("running-jobs","failed-jobs",this.JSONlocation + "/" + this.JSONrepoName + "/" + this.JSONfolderName,this.JSONfileName, this.gitMoveTestMode, this.getWorkflowBaseDir() + "/scripts/");
+//			extractionCommand += (" || " + moveToFailed);
+//			oxoGOnSnvsFromIndels.setCommand(extractionCommand);
+//		}
+//		oxoGOnSnvsFromIndels.addParent(parent);
+//		// At workflow-build time, we won't know if there's any files to upload from this step. So...
+//		// The script run_oxog_extracted_SNVs.sh will un-tar the tar file if it exists and copy the files to /datastore/files_for_upload
+//		// and then ... somehow we have to include those (if they exist) in the vcf-upload script. :/
+//		
+//		//TODO: update filesToUpload with files under /datastore/files_for_upload/snvs_from_indels/ 
+//		// /datastore/files_for_upload/snvs_from_indels/
+//		String pathToUploadDir = "/datastore/files_for_upload/snvs_from_indels/";
+//		this.filesForUpload.add( this.broadExtractedSNVVCFName.replace("/datastore/vcf/"+Pipeline.broad+"/", pathToUploadDir).replace(".vcf.gz", ".oxoG.vcf.gz"));
+//		this.filesForUpload.add( this.dkfzEmblExtractedSNVVCFName.replace("/datastore/vcf/"+Pipeline.dkfz_embl+"/", pathToUploadDir).replace(".vcf.gz",".oxoG.vcf.gz"));
+//		this.filesForUpload.add( this.sangerExtractedSNVVCFName.replace("/datastore/vcf/"+Pipeline.sanger+"/", pathToUploadDir).replace(".vcf.gz", ".oxoG.vcf.gz"));
+//		this.filesForUpload.add( this.broadExtractedSNVVCFName.replace("/datastore/vcf/"+Pipeline.broad+"/", pathToUploadDir).replace(".vcf.gz", ".oxoG.vcf.gz.tbi"));
+//		this.filesForUpload.add( this.dkfzEmblExtractedSNVVCFName.replace("/datastore/vcf/"+Pipeline.dkfz_embl+"/", pathToUploadDir).replace(".vcf.gz",".oxoG.vcf.gz.tbi"));
+//		this.filesForUpload.add( this.sangerExtractedSNVVCFName.replace("/datastore/vcf/"+Pipeline.sanger+"/", pathToUploadDir).replace(".vcf.gz", ".oxoG.vcf.gz.tbi"));
+//		this.filesForUpload.add(pathToUploadDir + this.aliquotID + ".gnos_files.tar");
+//
+//		return oxoGOnSnvsFromIndels;
+//	}
 	
 	/**
 	 * Runs the variant program inside the Broad's OxoG container to produce a mini-BAM for a given BAM. 
@@ -739,8 +756,9 @@ public class OxoGWrapperWorkflow extends BaseOxoGWrapperWorkflow {
 	{
 		String outDir = "/datastore/files_for_upload/";
 		String containerName = "pcawg-annotator_"+workflowName+"_"+inputType;
-		String commandName ="run annotator for "+workflowName+" "+inputType; 
-		if (vcfPath.contains("extracted_snvs"))
+		String commandName ="run annotator for "+workflowName+" "+inputType;
+		//If a filepath contains the phrase "extracted" then it contains SNVs that were extracted from an INDEL.
+		if (vcfPath.contains("extracted"))
 		{
 			outDir+= "snvs_from_indels/";
 			containerName += "_SNVs-from-INDELs";
@@ -819,9 +837,9 @@ public class OxoGWrapperWorkflow extends BaseOxoGWrapperWorkflow {
 		String museOxogSNVFileName = this.filesForUpload.stream().filter(p -> p.contains("MUSE") && p.endsWith("somatic.snv_mnv.oxoG.vcf.gz"))
 																	.collect(Collectors.toList()).get(0);
 		
-		String broadOxoGSNVFromIndelFileName = broadOxogSNVFileName.replace("/oxog_results/", "/oxog_results_extracted_snvs/");
-		String sangerOxoGSNVFromIndelFileName = sangerOxogSNVFileName.replace("/oxog_results/", "/oxog_results_extracted_snvs/");
-		String dkfzEmblOxoGSNVFromIndelFileName = dkfzEmbleOxogSNVFileName.replace("/oxog_results/", "/oxog_results_extracted_snvs/");
+		String broadOxoGSNVFromIndelFileName = broadOxogSNVFileName.replace(".vcf.gz", ".extracted-snvs.oxoG.vcf.gz");
+		String sangerOxoGSNVFromIndelFileName = sangerOxogSNVFileName.replace(".vcf.gz", ".extracted-snvs.oxoG.vcf.gz");
+		String dkfzEmblOxoGSNVFromIndelFileName = dkfzEmbleOxogSNVFileName.replace(".vcf.gz", ".extracted-snvs.oxoG.vcf.gz");
 		
 
 		Job broadIndelAnnotatorJob = this.runAnnotator("indel", Pipeline.broad, this.broadNormalizedIndelVCFName, this.tumourMinibamPath,this.normalMinibamPath, parents);
