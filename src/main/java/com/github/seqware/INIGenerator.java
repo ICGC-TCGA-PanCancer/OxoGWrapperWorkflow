@@ -14,7 +14,7 @@ public class INIGenerator {
 			// "JSONfileName = SomeDonor_1234.json\n"+
 			"GITemail = denis.yuen+icgc@gmail.com\n" + "GITname = icgc-bot\n"
 			+ "GITPemFile = /home/seqware/.gnos/git.pem\n"
-			+ "uploadURL = oicr@192.170.233.206:~/incoming/bulk_upload/";
+			+ "uploadURL = oicr@192.170.233.206:~/incoming/bulk_upload/\n";
 
 	private static Map<String, Object> getDataFromJSON(String pathToJSON) {
 		Map<String, Object> inputsFromJSON = JSONUtils.processJSONFile(pathToJSON);
@@ -26,14 +26,14 @@ public class INIGenerator {
 
 		for (String k : m.keySet()) {
 			if (m.get(k) instanceof String) {
-				//System.out.println(prefix + " " + m.get(k));
+				// System.out.println(prefix + " " + m.get(k));
 				// Some things *don't* need to be printed
 				if (!(k.equals(JSONUtils.TAG))) {
 					sb.append(prefix.equals("") ? "" : prefix + "_").append(k).append(" = ").append(m.get(k))
 							.append("\n");
 				}
 			} else if (m.get(k) instanceof Map) {
-				//System.out.println(prefix + " " + m.get(k));
+				// System.out.println(prefix + " " + m.get(k));
 				String newPrefix = prefix.equals("") ? "" : prefix;
 
 				if (((Map<String, Object>) m.get(k)).containsKey(JSONUtils.TAG)) {
