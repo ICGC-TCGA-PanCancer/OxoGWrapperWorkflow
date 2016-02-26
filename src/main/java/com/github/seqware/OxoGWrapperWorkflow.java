@@ -339,7 +339,23 @@ public class OxoGWrapperWorkflow extends BaseOxoGWrapperWorkflow {
 	private Job doOxoG(Job parent) {
 		Job runOxoGWorkflow = this.getWorkflow().createBashJob("run OxoG Filter");
 		String moveToFailed = GitUtils.gitMoveCommand("running-jobs","failed-jobs",this.JSONlocation + "/" + this.JSONrepoName + "/" + this.JSONfolderName,this.JSONfileName, this.gitMoveTestMode, this.getWorkflowBaseDir() + "/scripts/");
-
+		String extractedSnvCheck = "EXTRACTED_SNV_MOUNT=\"\"\n"
+									+ "EXTRACTED_SNV_FILES=\"\"\n"
+									+ "if (( $(zcat "+this.sangerExtractedSNVVCFName+" | grep \"^[^#]\" | wc -l) > 0 )) ; then \n"
+									+ "    echo \""+this.sangerExtractedSNVVCFName+"\" has SNVs."
+									+ "    EXTRACTED_SNV_MOUNT=\"${EXTRACTED_SNV_MOUNT}\" -v "+this.sangerExtractedSNVVCFName+":/datafiles/VCF/"+Pipeline.sanger+"/sanger_extracted_snv.vcf.gz \n"
+									+ "    EXTRACTED_SNV_FILES=\"${EXTRACTED_SNV_FILES} /datafiles/VCF/"+Pipeline.sanger+"/sanger_extracted_snv.vcf.gz \\\n\""
+									+ "fi\n\"  "
+									+ "if (( $(zcat "+this.broadExtractedSNVVCFName+" | grep \"^[^#]\" | wc -l) > 0 )) ; then \n"
+									+ "    echo \""+this.broadExtractedSNVVCFName+"\" has SNVs."
+									+ "    EXTRACTED_SNV_MOUNT=\"${EXTRACTED_SNV_MOUNT}\" -v "+this.broadExtractedSNVVCFName+":/datafiles/VCF/"+Pipeline.broad+"/broad_extracted_snv.vcf.gz \n"
+									+ "    EXTRACTED_SNV_FILES=\"${EXTRACTED_SNV_FILES} /datafiles/VCF/"+Pipeline.broad+"/broad_extracted_snv.vcf.gz \\\n\""
+									+ "fi\n\" "
+									+ "if (( $(zcat "+this.dkfzEmblExtractedSNVVCFName+" | grep \"^[^#]\" | wc -l) > 0 )) ; then \n"
+									+ "    echo \""+this.dkfzEmblExtractedSNVVCFName+"\" has SNVs."
+									+ "    EXTRACTED_SNV_MOUNT=\"${EXTRACTED_SNV_MOUNT}\" -v "+this.dkfzEmblExtractedSNVVCFName+":/datafiles/VCF/"+Pipeline.dkfz_embl+"/dkfz_embl_extracted_snv.vcf.gz \n"
+									+ "    EXTRACTED_SNV_FILES=\"${EXTRACTED_SNV_FILES} /datafiles/VCF/"+Pipeline.dkfz_embl+"/dkfz_embl_extracted_snv.vcf.gz \\\n\""
+									+ "fi\n\" ";
 		if (!skipOxoG)
 		{
 			String oxogMounts = " -v /refdata/:/cga/fh/pcawg_pipeline/refdata/ \\\n"
@@ -349,6 +365,7 @@ public class OxoGWrapperWorkflow extends BaseOxoGWrapperWorkflow {
 					+ " -v /datastore/vcf/"+Pipeline.sanger+"/"+this.sangerGnosID+"/"+"/:/datafiles/VCF/"+Pipeline.sanger+"/ \\\n"
 					+ " -v /datastore/vcf/"+Pipeline.dkfz_embl+"/"+this.dkfzemblGnosID+"/"+"/:/datafiles/VCF/"+Pipeline.dkfz_embl+"/ \\\n"
 					+ " -v /datastore/vcf/"+Pipeline.muse+"/"+this.museGnosID+"/"+"/:/datafiles/VCF/"+Pipeline.muse+"/ \\\n"
+					+ " ${EXTRACTED_SNV_MOUNT} \\\n"
 					+ " -v /datastore/oxog_results/:/cga/fh/pcawg_pipeline/jobResults_pipette/results:rw \\\n";
 			String oxogCommand = "/cga/fh/pcawg_pipeline/pipelines/run_one_pipeline.bash pcawg /cga/fh/pcawg_pipeline/pipelines/oxog_pipeline.py \\\n"
 					+ this.aliquotID + " \\\n"
@@ -358,8 +375,9 @@ public class OxoGWrapperWorkflow extends BaseOxoGWrapperWorkflow {
 					+ " /datafiles/VCF/"+Pipeline.sanger+"/" + this.sangerSNVName + " \\\n"
 					+ " /datafiles/VCF/"+Pipeline.dkfz_embl+"/" + this.dkfzEmblSNVName  + " \\\n"
 					+ " /datafiles/VCF/"+Pipeline.muse+"/" + this.museSNVName + " \\\n"
-					+ " /datafiles/VCF/"+Pipeline.broad+"/" + this.broadSNVName  ;
-			runOxoGWorkflow.setCommand("((docker run --rm --name=\"oxog_filter\" "+oxogMounts+" oxog /bin/bash -c \"" + oxogCommand+ "\" ) || echo \"OxoG Exit Code: $?\"  ) || "+moveToFailed);
+					+ " /datafiles/VCF/"+Pipeline.broad+"/" + this.broadSNVName 
+					+ " ${EXTRACTED_SNV_FILES} " ;
+			runOxoGWorkflow.setCommand("(("+extractedSnvCheck+"\nset -x;\ndocker run --rm --name=\"oxog_filter\" "+oxogMounts+" oxog /bin/bash -c \"" + oxogCommand+ "\" ;\nset +x;) || echo \"OxoG Exit Code: $?\"  ) || "+moveToFailed);
 			
 			
 		}
@@ -908,12 +926,12 @@ public class OxoGWrapperWorkflow extends BaseOxoGWrapperWorkflow {
 			Job combineVCFsByType = this.combineVCFsByType( sangerPreprocessVCF, dkfzEmblPreprocessVCF, broadPreprocessVCF);
 			
 			Job oxoG = this.doOxoG(combineVCFsByType);
-			Job oxoGSnvsFromIndels = this.doOxoGSnvsFromIndels(oxoG);
+			//Job oxoGSnvsFromIndels = this.doOxoGSnvsFromIndels(oxoG);
 			// variantbam jobs will run parallel to each other. variant seems to only use a *single* core, but runs long ( 60 - 120 min on OpenStack);
 			Job normalVariantBam = this.doVariantBam(combineVCFsByType,BAMType.normal,"/datastore/bam/normal/"+this.normalBamGnosID+"/"+this.normalBAMFileName);
 			Job tumourVariantBam = this.doVariantBam(combineVCFsByType,BAMType.tumour,"/datastore/bam/tumour/"+this.tumourBamGnosID+"/"+this.tumourBAMFileName);
 
-			List<Job> annotationJobs = this.doAnnotations(oxoGSnvsFromIndels, tumourVariantBam, normalVariantBam, oxoG);
+			List<Job> annotationJobs = this.doAnnotations(/*oxoGSnvsFromIndels,*/ tumourVariantBam, normalVariantBam, oxoG);
 			
 			//Now do the Upload
 			if (!skipUpload)
