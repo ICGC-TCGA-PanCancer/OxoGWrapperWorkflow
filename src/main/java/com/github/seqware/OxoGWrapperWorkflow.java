@@ -187,7 +187,7 @@ public class OxoGWrapperWorkflow extends BaseOxoGWrapperWorkflow {
 		Job installTabixJob = this.getWorkflow().createBashJob("install tabix and bgzip");
 		
 		installTabixJob.setCommand("sudo apt-get install tabix");
-		
+		installTabixJob.addParent(parent);
 		return installTabixJob;
 	}
 	
