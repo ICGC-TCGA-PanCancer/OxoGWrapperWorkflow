@@ -644,6 +644,7 @@ public class OxoGWrapperWorkflow extends BaseOxoGWrapperWorkflow {
 						+ " --vcf-md5sum-files $SNV_FROM_INDEL_OXOG_MD5"+vcfMD5Sums+" \\\n"
 						+ " --vcf-idx-md5sum-files $SNV_FROM_INDEL_OXOG_INDEX_MD5"+vcfIndexMD5Sums+" \\\n"
 						+ " --workflow-name OxoGWorkflow-OxoGFiltering \\\n"
+						+ " --study-refname-override "+this.studyRefNameOverride + " \\\n"
 						+ " --description-file /vcf/description.txt \\\n"
 						+ " --workflow-version " + this.getVersion() + " \\\n"
 						+ " --workflow-src-url https://github.com/ICGC-TCGA-PanCancer/OxoGWrapperWorkflow --workflow-url https://github.com/ICGC-TCGA-PanCancer/OxoGWrapperWorkflow  \"\n";
@@ -706,6 +707,7 @@ public class OxoGWrapperWorkflow extends BaseOxoGWrapperWorkflow {
 						+ " --bam-md5sum-files "+bamMD5Sums+" \\\n"
 						+ " --bam_bai-md5sum-files "+bamIndexMD5Sums+" \\\n"
 						+ " --workflow-name OxoGWorkflow-variantbam \\\n"
+						+ " --study-refname-override "+this.studyRefNameOverride + " \\\n"
 						+ " --description-file /vcf/description.txt \\\n"
 						+ " --workflow-version " + this.getVersion() + " \\\n"
 						+ " --workflow-src-url https://github.com/ICGC-TCGA-PanCancer/OxoGWrapperWorkflow --workflow-url https://github.com/ICGC-TCGA-PanCancer/OxoGWrapperWorkflow  \"\n";
@@ -821,27 +823,18 @@ public class OxoGWrapperWorkflow extends BaseOxoGWrapperWorkflow {
 		Predicate<String> isExtractedSNV = p -> p.contains("extracted-snv") && p.endsWith(".vcf.gz");
 		final String passFilteredOxoGSuffix = "somatic.snv_mnv.pass-filtered.oxoG.vcf.gz";
 		//list filtering should only ever produce one result.
-		String broadOxogSNVFileName = this.filesForUpload.stream().filter(p -> ((p.contains("broad-mutect") && p.endsWith(passFilteredOxoGSuffix))
-																				|| (p.contains(Pipeline.broad.toString()) && isExtractedSNV.test(p) )))
-																	.collect(Collectors.toList()).get(0);
+		String broadOxogSNVFileName = this.filesForUpload.stream().filter(p -> ((p.contains("broad-mutect") && p.endsWith(passFilteredOxoGSuffix)))).collect(Collectors.toList()).get(0);
+		String broadOxoGSNVFromIndelFileName = this.filesForUpload.stream().filter(p -> (p.contains(Pipeline.broad.toString()) && isExtractedSNV.test(p) )).collect(Collectors.toList()).get(0);
 		
-		String sangerOxogSNVFileName = this.filesForUpload.stream().filter(p -> ((p.contains("svcp_") && p.endsWith(passFilteredOxoGSuffix))
-																				|| (p.contains(Pipeline.sanger.toString()) && isExtractedSNV.test(p) )))
-																	.collect(Collectors.toList()).get(0);
+		String sangerOxogSNVFileName = this.filesForUpload.stream().filter(p -> ((p.contains("svcp_") && p.endsWith(passFilteredOxoGSuffix)))).collect(Collectors.toList()).get(0);
+		String sangerOxoGSNVFromIndelFileName = this.filesForUpload.stream().filter(p -> (p.contains(Pipeline.sanger.toString()) && isExtractedSNV.test(p) )).collect(Collectors.toList()).get(0);
 		
-		String dkfzEmbleOxogSNVFileName = this.filesForUpload.stream().filter(p -> ((p.contains("dkfz-snvCalling") && p.endsWith(passFilteredOxoGSuffix))
-																				|| (p.contains(Pipeline.dkfz_embl.toString()) && isExtractedSNV.test(p) )))
-																	.collect(Collectors.toList()).get(0);
+		String dkfzEmbleOxogSNVFileName = this.filesForUpload.stream().filter(p -> ((p.contains("dkfz-snvCalling") && p.endsWith(passFilteredOxoGSuffix)))).collect(Collectors.toList()).get(0);
+		String dkfzEmblOxoGSNVFromIndelFileName = this.filesForUpload.stream().filter(p -> (p.contains(Pipeline.dkfz_embl.toString()) && isExtractedSNV.test(p) )).collect(Collectors.toList()).get(0);
 
 		//Remember: MUSE files do not get PASS-filtered. Also, there is no INDEL so there cannot be any SNVs extracted from INDELs.
-		String museOxogSNVFileName = this.filesForUpload.stream().filter(p -> p.contains("MUSE") && p.endsWith("somatic.snv_mnv.oxoG.vcf.gz"))
-																	.collect(Collectors.toList()).get(0);
+		String museOxogSNVFileName = this.filesForUpload.stream().filter(p -> p.contains("MUSE") && p.endsWith("somatic.snv_mnv.oxoG.vcf.gz")).collect(Collectors.toList()).get(0);
 		
-		String broadOxoGSNVFromIndelFileName = broadOxogSNVFileName.replace(".vcf.gz", ".extracted-snvs.oxoG.vcf.gz");
-		String sangerOxoGSNVFromIndelFileName = sangerOxogSNVFileName.replace(".vcf.gz", ".extracted-snvs.oxoG.vcf.gz");
-		String dkfzEmblOxoGSNVFromIndelFileName = dkfzEmbleOxogSNVFileName.replace(".vcf.gz", ".extracted-snvs.oxoG.vcf.gz");
-		
-
 		Job broadIndelAnnotatorJob = this.runAnnotator("indel", Pipeline.broad, this.broadNormalizedIndelVCFName, this.tumourMinibamPath,this.normalMinibamPath, parents);
 		Job dfkzEmblIndelAnnotatorJob = this.runAnnotator("indel", Pipeline.dkfz_embl, this.dkfzEmblNormalizedIndelVCFName, this.tumourMinibamPath, this.normalMinibamPath, broadIndelAnnotatorJob);
 		Job sangerIndelAnnotatorJob = this.runAnnotator("indel", Pipeline.sanger, this.sangerNormalizedIndelVCFName, this.tumourMinibamPath, this.normalMinibamPath, dfkzEmblIndelAnnotatorJob);
