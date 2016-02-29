@@ -74,7 +74,7 @@ public abstract class BaseOxoGWrapperWorkflow extends AbstractWorkflowDataModel 
 	protected String broadIndelName;
 	
 	protected int snvPadding = 10;
-	protected int svPadding = 10;
+	protected int svPadding = 500;
 	protected int indelPadding = 200;
 	
 	protected String storageSource = "collab";
