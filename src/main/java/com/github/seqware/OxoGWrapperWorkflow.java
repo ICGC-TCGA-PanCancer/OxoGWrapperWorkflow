@@ -614,15 +614,9 @@ public class OxoGWrapperWorkflow extends BaseOxoGWrapperWorkflow {
 															+ "SNV_FROM_INDEL_OXOG_INDEX=\'\'\n"
 															+ "SNV_FROM_INDEL_OXOG_MD5=\'\'\n"
 															+ "SNV_FROM_INDEL_OXOG_INDEX_MD5=\'\'\n"
-															+ "SNV_FROM_INDEL_TARBALL=\'\'\n"
-															+ "SNV_FROM_INDEL_TARBALL_MD5=\'\'\n"
-															+ "[ -d /datastore/files_for_upload/snvs_from_indels/ ] &&  for f in $(ls /datastore/files_for_upload/snvs_from_indels/) ; do \n"
-															+ "    mv $f /datastore/files_for_upload/$f \n"
+															+ "for f in $(ls /datastore/files_for_upload/*extracted-snv*) ; do \n"
 															+ "    md5sum $f | cut -d ' ' -f 1 > $f.md5 \n"
-															+ "    if [[ \"$f\" =~ gnos_files\\.tar ]] ; then \n"
-															+ "        SNV_FROM_INDEL_TARBALL=$f,$SNV_FROM_INDEL_TARBALL\n"
-															+ "        SNV_FROM_INDEL_TARBALL_MD5=$f.md5,$SNV_FROM_INDEL_TARBALL_MD5\n"
-															+ "    elif [[ \"$f\" =~ tbi|idx ]] ; then \n"
+															+ "    if [[ \"$f\" =~ tbi|idx ]] ; then \n"
 															+ "        SNV_FROM_INDEL_OXOG_INDEX=$SNV_FROM_INDEL_OXOG_INDEX,$f\n"
 															+ "        SNV_FROM_INDEL_OXOG_INDEX_MD5=$SNV_FROM_INDEL_OXOG_INDEX_MD5,$f.md5\n"
 															+ "    else \n"
@@ -762,7 +756,7 @@ public class OxoGWrapperWorkflow extends BaseOxoGWrapperWorkflow {
 		//If a filepath contains the phrase "extracted" then it contains SNVs that were extracted from an INDEL.
 		if (vcfPath.contains("extracted"))
 		{
-			outDir+= "snvs_from_indels/";
+			//outDir+= "snvs_from_indels/";
 			containerName += "_SNVs-from-INDELs";
 			commandName += "_SNVs-from-INDELs";
 		}
