@@ -389,26 +389,26 @@ public class OxoGWrapperWorkflow extends BaseOxoGWrapperWorkflow {
 		String pathToResults = "/datastore/oxog_results/cga/fh/pcawg_pipeline/jobResults_pipette/jobs/"+this.aliquotID+"/links_for_gnos/annotate_failed_sites_to_vcfs/";
 		String pathToUploadDir = "/datastore/files_for_upload/";
 		
-		Function<String,String> changeToOxoGSuffix = (s) -> {return s.replace(".vcf.gz", ".oxoG.vcf.gz"); };
+		Function<String,String> changeToOxoGSuffix = (s) -> {return pathToUploadDir + s.replace(".vcf.gz", ".oxoG.vcf.gz"); };
 		Function<String,String> changeToOxoGTBISuffix = changeToOxoGSuffix.andThen((s) -> s+=".tbi"); 
 		//regular VCFs
-		this.filesForUpload.add(pathToUploadDir + changeToOxoGSuffix.apply(this.broadSNVName));
-		this.filesForUpload.add(pathToUploadDir + changeToOxoGSuffix.apply(this.dkfzEmblSNVName));
-		this.filesForUpload.add(pathToUploadDir + changeToOxoGSuffix.apply(this.sangerSNVName));
-		this.filesForUpload.add(pathToUploadDir + changeToOxoGSuffix.apply(this.museSNVName));
+		this.filesForUpload.add(changeToOxoGSuffix.apply(this.broadSNVName));
+		this.filesForUpload.add(changeToOxoGSuffix.apply(this.dkfzEmblSNVName));
+		this.filesForUpload.add(changeToOxoGSuffix.apply(this.sangerSNVName));
+		this.filesForUpload.add(changeToOxoGSuffix.apply(this.museSNVName));
 		//index files
-		this.filesForUpload.add(pathToUploadDir + changeToOxoGTBISuffix.apply(this.broadSNVName));
-		this.filesForUpload.add(pathToUploadDir + changeToOxoGTBISuffix.apply(this.dkfzEmblSNVName));
-		this.filesForUpload.add(pathToUploadDir + changeToOxoGTBISuffix.apply(this.sangerSNVName));
-		this.filesForUpload.add(pathToUploadDir + changeToOxoGTBISuffix.apply(this.museSNVName));
+		this.filesForUpload.add(changeToOxoGTBISuffix.apply(this.broadSNVName));
+		this.filesForUpload.add(changeToOxoGTBISuffix.apply(this.dkfzEmblSNVName));
+		this.filesForUpload.add(changeToOxoGTBISuffix.apply(this.sangerSNVName));
+		this.filesForUpload.add(changeToOxoGTBISuffix.apply(this.museSNVName));
 		//Extracted SNVs
-		this.filesForUpload.add(pathToUploadDir + changeToOxoGSuffix.apply(getFileName.apply(this.sangerExtractedSNVVCFName)));
-		this.filesForUpload.add(pathToUploadDir + changeToOxoGSuffix.apply(getFileName.apply(this.broadExtractedSNVVCFName)));
-		this.filesForUpload.add(pathToUploadDir + changeToOxoGSuffix.apply(getFileName.apply(this.dkfzEmblExtractedSNVVCFName)));
+		this.filesForUpload.add(changeToOxoGSuffix.apply(getFileName.apply(this.sangerExtractedSNVVCFName)));
+		this.filesForUpload.add(changeToOxoGSuffix.apply(getFileName.apply(this.broadExtractedSNVVCFName)));
+		this.filesForUpload.add(changeToOxoGSuffix.apply(getFileName.apply(this.dkfzEmblExtractedSNVVCFName)));
 		//index files
-		this.filesForUpload.add(pathToUploadDir + changeToOxoGTBISuffix.apply(getFileName.apply(this.sangerExtractedSNVVCFName)));
-		this.filesForUpload.add(pathToUploadDir + changeToOxoGTBISuffix.apply(getFileName.apply(this.broadExtractedSNVVCFName)));
-		this.filesForUpload.add(pathToUploadDir + changeToOxoGTBISuffix.apply(getFileName.apply(this.dkfzEmblExtractedSNVVCFName)));
+		this.filesForUpload.add(changeToOxoGTBISuffix.apply(getFileName.apply(this.sangerExtractedSNVVCFName)));
+		this.filesForUpload.add(changeToOxoGTBISuffix.apply(getFileName.apply(this.broadExtractedSNVVCFName)));
+		this.filesForUpload.add(changeToOxoGTBISuffix.apply(getFileName.apply(this.dkfzEmblExtractedSNVVCFName)));
 		
 		this.filesForUpload.add("/datastore/oxog_results/" + this.aliquotID + ".gnos_files.tar");
 		
