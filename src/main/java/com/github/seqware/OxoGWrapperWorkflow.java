@@ -504,7 +504,7 @@ public class OxoGWrapperWorkflow extends BaseOxoGWrapperWorkflow {
 		
 		String generateAnalysisFilesVCFCommand = "";
 		
-		for (String file : this.filesForUpload.stream().filter(p -> ((p.contains(".vcf") || p.endsWith(".tar")) && !( p.contains("extracted-snv"))) ).collect(Collectors.toList()) )
+		for (String file : this.filesForUpload.stream().filter(p -> ((p.contains(".vcf") || p.endsWith(".tar")) && !( p.contains("extracted-snv"))) ).distinct().collect(Collectors.toList()) )
 		{
 			file = file.trim();
 			//md5sum test_files/tumour_minibam.bam.bai | cut -d ' ' -f 1 > test_files/tumour_minibam.bai.md5
@@ -591,7 +591,7 @@ public class OxoGWrapperWorkflow extends BaseOxoGWrapperWorkflow {
 		String bamIndexMD5Sums = "";
 		String generateAnalysisFilesBAMsCommand = "";
 		generateAnalysisFilesBAMsCommand += "sudo chmod a+rw -R /datastore/variantbam_results/ &&\n";
-		for (String file : this.filesForUpload.stream().filter( p -> p.contains(".bam") || p.contains(".bai") ).collect(Collectors.toList()) )
+		for (String file : this.filesForUpload.stream().filter( p -> p.contains(".bam") || p.contains(".bai") ).distinct().collect(Collectors.toList()) )
 		{
 			file = file.trim();
 			//md5sum test_files/tumour_minibam.bam.bai | cut -d ' ' -f 1 > test_files/tumour_minibam.bai.md5
