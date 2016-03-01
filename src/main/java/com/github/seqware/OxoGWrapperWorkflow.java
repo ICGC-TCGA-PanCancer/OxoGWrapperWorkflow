@@ -417,14 +417,6 @@ public class OxoGWrapperWorkflow extends BaseOxoGWrapperWorkflow {
 				+ " && cp /datastore/oxog_results/"+this.aliquotID+".gnos_files.tar /datastore/files_for_upload/ \\\n"
 				+ " && cp " + pathToResults + "*.vcf.gz  "+pathToUploadDir+" \\\n"
 				+ " && cp " + pathToResults + "*.vcf.gz.tbi  "+pathToUploadDir+" \\\n"
-				/*+ " && cp " + pathToResults + this.broadSNVName.replace(".vcf.gz", ".oxoG.vcf.gz")+" "+pathToUploadDir+" \\\n"
-				+ " && cp " + pathToResults + this.dkfzEmblSNVName.replace(".vcf.gz", ".oxoG.vcf.gz")+" "+pathToUploadDir+" \\\n"
-				+ " && cp " + pathToResults + this.sangerSNVName.replace(".vcf.gz", ".oxoG.vcf.gz")+" "+pathToUploadDir+" \\\n"
-				+ " && cp " + pathToResults + this.museSNVName.replace(".vcf.gz", ".oxoG.vcf.gz")+" "+pathToUploadDir+" \\\n"
-				+ " && cp " + pathToResults + this.broadSNVName.replace(".vcf.gz", ".oxoG.vcf.gz.tbi")+" "+pathToUploadDir+" \\\n"
-				+ " && cp " + pathToResults + this.dkfzEmblSNVName.replace(".vcf.gz", ".oxoG.vcf.gz.tbi")+" "+pathToUploadDir+" \\\n"
-				+ " && cp " + pathToResults + this.sangerSNVName.replace(".vcf.gz", ".oxoG.vcf.gz.tbi")+" "+pathToUploadDir+" \\\n"*/
-				//+ " && cp " + pathToResults + this.museSNVNamie.replace(".vcf.gz", ".oxoG.vcf.gz.tbi")+" "+pathToUploadDir+" \\\n"
 				// Also need to upload normalized INDELs - TODO: Move to its own job, or maybe combine with the normalization job?
 				+ " && cp " + this.broadNormalizedIndelVCFName+" "+pathToUploadDir+" \\\n"
 				+ " && cp " + this.dkfzEmblNormalizedIndelVCFName+" "+pathToUploadDir+" \\\n"
@@ -441,51 +433,6 @@ public class OxoGWrapperWorkflow extends BaseOxoGWrapperWorkflow {
 		return prepOxoGTarAndMutectCallsforUpload;
 	}
 
-//	/**
-//	 * This will run the OxoG Filter program on the SNVs that were extracted from the INDELs, if there were any. It's possible that no SNVs will be extracted from any
-//	 * INDEL files (in fact, I've been told this is the most likely scenario for most donors) in which case nothing will run. See the script scripts/run_oxog_extracted_SNVs.sh
-//	 * for more details on this.
-//	 * @param parent
-//	 * @return
-//	 */
-//	private Job doOxoGSnvsFromIndels(Job parent) {
-//		Job oxoGOnSnvsFromIndels = this.getWorkflow().createBashJob("running OxoG on SNVs from INDELs");
-//		if (!skipOxoG)
-//		{
-//			String vcf1 = this.sangerExtractedSNVVCFName;
-//			String vcf2 = this.broadExtractedSNVVCFName;
-//			String vcf3 = this.dkfzEmblExtractedSNVVCFName;
-//
-//			String extractionCommand = this.getWorkflowBaseDir()+"/scripts/run_oxog_extracted_SNVs.sh "+
-//					vcf1+" "+vcf2+" "+vcf3+" "+
-//					" tumour/" + this.tumourBamGnosID + "/" + this.tumourBAMFileName +  
-//					" normal/" + this.normalBamGnosID + "/" + this.normalBAMFileName + 
-//					" " + this.aliquotID + " " + 
-//					this.oxoQScore;
-//			
-//			String moveToFailed = GitUtils.gitMoveCommand("running-jobs","failed-jobs",this.JSONlocation + "/" + this.JSONrepoName + "/" + this.JSONfolderName,this.JSONfileName, this.gitMoveTestMode, this.getWorkflowBaseDir() + "/scripts/");
-//			extractionCommand += (" || " + moveToFailed);
-//			oxoGOnSnvsFromIndels.setCommand(extractionCommand);
-//		}
-//		oxoGOnSnvsFromIndels.addParent(parent);
-//		// At workflow-build time, we won't know if there's any files to upload from this step. So...
-//		// The script run_oxog_extracted_SNVs.sh will un-tar the tar file if it exists and copy the files to /datastore/files_for_upload
-//		// and then ... somehow we have to include those (if they exist) in the vcf-upload script. :/
-//		
-//		//TODO: update filesToUpload with files under /datastore/files_for_upload/snvs_from_indels/ 
-//		// /datastore/files_for_upload/snvs_from_indels/
-//		String pathToUploadDir = "/datastore/files_for_upload/snvs_from_indels/";
-//		this.filesForUpload.add( this.broadExtractedSNVVCFName.replace("/datastore/vcf/"+Pipeline.broad+"/", pathToUploadDir).replace(".vcf.gz", ".oxoG.vcf.gz"));
-//		this.filesForUpload.add( this.dkfzEmblExtractedSNVVCFName.replace("/datastore/vcf/"+Pipeline.dkfz_embl+"/", pathToUploadDir).replace(".vcf.gz",".oxoG.vcf.gz"));
-//		this.filesForUpload.add( this.sangerExtractedSNVVCFName.replace("/datastore/vcf/"+Pipeline.sanger+"/", pathToUploadDir).replace(".vcf.gz", ".oxoG.vcf.gz"));
-//		this.filesForUpload.add( this.broadExtractedSNVVCFName.replace("/datastore/vcf/"+Pipeline.broad+"/", pathToUploadDir).replace(".vcf.gz", ".oxoG.vcf.gz.tbi"));
-//		this.filesForUpload.add( this.dkfzEmblExtractedSNVVCFName.replace("/datastore/vcf/"+Pipeline.dkfz_embl+"/", pathToUploadDir).replace(".vcf.gz",".oxoG.vcf.gz.tbi"));
-//		this.filesForUpload.add( this.sangerExtractedSNVVCFName.replace("/datastore/vcf/"+Pipeline.sanger+"/", pathToUploadDir).replace(".vcf.gz", ".oxoG.vcf.gz.tbi"));
-//		this.filesForUpload.add(pathToUploadDir + this.aliquotID + ".gnos_files.tar");
-//
-//		return oxoGOnSnvsFromIndels;
-//	}
-	
 	/**
 	 * Runs the variant program inside the Broad's OxoG container to produce a mini-BAM for a given BAM. 
 	 * @param parent
@@ -523,31 +470,12 @@ public class OxoGWrapperWorkflow extends BaseOxoGWrapperWorkflow {
 			command += (" || " + moveToFailed);
 			runOxoGWorkflow.setCommand(command);
 		}
-		//this.filesForUpload.add("/datastore/variantbam_results/"+minibamName+".bam.bai");
-		//this.filesForUpload.add("/datastore/variantbam_results/"+minibamName+".bam");
 		runOxoGWorkflow.addParent(parent);
 		
 		//Job getLogs = this.getOxoGLogs(runOxoGWorkflow);
 		return runOxoGWorkflow;
 	}
 	
-//	/**
-//	 * Gets logs from the container named oxog_run
-//	 * @param parent
-//	 * @return
-//	 * 
-//	 */
-//	@Deprecated
-//	private Job getOxoGLogs(Job parent) {
-//		//TODO: Either update this to make it more relevant or remove it.
-//		Job getLog = this.getWorkflow().createBashJob("get OxoG docker logs");
-//		// This will get the docker logs and print them to stdout, but we may also want to get the logs
-//		// in the mounted oxog_workspace dir...
-//		getLog.setCommand(" docker logs oxog_run");
-//		getLog.addParent(parent);
-//		return getLog;
-//	}
-
 	/**
 	 * Uploads files. Will use the vcf-upload script in pancancer/pancancer_upload_download:1.7 to generate metadata.xml, analysis.xml, and the GTO file, and
 	 * then rsync everything to a staging server. 
@@ -576,7 +504,7 @@ public class OxoGWrapperWorkflow extends BaseOxoGWrapperWorkflow {
 		
 		String generateAnalysisFilesVCFCommand = "";
 		
-		for (String file : this.filesForUpload.stream().filter(p -> ((p.contains(".vcf") || p.endsWith(".tar")) && (! p.contains("extracted-snv"))) ).collect(Collectors.toList()) )
+		for (String file : this.filesForUpload.stream().filter(p -> ((p.contains(".vcf") || p.endsWith(".tar")) && !( p.contains("extracted-snv"))) ).collect(Collectors.toList()) )
 		{
 			file = file.trim();
 			//md5sum test_files/tumour_minibam.bam.bai | cut -d ' ' -f 1 > test_files/tumour_minibam.bai.md5
@@ -610,38 +538,38 @@ public class OxoGWrapperWorkflow extends BaseOxoGWrapperWorkflow {
 		//This ugliness is here because of the OxoG results on SNVs from INDELs. We won't know until the workflow actually runs if there are any SNVs from INDELs.
 		//So we need to build up the list of files to upload using a bash script that will be evaluated at runtime rather
 		//than Java code that gets evaluated when the workflow is built.
-		generateAnalysisFilesVCFCommand += "\nSNV_FROM_INDEL_OXOG=\'\'\n"
-															+ "SNV_FROM_INDEL_OXOG_INDEX=\'\'\n"
-															+ "SNV_FROM_INDEL_OXOG_MD5=\'\'\n"
-															+ "SNV_FROM_INDEL_OXOG_INDEX_MD5=\'\'\n"
-															+ "for f in $(ls /datastore/files_for_upload/*extracted-snv*) ; do \n"
-															+ "    md5sum $f | cut -d ' ' -f 1 > $f.md5 \n"
-															+ "    if [[ \"$f\" =~ tbi|idx ]] ; then \n"
-															+ "        SNV_FROM_INDEL_OXOG_INDEX=$SNV_FROM_INDEL_OXOG_INDEX,$f\n"
-															+ "        SNV_FROM_INDEL_OXOG_INDEX_MD5=$SNV_FROM_INDEL_OXOG_INDEX_MD5,$f.md5\n"
-															+ "    else \n"
-															+ "        SNV_FROM_INDEL_OXOG=$SNV_FROM_INDEL_OXOG,$f\n"
-															+ "        SNV_FROM_INDEL_OXOG_MD5=$SNV_FROM_INDEL_OXOG_MD5,$f.md5\n"
-															+ "    fi\n"
-															+ "done\n";
+		generateAnalysisFilesVCFCommand += "\n\nSNV_FROM_INDEL_OXOG=\'\'\n"
+										+ "SNV_FROM_INDEL_OXOG_INDEX=\'\'\n"
+										+ "SNV_FROM_INDEL_OXOG_MD5=\'\'\n"
+										+ "SNV_FROM_INDEL_OXOG_INDEX_MD5=\'\'\n"
+										+ "for f in $(ls /datastore/files_for_upload/*extracted-snv*) ; do \n"
+										+ "    md5sum $f | cut -d ' ' -f 1 > $f.md5 \n"
+										+ "    if [[ \"$f\" =~ tbi|idx ]] ; then \n"
+										+ "        SNV_FROM_INDEL_OXOG_INDEX=$SNV_FROM_INDEL_OXOG_INDEX,$f\n"
+										+ "        SNV_FROM_INDEL_OXOG_INDEX_MD5=$SNV_FROM_INDEL_OXOG_INDEX_MD5,$f.md5\n"
+										+ "    else \n"
+										+ "        SNV_FROM_INDEL_OXOG=$SNV_FROM_INDEL_OXOG,$f\n"
+										+ "        SNV_FROM_INDEL_OXOG_MD5=$SNV_FROM_INDEL_OXOG_MD5,$f.md5\n"
+										+ "    fi\n"
+										+ "done\n\n";
 		generateAnalysisFilesVCFCommand += "\n docker run --rm --name=upload_vcfs_and_tarballs -v /datastore/vcf-upload-prep/:/vcf/ -v "+this.gnosKey+":/gnos.key -v /datastore/:/datastore/ "
 				+ " pancancer/pancancer_upload_download:1.7 /bin/bash -c \" cat << DESCRIPTIONFILE > /vcf/description.txt\n"
 				+ vcfDescription
 				+ "\nDESCRIPTIONFILE\n"
 				+ " perl -I /opt/gt-download-upload-wrapper/gt-download-upload-wrapper-2.0.13/lib/ /opt/vcf-uploader/vcf-uploader-2.0.9/gnos_upload_vcf.pl \\\n"
-				+ " --gto-only --key /gnos.key --upload-url "+this.gnosMetadataUploadURL+" "
-						+ " --metadata-urls "+this.normalMetdataURL+","+this.tumourMetdataURL+" \\\n"
-						+ " --vcfs $SNV_FROM_INDEL_OXOG"+vcfs+" \\\n"
-						+ " --tarballs $SNV_FROM_INDEL_TARBALL"+tars+" \\\n"
-						+ " --tarball-md5sum-files $SNV_FROM_INDEL_TARBALL_MD5"+tarMD5Sums+" \\\n"
-						+ " --vcf-idxs $SNV_FROM_INDEL_OXOG_INDEX"+vcfIndicies+" \\\n"
-						+ " --vcf-md5sum-files $SNV_FROM_INDEL_OXOG_MD5"+vcfMD5Sums+" \\\n"
-						+ " --vcf-idx-md5sum-files $SNV_FROM_INDEL_OXOG_INDEX_MD5"+vcfIndexMD5Sums+" \\\n"
-						+ " --workflow-name OxoGWorkflow-OxoGFiltering \\\n"
-						+ " --study-refname-override "+this.studyRefNameOverride + " \\\n"
-						+ " --description-file /vcf/description.txt \\\n"
-						+ " --workflow-version " + this.getVersion() + " \\\n"
-						+ " --workflow-src-url https://github.com/ICGC-TCGA-PanCancer/OxoGWrapperWorkflow --workflow-url https://github.com/ICGC-TCGA-PanCancer/OxoGWrapperWorkflow  \"\n";
+					+ " --gto-only --key /gnos.key --upload-url "+this.gnosMetadataUploadURL+" "
+					+ " --metadata-urls "+this.normalMetdataURL+","+this.tumourMetdataURL+" \\\n"
+					+ " --vcfs $SNV_FROM_INDEL_OXOG"+vcfs+" \\\n"
+					+ " --tarballs $SNV_FROM_INDEL_TARBALL"+tars+" \\\n"
+					+ " --tarball-md5sum-files $SNV_FROM_INDEL_TARBALL_MD5"+tarMD5Sums+" \\\n"
+					+ " --vcf-idxs $SNV_FROM_INDEL_OXOG_INDEX"+vcfIndicies+" \\\n"
+					+ " --vcf-md5sum-files $SNV_FROM_INDEL_OXOG_MD5"+vcfMD5Sums+" \\\n"
+					+ " --vcf-idx-md5sum-files $SNV_FROM_INDEL_OXOG_INDEX_MD5"+vcfIndexMD5Sums+" \\\n"
+					+ " --workflow-name OxoGWorkflow-OxoGFiltering \\\n"
+					+ " --study-refname-override "+this.studyRefNameOverride + " \\\n"
+					+ " --description-file /vcf/description.txt \\\n"
+					+ " --workflow-version " + this.getVersion() + " \\\n"
+					+ " --workflow-src-url https://github.com/ICGC-TCGA-PanCancer/OxoGWrapperWorkflow --workflow-url https://github.com/ICGC-TCGA-PanCancer/OxoGWrapperWorkflow  \"\n";
 		
 		
 		
@@ -694,21 +622,21 @@ public class OxoGWrapperWorkflow extends BaseOxoGWrapperWorkflow {
 				+ bamDescription
 				+ "\nDESCRIPTIONFILE\n"
 				+ " perl -I /opt/gt-download-upload-wrapper/gt-download-upload-wrapper-2.0.13/lib/ /opt/vcf-uploader/vcf-uploader-2.0.9/gnos_upload_vcf.pl \\\n"
-				+ " --gto-only --key /gnos.key --upload-url "+this.gnosMetadataUploadURL+" "
-						+ " --metadata-urls "+this.normalMetdataURL+","+this.tumourMetdataURL+" \\\n"
-						+ " --bams "+bams+" \\\n"
-						+ " --bam-bais "+bamIndicies+" \\\n"
-						+ " --bam-md5sum-files "+bamMD5Sums+" \\\n"
-						+ " --bam_bai-md5sum-files "+bamIndexMD5Sums+" \\\n"
-						+ " --workflow-name OxoGWorkflow-variantbam \\\n"
-						+ " --study-refname-override "+this.studyRefNameOverride + " \\\n"
-						+ " --description-file /vcf/description.txt \\\n"
-						+ " --workflow-version " + this.getVersion() + " \\\n"
-						+ " --workflow-src-url https://github.com/ICGC-TCGA-PanCancer/OxoGWrapperWorkflow --workflow-url https://github.com/ICGC-TCGA-PanCancer/OxoGWrapperWorkflow  \"\n";
+					+ " --gto-only --key /gnos.key --upload-url "+this.gnosMetadataUploadURL+" "
+					+ " --metadata-urls "+this.normalMetdataURL+","+this.tumourMetdataURL+" \\\n"
+					+ " --bams "+bams+" \\\n"
+					+ " --bam-bais "+bamIndicies+" \\\n"
+					+ " --bam-md5sum-files "+bamMD5Sums+" \\\n"
+					+ " --bam_bai-md5sum-files "+bamIndexMD5Sums+" \\\n"
+					+ " --workflow-name OxoGWorkflow-variantbam \\\n"
+					+ " --study-refname-override "+this.studyRefNameOverride + " \\\n"
+					+ " --description-file /vcf/description.txt \\\n"
+					+ " --workflow-version " + this.getVersion() + " \\\n"
+					+ " --workflow-src-url https://github.com/ICGC-TCGA-PanCancer/OxoGWrapperWorkflow --workflow-url https://github.com/ICGC-TCGA-PanCancer/OxoGWrapperWorkflow  \"\n";
 		
 		generateAnalysisFilesBAMsCommand += "\n cp /datastore/bam-upload-prep/*/*/manifest.xml /datastore/variantbam_results/manifest.xml "
-															+ " && cp /datastore/bam-upload-prep/*/*/analysis.xml /datastore/variantbam_results/analysis.xml "
-															+ " && cp /datastore/bam-upload-prep/*/*/*.gto /datastore/variantbam_results/";
+											+ " && cp /datastore/bam-upload-prep/*/*/analysis.xml /datastore/variantbam_results/analysis.xml "
+											+ " && cp /datastore/bam-upload-prep/*/*/*.gto /datastore/variantbam_results/";
 		generateAnalysisFilesBAMs.setCommand("( "+generateAnalysisFilesBAMsCommand+" ) || "+moveToFailed);
 		generateAnalysisFilesBAMs.addParent(parentJob);
 	
