@@ -8,8 +8,7 @@ import com.github.seqware.OxoGWrapperWorkflow.VCFType;
 
 public class INIGenerator {
 
-	private static String ini = "uploadURL = http://some.rsync.server.com/oxogUpload/\n"
-			+ "JSONrepo = https://github.com/ICGC-TCGA-PanCancer/oxog-ops.git\n" + "JSONrepoName = oxog-ops\n"
+	private static String ini = "JSONrepo = https://github.com/ICGC-TCGA-PanCancer/oxog-ops.git\n" + "JSONrepoName = oxog-ops\n"
 			+ "JSONfolderName = oxog-collab-jobs-test\n" + "JSONlocation = /home/seqware/gitroot/\n" +
 			// "JSONfileName = SomeDonor_1234.json\n"+
 			"GITemail = denis.yuen+icgc@gmail.com\n" + "GITname = icgc-bot\n"
