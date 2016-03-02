@@ -91,7 +91,10 @@ public class OxoGWrapperWorkflow extends BaseOxoGWrapperWorkflow {
 			    + " -v /datastore/bam/"+bamType.toString()+"/:/downloads/:rw"
 	    		+ " icgc/icgc-storage-client /bin/bash -c "
 	    		+ " \" "+downloadObjects+" \"";
-		getBamFileJob.setCommand(storageClientDockerCmdNormal);
+		
+		String moveToFailed = GitUtils.gitMoveCommand("downloading-jobs","failed-jobs",this.JSONlocation + "/" + this.JSONrepoName + "/" + this.JSONfolderName,this.JSONfileName, this.gitMoveTestMode, this.getWorkflowBaseDir() + "/scripts/");
+		
+		getBamFileJob.setCommand("( "+storageClientDockerCmdNormal+" ) || "+moveToFailed);
 
 		return getBamFileJob;
 	}
@@ -133,12 +136,12 @@ public class OxoGWrapperWorkflow extends BaseOxoGWrapperWorkflow {
 				+ " /icgc/icgc-storage-client/bin/icgc-storage-client download --object-id " + objectID+" --output-layout bundle --output-dir /downloads/ ;\n "; 
 		}
 		
-		String getVCFCommand = " docker run --rm --name get_vcf_"+workflowName+" "
+		String getVCFCommand = "(( docker run --rm --name get_vcf_"+workflowName+" "
 				+ " -e STORAGE_PROFILE="+this.storageSource+" " 
 			    + " -v "+outDir+"/logs/:/icgc/icgc-storage-client/logs/:rw "
 				+ " -v /datastore/credentials/collab.token:/icgc/icgc-storage-client/conf/application.properties:ro "
 			    + " -v "+outDir+"/:/downloads/:rw"
-	    		+ " icgc/icgc-storage-client /bin/bash -c \" "+downloadObjects+" \" ";
+	    		+ " icgc/icgc-storage-client /bin/bash -c \" "+downloadObjects+" \" ) && sudo chmod a+rw -R /datastore/vcf )";
 		
 		String moveToFailed = GitUtils.gitMoveCommand("downloading-jobs","failed-jobs",this.JSONlocation + "/" + this.JSONrepoName + "/" + this.JSONfolderName,this.JSONfileName, this.gitMoveTestMode, this.getWorkflowBaseDir() + "/scripts/");				 
 		getVCFCommand += (" || " + moveToFailed);
@@ -160,7 +163,7 @@ public class OxoGWrapperWorkflow extends BaseOxoGWrapperWorkflow {
 	private Job passFilterWorkflow(Pipeline workflowName, Job ... parents)
 	{
 		Job passFilter = this.getWorkflow().createBashJob("pass filter "+workflowName);
-		String moveToFailed = GitUtils.gitMoveCommand("downloading-jobs","failed-jobs",this.JSONlocation + "/" + this.JSONrepoName + "/" + this.JSONfolderName,this.JSONfileName, this.gitMoveTestMode, this.getWorkflowBaseDir() + "/scripts/");
+		String moveToFailed = GitUtils.gitMoveCommand("running-jobs","failed-jobs",this.JSONlocation + "/" + this.JSONrepoName + "/" + this.JSONfolderName,this.JSONfileName, this.gitMoveTestMode, this.getWorkflowBaseDir() + "/scripts/");
 		//If we were processing MUSE files we would also need to filter for tier* but we're NOT processing MUSE files so 
 		//we don't need to worry about that for now.
 		passFilter.setCommand("( for f in $(ls /datastore/vcf/"+workflowName+"/*/*.vcf.gz | grep -v pass | tr '\\n' ' ' ) ; do \n"
