@@ -50,8 +50,8 @@ public class OxoGWrapperWorkflow extends BaseOxoGWrapperWorkflow {
 		//lscpu | grep "^CPU(s):" | grep -o "[^ ]$"
 		//Andy says transport.parallel is not yet supported, but transport.memory may improve performance.
 		//Also set transport.memory: either "4" or "6" (GB - implied). 
-		Job copy = this.getWorkflow().createBashJob("copy ~/.gnos");
-		copy.setCommand("mkdir /datastore/credentials && cp -r ~/.gnos/* /datastore/credentials && ls -l /datastore/credentials");
+		Job copy = this.getWorkflow().createBashJob("copy /home/ubuntu/.gnos");
+		copy.setCommand("mkdir /datastore/credentials && cp -r /home/ubuntu/.gnos/* /datastore/credentials && ls -l /datastore/credentials");
 		copy.addParent(parentJob);
 		return copy;
 	}
@@ -503,7 +503,7 @@ public class OxoGWrapperWorkflow extends BaseOxoGWrapperWorkflow {
 		String tarMD5Sums = "";
 		
 		String generateAnalysisFilesVCFCommand = "";
-		
+		//I don't think "distinct" should be necessary here, but there were weird duplicates popping up in the list.
 		for (String file : this.filesForUpload.stream().filter(p -> ((p.contains(".vcf") || p.endsWith(".tar")) && !( p.contains("extracted-snv"))) ).distinct().collect(Collectors.toList()) )
 		{
 			file = file.trim();
@@ -591,6 +591,7 @@ public class OxoGWrapperWorkflow extends BaseOxoGWrapperWorkflow {
 		String bamIndexMD5Sums = "";
 		String generateAnalysisFilesBAMsCommand = "";
 		generateAnalysisFilesBAMsCommand += "sudo chmod a+rw -R /datastore/variantbam_results/ &&\n";
+		//I don't think distinct() should be necessary.
 		for (String file : this.filesForUpload.stream().filter( p -> p.contains(".bam") || p.contains(".bai") ).distinct().collect(Collectors.toList()) )
 		{
 			file = file.trim();
