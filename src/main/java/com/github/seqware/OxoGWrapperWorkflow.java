@@ -685,15 +685,17 @@ public class OxoGWrapperWorkflow extends BaseOxoGWrapperWorkflow {
 		String outDir = "/datastore/files_for_upload/";
 		String containerName = "pcawg-annotator_"+workflowName+"_"+inputType;
 		String commandName ="run annotator for "+workflowName+" "+inputType;
+		String annotatedFileName = this.aliquotID+"_annotated_"+workflowName+"_"+inputType+".vcf";
 		//If a filepath contains the phrase "extracted" then it contains SNVs that were extracted from an INDEL.
 		if (vcfPath.contains("extracted"))
 		{
 			//outDir+= "snvs_from_indels/";
 			containerName += "_SNVs-from-INDELs";
 			commandName += "_SNVs-from-INDELs";
+			annotatedFileName = annotatedFileName.replace(inputType, "SNVs_from_INDELs");
 		}
 		String command = "";
-		String annotatedFileName = this.aliquotID+"_annotated_"+workflowName+"_"+inputType+".vcf";
+		
 		
 		Job annotatorJob = this.getWorkflow().createBashJob(commandName);
 		if (!this.skipAnnotation)
@@ -703,15 +705,17 @@ public class OxoGWrapperWorkflow extends BaseOxoGWrapperWorkflow {
 			// when the workflow engine first builds the scripts.
 			// Also, the call to the ljdursi/pcawg-annotate container looks a little weird, (inside parens and redirected to a file),
 			// but that seems to be the easiest way to get the capture the outpuyt from it. 
-			command = "( ([ -f "+vcfPath+" ] \\\n"
-							+ " && (docker run --rm --name="+containerName+" -v "+vcfPath+":/input.vcf "
-							+ " -v "+tumourBamPath+":/tumour_minibam.bam "
-							+ " -v "+normalBamPath+":/normal_minibam.bam "
-							+ " ljdursi/pcawg-annotate  "
-							+ " "+inputType+" /input.vcf /normal_minibam.bam /tumour_minibam.bam ) > "+outDir+"/"+annotatedFileName+" ) \\\n"
-							+ " && ( bgzip -f -c "+outDir+annotatedFileName+" > "+outDir+"/"+annotatedFileName+".gz && "
-							+ " tabix -p vcf "+outDir+"/"+annotatedFileName+".gz ; "
-							+ " ) ) \\\n" ;
+			command = "(\n"
+					+ "if [ -f "+vcfPath+" ] ; then \n"
+					+ "    (docker run --rm --name="+containerName+" -v "+vcfPath+":/input.vcf \\\n"
+					+ "        -v "+tumourBamPath+":/tumour_minibam.bam \\\n"
+					+ "        -v "+normalBamPath+":/normal_minibam.bam \\\n"
+					+ "        ljdursi/pcawg-annotate \\\n"
+					+ "        "+inputType+" /input.vcf /normal_minibam.bam /tumour_minibam.bam ) > "+outDir+"/"+annotatedFileName+" \n"
+					+ "    bgzip -f -c "+outDir+annotatedFileName+" > "+outDir+"/"+annotatedFileName+".gz \n"
+					+ "    tabix -p vcf "+outDir+"/"+annotatedFileName+".gz \n "
+					+ "fi\n"
+					+ ") " ;
 			
 			
 			String moveToFailed = GitUtils.gitMoveCommand("running-jobs","failed-jobs",this.JSONlocation + "/" + this.JSONrepoName + "/" + this.JSONfolderName,this.JSONfileName, this.gitMoveTestMode, this.getWorkflowBaseDir() + "/scripts/");
