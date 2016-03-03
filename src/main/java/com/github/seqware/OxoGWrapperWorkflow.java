@@ -507,7 +507,7 @@ public class OxoGWrapperWorkflow extends BaseOxoGWrapperWorkflow {
 		
 		String generateAnalysisFilesVCFCommand = "";
 		//I don't think "distinct" should be necessary here, but there were weird duplicates popping up in the list.
-		for (String file : this.filesForUpload.stream().filter(p -> ((p.contains(".vcf") || p.endsWith(".tar")) && !( p.contains("extracted-snv"))) ).distinct().collect(Collectors.toList()) )
+		for (String file : this.filesForUpload.stream().filter(p -> ((p.contains(".vcf") || p.endsWith(".tar")) && !( p.contains("SNVs_from_INDELs") || p.contains("extracted-snv"))) ).distinct().collect(Collectors.toList()) )
 		{
 			file = file.trim();
 			//md5sum test_files/tumour_minibam.bam.bai | cut -d ' ' -f 1 > test_files/tumour_minibam.bai.md5
@@ -545,7 +545,7 @@ public class OxoGWrapperWorkflow extends BaseOxoGWrapperWorkflow {
 										+ "SNV_FROM_INDEL_OXOG_INDEX=\'\'\n"
 										+ "SNV_FROM_INDEL_OXOG_MD5=\'\'\n"
 										+ "SNV_FROM_INDEL_OXOG_INDEX_MD5=\'\'\n"
-										+ "for f in $(ls /datastore/files_for_upload/*extracted-snv*) ; do \n"
+										+ "for f in $(ls /datastore/files_for_upload/ | grep -e from_INDELs -e extracted) ; do \n"
 										+ "    md5sum $f | cut -d ' ' -f 1 > $f.md5 \n"
 										+ "    if [[ \"$f\" =~ tbi|idx ]] ; then \n"
 										+ "        SNV_FROM_INDEL_OXOG_INDEX=$SNV_FROM_INDEL_OXOG_INDEX,$f\n"
