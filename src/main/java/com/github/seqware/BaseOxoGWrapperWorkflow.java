@@ -270,7 +270,7 @@ public abstract class BaseOxoGWrapperWorkflow extends AbstractWorkflowDataModel 
 			}
 			
 			if (hasPropertyAndNotNull("skipAnnotation")) {
-				this.skipVariantBam = Boolean.valueOf(getProperty("skipAnnotation"));
+				this.skipAnnotation = Boolean.valueOf(getProperty("skipAnnotation"));
 			}
 			
 			if (hasPropertyAndNotNull("gnosMetadataUploadURL")) {
