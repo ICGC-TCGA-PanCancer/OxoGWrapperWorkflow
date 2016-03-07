@@ -529,6 +529,13 @@ public class OxoGWrapperWorkflow extends BaseOxoGWrapperWorkflow {
 				vcfMD5Sums += file + ".md5,";	 
 			}
 		}
+
+		// trim trailing commas so that you don't get ",," in the "--vcfs ..." arg to gt-download-upload-wrapper
+		// since that will result in empty files in the analysis and things will break.
+		vcfs = vcfs.substring(0,vcfs.length()-1);
+		vcfMD5Sums = vcfMD5Sums.substring(0,vcfMD5Sums.length()-1);
+		vcfIndicies = vcfIndicies.substring(0,vcfIndicies.length()-1);
+		vcfIndexMD5Sums = vcfIndexMD5Sums.substring(0,vcfIndexMD5Sums.length()-1);
 		
 		String vcfDescription="These are the OxoG-filtered (with an OxoQ Score of "+this.oxoQScore+") and Annotated VCFs for specimen "+this.specimenID+" from donor "+this.donorID+","
 				+ " based on the VCFs produced from the core variant calling workflows."
