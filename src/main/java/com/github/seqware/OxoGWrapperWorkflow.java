@@ -545,7 +545,9 @@ public class OxoGWrapperWorkflow extends BaseOxoGWrapperWorkflow {
 										+ "SNV_FROM_INDEL_OXOG_INDEX=\'\'\n"
 										+ "SNV_FROM_INDEL_OXOG_MD5=\'\'\n"
 										+ "SNV_FROM_INDEL_OXOG_INDEX_MD5=\'\'\n"
-										+ "for f in $(ls /datastore/files_for_upload/ | grep -e from_INDELs -e extracted) ; do \n"
+										+ "for f in $(ls /datastore/files_for_upload/ | grep -e from_INDELs -e extracted | grep -e gz | grep -v md5) ; do \n"
+										+ "    echo \"processing $f\""
+										+ "    f=/datastore/files_for_upload/$f \n"
 										+ "    md5sum $f | cut -d ' ' -f 1 > $f.md5 \n"
 										+ "    if [[ \"$f\" =~ tbi|idx ]] ; then \n"
 										+ "        SNV_FROM_INDEL_OXOG_INDEX=$SNV_FROM_INDEL_OXOG_INDEX,$f\n"
@@ -554,25 +556,29 @@ public class OxoGWrapperWorkflow extends BaseOxoGWrapperWorkflow {
 										+ "        SNV_FROM_INDEL_OXOG=$SNV_FROM_INDEL_OXOG,$f\n"
 										+ "        SNV_FROM_INDEL_OXOG_MD5=$SNV_FROM_INDEL_OXOG_MD5,$f.md5\n"
 										+ "    fi\n"
-										+ "done\n\n";
-		generateAnalysisFilesVCFCommand += "\n docker run --rm --name=upload_vcfs_and_tarballs -v /datastore/vcf-upload-prep/:/vcf/ -v "+this.gnosKey+":/gnos.key -v /datastore/:/datastore/ "
+										+ "done\n\n"
+										+ "echo \"SNV_FROM_INDEL_OXOG_INDEX = $SNV_FROM_INDEL_OXOG_INDEX\" \n"
+										+ "echo \"SNV_FROM_INDEL_OXOG_INDEX_MD5 = $SNV_FROM_INDEL_OXOG_INDEX_MD5\" \n"
+										+ "echo \"SNV_FROM_INDEL_OXOG = $SNV_FROM_INDEL_OXOG\" \n"
+										+ "echo \"SNV_FROM_INDEL_OXOG_MD5 = $SNV_FROM_INDEL_OXOG_MD5\" \n\n";
+		generateAnalysisFilesVCFCommand += "\nset -x\n\n docker run --rm --name=upload_vcfs_and_tarballs -v /datastore/vcf-upload-prep/:/vcf/ -v "+this.gnosKey+":/gnos.key -v /datastore/:/datastore/ "
 				+ " pancancer/pancancer_upload_download:1.7 /bin/bash -c \" cat << DESCRIPTIONFILE > /vcf/description.txt\n"
 				+ vcfDescription
 				+ "\nDESCRIPTIONFILE\n"
 				+ " perl -I /opt/gt-download-upload-wrapper/gt-download-upload-wrapper-2.0.13/lib/ /opt/vcf-uploader/vcf-uploader-2.0.9/gnos_upload_vcf.pl \\\n"
 					+ " --gto-only --key /gnos.key --upload-url "+this.gnosMetadataUploadURL+" "
 					+ " --metadata-urls "+this.normalMetdataURL+","+this.tumourMetdataURL+" \\\n"
-					+ " --vcfs $SNV_FROM_INDEL_OXOG"+vcfs+" \\\n"
-					+ " --tarballs $SNV_FROM_INDEL_TARBALL"+tars+" \\\n"
-					+ " --tarball-md5sum-files $SNV_FROM_INDEL_TARBALL_MD5"+tarMD5Sums+" \\\n"
-					+ " --vcf-idxs $SNV_FROM_INDEL_OXOG_INDEX"+vcfIndicies+" \\\n"
-					+ " --vcf-md5sum-files $SNV_FROM_INDEL_OXOG_MD5"+vcfMD5Sums+" \\\n"
-					+ " --vcf-idx-md5sum-files $SNV_FROM_INDEL_OXOG_INDEX_MD5"+vcfIndexMD5Sums+" \\\n"
+					+ " --vcfs "+vcfs+"$SNV_FROM_INDEL_OXOG \\\n"
+					+ " --tarballs "+tars+"$SNV_FROM_INDEL_TARBALL \\\n"
+					+ " --tarball-md5sum-files "+tarMD5Sums+"$SNV_FROM_INDEL_TARBALL_MD5 \\\n"
+					+ " --vcf-idxs "+vcfIndicies+"$SNV_FROM_INDEL_OXOG_INDEX \\\n"
+					+ " --vcf-md5sum-files "+vcfMD5Sums+"$SNV_FROM_INDEL_OXOG_MD5 \\\n"
+					+ " --vcf-idx-md5sum-files "+vcfIndexMD5Sums+"$SNV_FROM_INDEL_OXOG_INDEX_MD5 \\\n"
 					+ " --workflow-name OxoGWorkflow-OxoGFiltering \\\n"
 					+ " --study-refname-override "+this.studyRefNameOverride + " \\\n"
 					+ " --description-file /vcf/description.txt \\\n"
 					+ " --workflow-version " + this.getVersion() + " \\\n"
-					+ " --workflow-src-url https://github.com/ICGC-TCGA-PanCancer/OxoGWrapperWorkflow --workflow-url https://github.com/ICGC-TCGA-PanCancer/OxoGWrapperWorkflow  \"\n";
+					+ " --workflow-src-url https://github.com/ICGC-TCGA-PanCancer/OxoGWrapperWorkflow --workflow-url https://github.com/ICGC-TCGA-PanCancer/OxoGWrapperWorkflow  \"\nset +x\n";
 		
 		
 		
