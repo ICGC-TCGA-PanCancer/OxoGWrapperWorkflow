@@ -37,12 +37,12 @@ my $d = {};
 #                                               /datastore/path_to_above_VCFs/ \
 #                                               /datastore/output_directory 
 
-my ($broad_snv, $sanger_snv, $de_snv,
+my ($broad_snv, $sanger_snv, $de_snv, $muse_snv,
         $broad_indel, $sanger_indel, $de_indel,
         $broad_sv, $sanger_sv, $de_sv,
         $in_dir, $out_dir) = @ARGV;
 
-my @snv = ($broad_snv, $sanger_snv, $de_snv);
+my @snv = ($broad_snv, $sanger_snv, $de_snv, $muse_snv);
 my @indel = ($broad_indel, $sanger_indel, $de_indel);
 my @sv = ($broad_sv, $sanger_sv, $de_sv);
 
@@ -91,15 +91,14 @@ sub sort_and_index {
   my ($file) = @_;
   my @parts = split /\//, $file;
   my $filename = $parts[-1];
-  my $cmd = "sudo docker run --rm \\
+  my $cmd = "sudo docker run --rm --name=sort_merged_vcf \\
         -v $file.vcf:/input.vcf:rw \\
         -v /datastore/refdata/public:/ref \\
-        -v ~/vcflib/:/home/ngseasy/vcflib/ \\
         -v $out_dir:/outdir/:rw \\
         compbio/ngseasy-base:a1.0-002 /bin/bash -c \\
-        \"vcf-sort /input.vcf > /outdir/$filename.sorted.vcf; \\
-        echo \"zipping and indexing...\" \\
-        bgzip -f /outdir/$filename.sorted.vcf ; \\
+        \" vcf-sort /input.vcf > /outdir/$filename.sorted.vcf; \\
+        echo zipping_and_indexing ; \\
+        bgzip -f -c /outdir/$filename.sorted.vcf > /outdir/$filename.sorted.vcf.gz ; \\
         tabix -p vcf /outdir/$filename.sorted.vcf.gz\"
    ";
 
@@ -130,7 +129,7 @@ sub process_file {
     chomp;
     next if (/^#/);
     # FIXME
-    next if (!/PASS/ || /tier/);
+    # next if (!/PASS/ || /tier/);
     my @a = split /\t/;
     my $payload = "$a[0]\t$a[1]\t.\t$a[3]\t$a[4]\t$a[5]\t$a[6]\t.";
     $d->{$a[0]}{$a[1]} = $payload;

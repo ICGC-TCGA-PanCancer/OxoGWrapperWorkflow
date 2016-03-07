@@ -32,14 +32,45 @@ sudo docker run --rm -v /datastore:/datastore \
 	seqware bundle launch --dir /workflow --ini /ini --no-metadata --engine whitestar-parallel
 ```
 
+### INIs
+The INI must reference the object IDs and filenames of INDEL, SNV, and SV VCFs from the Sanger, Broad, Muse (SNV only), and DKFZ/EMBL pipelines.
+Populating such an INI file is a lot of work and since most of the necessary information is already in the JSON file (produced by Linda/Junjun),
+you can use the INIGenerator to produce an INI for you. It works like this:
+
+```
+cd /workflows/Workflow_Bundle_OxoGWrapper_1.0_SeqWare_1.1.2/Workflow_Bundle_OxoGWrapper/1.0/
+java -cp ./classes:./bin com.github.seqware.INIGenerator ~/BTCA-SG.BTCA_donor_A153.json
+```
+
+Other fields that are useful to populate in the INI:
+
+ - gitMoveTestMode - Set it to `true` to prevent file operations from being propagated back to github. This is really only intended for testing purposes.
+ - storageSource - This tells the ICGC storage client where to download from. Options are `aws` or `collab`.
+ - skipDownload - Set to `true` to skip file downloading. Useful if you can set up the environment with the files ahead of time.
+ - skipUpload - Set to `true` to skip the upload process.
+ - refFile - Specify the reference fasta file to use in the workflow. Must be in a directory _relative_ to `/datastore/refdata/`. Defaults to `public/Homo_sapiens_assembly19.fasta`.
+ - uploadKey - The path to the key that will be used when uploading to the rsync server.
+ - gnosKey - The path to the key that will be used when talking to GNOS to generate gto files and metadata.
+ - skipOxoG - Skip the OxoG filtering process. Useful if OxoG has already run on this data.
+ - skipVariantBam - Skip running variant to produce the minibams. Useful if you do not need to run this step.
+ - skipAnnotation - Skip running the annotation process. Useful if you have already run this step.
+
+
 ### Flow Control
 
-It uses git to note state in the workflow... more details TBD.
+It uses git to note state in the workflow.
+
+To do this, a repo must be set up with a directory that contains the state-directories. When a JSON file is in a specific directory, in indicates the state that the workflow running that JSOn file is in.
+
+The JSON file for a job must first be in the `queued-jobs` directory. The workflow will then move it to the `downloading-jobs` directory. When the download phase of the workflow completes, the file is moved to the `running-jobs` directory.
+When the main processes have finished and the upload is in progress, the file will be moved to the `uploading-jobs` directory. When upload completes successfully, the file will be moved to the `completed-jobs` directory.
+If the workflow fails, the file may be moved to the `failed-jobs` directory. If you re-run a workflow on a worker manually, be aware that you'll have to move the JSON file back to the directory that the workflow expects it to be in.
+  
 
 ### Downloads
 
 The inputs are 1) all the variant calling workflow outputs (Sanger, DKFZ/EMBL, EMBL, Muse) and
-2) the BAM files for normal and tumour(s).
+2) the BAM files for normal and tumour(s). 
 
 These are downloaded from either AWS S3 or the Collaboratory using the ICGC Storage Client.
 
