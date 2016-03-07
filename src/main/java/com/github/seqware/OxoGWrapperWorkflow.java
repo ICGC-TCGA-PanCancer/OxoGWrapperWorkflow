@@ -553,7 +553,7 @@ public class OxoGWrapperWorkflow extends BaseOxoGWrapperWorkflow {
 										+ "SNV_FROM_INDEL_OXOG_MD5=\'\'\n"
 										+ "SNV_FROM_INDEL_OXOG_INDEX_MD5=\'\'\n"
 										+ "for f in $(ls /datastore/files_for_upload/ | grep -e from_INDELs -e extracted | grep -e gz | grep -v md5) ; do \n"
-										+ "    echo \"processing $f\""
+										+ "    echo \"processing $f\"\n"
 										+ "    f=/datastore/files_for_upload/$f \n"
 										+ "    md5sum $f | cut -d ' ' -f 1 > $f.md5 \n"
 										+ "    if [[ \"$f\" =~ tbi|idx ]] ; then \n"
