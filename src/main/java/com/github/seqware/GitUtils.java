@@ -32,12 +32,14 @@ class GitUtils {
 		pullRepoJob.getCommand().addArgument("cp " + GITPemFile + " ~/.ssh/id_rsa \n");
 		pullRepoJob.getCommand().addArgument("chmod 600 ~/.ssh/id_rsa \n");
 		pullRepoJob.getCommand().addArgument("echo 'StrictHostKeyChecking no' > ~/.ssh/config \n");
+		// Make the directory and then cd there.
 		pullRepoJob.getCommand().addArgument("[ -d " + JSONlocation + " ] || mkdir -p " + JSONlocation + " \n");
 		pullRepoJob.getCommand().addArgument("cd " + JSONlocation + " \n");
-		pullRepoJob.getCommand()
-				.addArgument("[ -d " + JSONlocation + "/" + JSONrepoName + " ] || git clone " + JSONrepo + " \n");
-		// pullRepoJob.getCommand().addArgument("echo $? \n");
-
+		// Clone if the repo is not yet cloned.
+		pullRepoJob.getCommand().addArgument("[ -d " + JSONlocation + "/" + JSONrepoName + " ] || git clone " + JSONrepo + " \n");
+		// Checkout master
+		pullRepoJob.getCommand().addArgument("cd " + JSONlocation + "/" + JSONrepoName + " && git checkout master \n");
+		// Get a list of what's in there.
 		pullRepoJob.getCommand().addArgument("echo \"contents: \"\n");
 		pullRepoJob.getCommand().addArgument("ls -lRA  \n");
 		return pullRepoJob;
