@@ -55,26 +55,22 @@ if test_mode == 'true' :
 else:
     print ("In \"live\" mode - files will be moved in git")
     move_command = 'git mv {} {} && '.format(full_path_to_src, full_path_to_dest) + \
-                  'git commit -m \'{} to {}: {} \' && '.format(src_dir,dest_dir,file_name) + \
-                  'git push'
+                  ' git status && git commit -m \'{} to {}: {} \' && '.format(src_dir,dest_dir,file_name) + \
+                  ' git push'
     
 for i in range(10): # try 10 times. If there are MANY clients trying to check-in at once this might be necessary. 
     exit_code = 0
     print ("git mv attempt #"+str(i))
     
     if os.path.isfile(full_path_to_src):
+        command = 'cd {} ; '.format(repo_location)
         if test_mode:
-            command = 'cd {} ; '.format(repo_location) + \
-                  move_command
+            command = command + move_command
         else:
-            command = 'cd {} ; '.format(repo_location) + \
-                  'git checkout master ; ' + \
-                  'git reset --hard origin/master ; ' + \
-                  'git pull ; ' + \
-                  move_command
+            command = command + ' git pull ; git status ; ' + move_command
         
         
-        print("Command to execute will be:\t\n"+command+"\n\n")
+        print("Command to execute will be:\n"+command+"\n\n")
         process = subprocess.Popen(command, shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE )
         out, err = process.communicate()
     
@@ -95,7 +91,7 @@ for i in range(10): # try 10 times. If there are MANY clients trying to check-in
                 exit_code = 1
                 sys.exit(exit_code)
     else:
-        print ("Check to see if "+full_path_to_src+" is  valid file fails, BUT that might not be an error: Please check that another process (or the same process, re-trying multiple times) hasn't already moved the file.")
+        print ("The check to see if "+full_path_to_src+" is a valid file failed, BUT that might not be an error: Please check that another process (or the same process, re-trying multiple times) hasn't already moved the file.")
         if dest_dir == 'failed-jobs':
             print ("Error: Can't move to failed-jobs because source file could not be found!")
             exit_code = 1
