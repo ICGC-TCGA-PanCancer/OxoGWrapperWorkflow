@@ -67,7 +67,8 @@ for i in range(10): # try 10 times. If there are MANY clients trying to check-in
         if test_mode:
             command = command + move_command
         else:
-            command = command + ' git pull ; git status ; ' + move_command
+            # I think we *do* need to hard reset here.
+            command = command + ' git reset --hard origin/master ; git pull ; git status ; ' + move_command
         
         
         print("Command to execute will be:\n"+command+"\n\n")

@@ -17,3 +17,9 @@ hs_err_pid*
 .settings
 target/*
 /target/
+.pydevproject
+.gitignore.orig
+
+# files created while testing workflow: INI files and json files that exist in the ROOT directory of the project
+/*.INI
+/*.json
