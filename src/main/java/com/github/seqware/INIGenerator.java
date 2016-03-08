@@ -8,12 +8,14 @@ import com.github.seqware.OxoGWrapperWorkflow.VCFType;
 
 public class INIGenerator {
 
-	private static String ini = "JSONrepo = https://github.com/ICGC-TCGA-PanCancer/oxog-ops.git\n" + "JSONrepoName = oxog-ops\n"
-			+ "JSONfolderName = oxog-collab-jobs-test\n" + "JSONlocation = /home/seqware/gitroot/\n" +
-			// "JSONfileName = SomeDonor_1234.json\n"+
-			"GITemail = denis.yuen+icgc@gmail.com\n" + "GITname = icgc-bot\n"
-			+ "GITPemFile = /home/ubuntu/.gnos/git.pem\n"
-			+ "uploadURL = oicr@192.170.233.206:~/incoming/bulk_upload/\n";
+	private static String ini = "JSONrepo = https://github.com/ICGC-TCGA-PanCancer/oxog-ops.git\n"
+								+ "JSONrepoName = oxog-ops\n"
+								+ "JSONfolderName = oxog-collab-jobs-test\n"
+								+ "JSONlocation = /home/seqware/gitroot/\n"
+								+ "GITemail = denis.yuen+icgc@gmail.com\n" 
+								+ "GITname = icgc-bot\n"
+								+ "GITPemFile = /home/ubuntu/.gnos/git.pem\n"
+								+ "uploadURL = oicr@192.170.233.206:~/incoming/bulk_upload/\n";
 
 	private static Map<String, Object> getDataFromJSON(String pathToJSON) {
 		Map<String, Object> inputsFromJSON = JSONUtils.processJSONFile(pathToJSON);
@@ -28,18 +30,25 @@ public class INIGenerator {
 				// System.out.println(prefix + " " + m.get(k));
 				// Some things *don't* need to be printed
 				if (!(k.equals(JSONUtils.TAG))) {
-					sb.append(prefix.equals("") ? "" : prefix + "_").append(k).append(" = ").append(m.get(k))
-							.append("\n");
+					sb.append(prefix.equals("") ? "" : prefix + "_").append(k).append(" = ").append(m.get(k)).append("\n");
 				}
 			} else if (m.get(k) instanceof Map) {
 				// System.out.println(prefix + " " + m.get(k));
 				String newPrefix = prefix.equals("") ? "" : prefix;
 
-				if (((Map<String, Object>) m.get(k)).containsKey(JSONUtils.TAG)) {
-					newPrefix = (String) ((Map<String, Object>) m.get(k)).get(JSONUtils.TAG);
-				} else if (k.equals(JSONUtils.DATA)) {
+				@SuppressWarnings("unchecked")
+				Map<String, Object> submap = (Map<String, Object>) m.get(k);
+				
+				if (submap.containsKey(JSONUtils.TAG)) {
+					newPrefix = (String) submap.get(JSONUtils.TAG);
+				} else if (k.equals(JSONUtils.DATA) 
+						|| k.equals(JSONUtils.INDEX)
+						|| k.equals(VCFType.sv.toString())
+						|| k.equals(VCFType.sv.toString())
+						|| k.equals(VCFType.indel.toString())
+						|| k.equals(VCFType.snv.toString())) {
 					newPrefix += "_" + k;
-				} else if (k.equals(JSONUtils.INDEX)) {
+				} /*else if (k.equals(JSONUtils.INDEX)) {
 					newPrefix += "_" + k;
 				} else if (k.equals(VCFType.sv.toString())) {
 					newPrefix += "_" + k;
@@ -47,8 +56,8 @@ public class INIGenerator {
 					newPrefix += "_" + k;
 				} else if (k.equals(VCFType.snv.toString())) {
 					newPrefix += "_" + k;
-				}
-				sb.append(mapToINI((Map<String, Object>) m.get(k), newPrefix));
+				}*/
+				sb.append(mapToINI(submap, newPrefix));
 			}
 		}
 		return sb.toString();
