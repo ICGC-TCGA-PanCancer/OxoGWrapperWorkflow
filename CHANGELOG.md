@@ -1,9 +1,12 @@
 # CHANGELOG
 
+## 1.0.2
+ - Fixed the git_move.py script to move files in git better.
+
 ## 1.0.1
 **Main changes:**
  - Add `git reset --hard origin/master` to git move scripts.
- - Add `-t` and `-u` to rsync command, trying to resolve the manifest-newer-than-gto issue that Jonthan reported.
+ - Add `-t` and `-u` to rsync command, trying to resolve the manifest-newer-than-igto issue that Jonthan reported.
 
 **Other changes:**
  - update ini_generator.sh script with more current default values.
