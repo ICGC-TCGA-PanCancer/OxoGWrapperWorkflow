@@ -7,6 +7,7 @@ import time
 import subprocess
 import json
 import datetime
+import math
 
 #Args:
 # 1. path to root-dir in repo
@@ -58,17 +59,18 @@ else:
                   ' git status && git commit -m \'{} to {}: {} \' && '.format(src_dir,dest_dir,file_name) + \
                   ' git push'
     
-for i in range(10): # try 10 times. If there are MANY clients trying to check-in at once this might be necessary. 
+for i in range(60): # try up to 60 times. If there are MANY clients trying to check-in at once this might be necessary. 
     exit_code = 0
-    print ("git mv attempt #"+str(i))
-    
+    sleepAmt = random.uniform(0,(2*i)+5)
+    time.sleep(sleepAmt)
+    print ("git mv attempt #"+str(i)+ ", after sleeping for "+str(sleepAmt)+" seconds.")
     if os.path.isfile(full_path_to_src):
-        command = 'cd {} ; '.format(repo_location)
+        command = 'cd {} && '.format(repo_location)
         if test_mode:
             command = command + move_command
         else:
             # I think we *do* need to hard reset here.
-            command = command + ' git reset --hard origin/master ; git pull ; git status ; ' + move_command
+            command = command + ' git checkout master && git reset --hard origin/master && git pull && ' + move_command
         
         
         print("Command to execute will be:\n"+command+"\n\n")
@@ -85,11 +87,10 @@ for i in range(10): # try 10 times. If there are MANY clients trying to check-in
             sys.exit(exit_code)
         else:
             print('Error while moving the file: '+file_name+'.\nError message: {}\n\nRetrying...'.format(err))
-            if not test_mode:
-                # Only retry if we're not in test mode.
-                time.sleep(randint(1,15))  # pause a few seconds before retry
-            else:
-                exit_code = 1
+
+            if test_mode == 'true' :
+                print("In TEST mode, so file move will *not* be retried. Exiting without error, so workflow can continue.")
+                exit_code = 0
                 sys.exit(exit_code)
     else:
         print ("The check to see if "+full_path_to_src+" is a valid file failed, BUT that might not be an error: Please check that another process (or the same process, re-trying multiple times) hasn't already moved the file.")
