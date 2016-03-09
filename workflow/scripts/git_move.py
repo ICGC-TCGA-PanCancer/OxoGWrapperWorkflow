@@ -66,10 +66,9 @@ for i in range(60): # try up to 60 times. If there are MANY clients trying to ch
     print ("git mv attempt #"+str(i)+ ", after sleeping for "+str(sleepAmt)+" seconds.")
     if os.path.isfile(full_path_to_src):
         command = 'cd {} && '.format(repo_location)
-        if test_mode:
+        if test_mode == 'true':
             command = command + move_command
         else:
-            # I think we *do* need to hard reset here.
             command = command + ' git checkout master && git reset --hard origin/master && git pull && ' + move_command
         
         
