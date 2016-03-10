@@ -215,7 +215,14 @@ public class OxoGWrapperWorkflow extends BaseOxoGWrapperWorkflow {
 					+ " -v /refdata/:/ref/"
 					+ " compbio/ngseasy-base:a1.0-002 /bin/bash -c \""
 						+ " bgzip -d -c /datastore/datafile.vcf.gz \\\n"
-						+ " | sed -e s/\\\"$(echo -e '\\t\\t')\\\"/\\\"$(echo -e '\\t')\\\".\\\"$(echo -e '\\t')\\\"./g -e s/\\\"$(echo -e '\\t')\\\"$/\\\"$(echo -e '\\t')\\\"./g -e 's/\\(##.*\\);$/\\1/g' \\\n"
+						// TODO: replace any column begining with M to MT. Needed for some Broad INDELS, such as that for CLLE-ES::10 which failed with the msssage while normalizing the indel:
+						// [fai_fetch_seq] The sequence "M" not found
+						// faidx_fetch_seq failed at M:15500
+						+ " | sed -e s/\\\"$(echo -e '\\t\\t')\\\"/\\\"$(echo -e '\\t')\\\".\\\"$(echo -e '\\t')\\\"/g"
+							  + " -e s/\\\"$(echo -e '\\t\\t')\\\"/\\\"$(echo -e '\\t')\\\".\\\"$(echo -e '\\t')\\\"/g"
+							  + " -e s/\\\"$(echo -e '\\t')\\\"$/\\\"$(echo -e '\\t')\\\"./g"
+							  + " -e 's/^M\\([[:blank:]]\\)/MT\\1/g'"
+							  + " -e 's/\\(##.*\\);$/\\1/g' \\\n"
 						+ " > /outdir/"+fixedIndel+" && \\\n"
 						+ " bcftools norm -c w -m -any -Oz -f /ref/"+this.refFile+"  /outdir/"+fixedIndel+" "  
 						+ " > /outdir/"+normalizedINDELName
