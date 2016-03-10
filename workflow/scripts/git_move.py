@@ -47,15 +47,14 @@ full_path_to_dest = os.path.join(repo_location, dest_dir, file_name)
 
 print("Getting ready to move "+full_path_to_src+" to "+full_path_to_dest)
 
-move_command = ''
-
+command = 'cd {} && '.format(repo_location)
 if test_mode == 'true' :
     print ("In test mode - file will only be moved locally.")
 
-    move_command = 'mv {} {}'.format(full_path_to_src, full_path_to_dest)
+    command = command + 'mv {} {}'.format(full_path_to_src, full_path_to_dest)
 else:
     print ("In \"live\" mode - files will be moved in git")
-    move_command = 'git mv {} {} && '.format(full_path_to_src, full_path_to_dest) + \
+    command = command + ' git checkout master && git reset --hard origin/master && git pull && git mv {} {} && '.format(full_path_to_src, full_path_to_dest) + \
                   ' git status && git commit -m \'{} to {}: {} \' && '.format(src_dir,dest_dir,file_name) + \
                   ' git push'
     
@@ -64,15 +63,8 @@ for i in range(60): # try up to 60 times. If there are MANY clients trying to ch
     sleepAmt = random.uniform(0,(2*i)+5)
     time.sleep(sleepAmt)
     print ("git mv attempt #"+str(i)+ ", after sleeping for "+str(sleepAmt)+" seconds.")
+    print("Command to execute will be:\n"+command+"\n\n")
     if os.path.isfile(full_path_to_src):
-        command = 'cd {} && '.format(repo_location)
-        if test_mode == 'true':
-            command = command + move_command
-        else:
-            command = command + ' git checkout master && git reset --hard origin/master && git pull && ' + move_command
-        
-        
-        print("Command to execute will be:\n"+command+"\n\n")
         process = subprocess.Popen(command, shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE )
         out, err = process.communicate()
     
