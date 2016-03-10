@@ -209,13 +209,28 @@ public class OxoGWrapperWorkflow extends BaseOxoGWrapperWorkflow {
 		String extractedSNVVCFName = this.aliquotID+ "_"+ workflowName+"_somatic.indel.pass-filtered.bcftools-norm.extracted-snvs.vcf";
 		String fixedIndel = vcfName.replace("indel.", "indel.fixed.").replace(".gz", ""); //...because the fixed indel will not be a gz file - at least not immediately.
 		Job bcfToolsNormJob = this.getWorkflow().createBashJob("normalize "+workflowName+" Indels");
+		String sedTab = "\\\"$(echo -e '\\t')\\\"";
 		String runBCFToolsNormCommand = "sudo chmod a+rw -R /datastore/vcf/ && ( docker run --rm --name normalize_indel_"+workflowName+" "
 					+ " -v "+outDir+"/"+vcfName+":/datastore/datafile.vcf.gz "
 					+ " -v "+outDir+"/"+":/outdir/:rw "
 					+ " -v /refdata/:/ref/"
 					+ " compbio/ngseasy-base:a1.0-002 /bin/bash -c \""
 						+ " bgzip -d -c /datastore/datafile.vcf.gz \\\n"
-						+ " | sed -e s/\\\"$(echo -e '\\t\\t')\\\"/\\\"$(echo -e '\\t')\\\".\\\"$(echo -e '\\t')\\\"./g -e s/\\\"$(echo -e '\\t')\\\"$/\\\"$(echo -e '\\t')\\\"./g -e 's/\\(##.*\\);$/\\1/g' \\\n"
+						//The goal is a sed call that looks like this, where the "t" is a tab...
+						//sed -e 's/t$/t./g' -e 's/tt/t.t/g'  -e 's/\([^t]\)tt\([^t]\)/\1t.t\2/g' -e 's/tt/t.t/g' -e -e 's/^Mt/MTt/g' -e 's/\\(##.*\\);$/\\1/g'
+						//First, replace a tab at the end of a line with a tab and a dot because the dot was miossing.
+						//Second, replace any two tabs next to each other with tab-dot-tab because the dot was missing in between them.
+						//Third, replace any two tabs that are still beside each other and are book-ended by non-tabs with
+						//the original leading/trailing characters and two tabs with a dot in between. 
+						//Fourth, replace any remaining sequential tabs with tab-dot-tab.
+						//Fifth, replace any leading M with MT
+						//Sixth, get rid of trailing semi-colons in header lines.
+						+ " | sed -e s/"+sedTab+"$/"+sedTab+"./g"
+							  + " -e s/"+sedTab+sedTab+"/"+sedTab+"."+sedTab+"/g"
+							  + " -e s/\\([^"+sedTab+"]\\)"+sedTab+sedTab+"\\([^"+sedTab+"]\\)/\\1"+sedTab+"."+sedTab+"\\2/g"
+							  + " -e s/"+sedTab+sedTab+"/"+sedTab+"."+sedTab+"/g"
+							  + " -e 's/^M\\([[:blank:]]\\)/MT\\1/g'"
+							  + " -e 's/\\(##.*\\);$/\\1/g' \\\n"
 						+ " > /outdir/"+fixedIndel+" && \\\n"
 						+ " bcftools norm -c w -m -any -Oz -f /ref/"+this.refFile+"  /outdir/"+fixedIndel+" "  
 						+ " > /outdir/"+normalizedINDELName
