@@ -64,30 +64,23 @@ for i in range(60): # try up to 60 times. If there are MANY clients trying to ch
     time.sleep(sleepAmt)
     print ("git mv attempt #"+str(i)+ ", after sleeping for "+str(sleepAmt)+" seconds.")
     print("Command to execute will be:\n"+command+"\n\n")
-    if os.path.isfile(full_path_to_src):
-        process = subprocess.Popen(command, shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE )
-        out, err = process.communicate()
     
-        if process.returncode == 0 :
-            if dest_dir == 'failed-jobs':
-                print ("moved to failed, exiting script with error code 1 to interrupt workflow!")
-                exit_code = 1
-            else:
-                # succeeded
-                exit_code = 0
-            sys.exit(exit_code)
-        else:
-            print('Error while moving the file: '+file_name+'.\nError message: {}\n\nRetrying...'.format(err))
+    process = subprocess.Popen(command, shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE )
+    out, err = process.communicate()
 
-            if test_mode == 'true' :
-                print("In TEST mode, so file move will *not* be retried. Exiting without error, so workflow can continue.")
-                exit_code = 0
-                sys.exit(exit_code)
-    else:
-        print ("The check to see if "+full_path_to_src+" is a valid file failed, BUT that might not be an error: Please check that another process (or the same process, re-trying multiple times) hasn't already moved the file.")
+    if process.returncode == 0 :
         if dest_dir == 'failed-jobs':
-            print ("Error: Can't move to failed-jobs because source file could not be found!")
+            print ("moved to failed, exiting script with error code 1 to interrupt workflow!")
             exit_code = 1
         else:
+            # succeeded
             exit_code = 0
         sys.exit(exit_code)
+    else:
+        print('Error while moving the file: '+file_name+'.\nError message: {}\n\nRetrying...'.format(err))
+
+        if test_mode == 'true' :
+            print("In TEST mode, so file move will *not* be retried. Exiting without error, so workflow can continue.")
+            exit_code = 0
+            sys.exit(exit_code)
+    
