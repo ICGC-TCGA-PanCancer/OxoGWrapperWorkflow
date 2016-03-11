@@ -50,7 +50,6 @@ print("Getting ready to move "+full_path_to_src+" to "+full_path_to_dest)
 command = 'cd {} && '.format(repo_location)
 if test_mode == 'true' :
     print ("In test mode - file will only be moved locally.")
-
     command = command + 'mv {} {}'.format(full_path_to_src, full_path_to_dest)
 else:
     print ("In \"live\" mode - files will be moved in git")
@@ -78,7 +77,6 @@ for i in range(60): # try up to 60 times. If there are MANY clients trying to ch
         sys.exit(exit_code)
     else:
         print('Error while moving the file: '+file_name+'.\nError message: {}\n\nRetrying...'.format(err))
-
         if test_mode == 'true' :
             print("In TEST mode, so file move will *not* be retried. Exiting without error, so workflow can continue.")
             exit_code = 0
