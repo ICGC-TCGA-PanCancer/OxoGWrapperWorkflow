@@ -1,5 +1,8 @@
 # CHANGELOG
 
+## 1.0.4
+ - Fixed a bug in git_move.py
+
 ## 1.0.3
  - Changed pre-processing to replace leading M with MT in the CHROM field. This was causing bcf-tools norm to fail.
 	At least one Broad INDEL had M (which is not valid) instead of MT, so it will be fixed at workflow run-time. 

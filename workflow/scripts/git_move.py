@@ -47,15 +47,13 @@ full_path_to_dest = os.path.join(repo_location, dest_dir, file_name)
 
 print("Getting ready to move "+full_path_to_src+" to "+full_path_to_dest)
 
-move_command = ''
-
+command = 'cd {} && '.format(repo_location)
 if test_mode == 'true' :
     print ("In test mode - file will only be moved locally.")
-
-    move_command = 'mv {} {}'.format(full_path_to_src, full_path_to_dest)
+    command = command + 'mv {} {}'.format(full_path_to_src, full_path_to_dest)
 else:
     print ("In \"live\" mode - files will be moved in git")
-    move_command = 'git mv {} {} && '.format(full_path_to_src, full_path_to_dest) + \
+    command = command + ' git checkout master && git reset --hard origin/master && git pull && git mv {} {} && '.format(full_path_to_src, full_path_to_dest) + \
                   ' git status && git commit -m \'{} to {}: {} \' && '.format(src_dir,dest_dir,file_name) + \
                   ' git push'
     
@@ -64,38 +62,23 @@ for i in range(60): # try up to 60 times. If there are MANY clients trying to ch
     sleepAmt = random.uniform(0,(2*i)+5)
     time.sleep(sleepAmt)
     print ("git mv attempt #"+str(i)+ ", after sleeping for "+str(sleepAmt)+" seconds.")
-    if os.path.isfile(full_path_to_src):
-        command = 'cd {} && '.format(repo_location)
-        if test_mode == 'true':
-            command = command + move_command
-        else:
-            command = command + ' git checkout master && git reset --hard origin/master && git pull && ' + move_command
-        
-        
-        print("Command to execute will be:\n"+command+"\n\n")
-        process = subprocess.Popen(command, shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE )
-        out, err = process.communicate()
+    print("Command to execute will be:\n"+command+"\n\n")
     
-        if process.returncode == 0 :
-            if dest_dir == 'failed-jobs':
-                print ("moved to failed, exiting script with error code 1 to interrupt workflow!")
-                exit_code = 1
-            else:
-                # succeeded
-                exit_code = 0
-            sys.exit(exit_code)
-        else:
-            print('Error while moving the file: '+file_name+'.\nError message: {}\n\nRetrying...'.format(err))
+    process = subprocess.Popen(command, shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE )
+    out, err = process.communicate()
 
-            if test_mode == 'true' :
-                print("In TEST mode, so file move will *not* be retried. Exiting without error, so workflow can continue.")
-                exit_code = 0
-                sys.exit(exit_code)
-    else:
-        print ("The check to see if "+full_path_to_src+" is a valid file failed, BUT that might not be an error: Please check that another process (or the same process, re-trying multiple times) hasn't already moved the file.")
+    if process.returncode == 0 :
         if dest_dir == 'failed-jobs':
-            print ("Error: Can't move to failed-jobs because source file could not be found!")
+            print ("moved to failed, exiting script with error code 1 to interrupt workflow!")
             exit_code = 1
         else:
+            # succeeded
             exit_code = 0
         sys.exit(exit_code)
+    else:
+        print('Error while moving the file: '+file_name+'.\nError message: {}\n\nRetrying...'.format(err))
+        if test_mode == 'true' :
+            print("In TEST mode, so file move will *not* be retried. Exiting without error, so workflow can continue.")
+            exit_code = 0
+            sys.exit(exit_code)
+    
