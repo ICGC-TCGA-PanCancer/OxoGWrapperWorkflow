@@ -113,6 +113,7 @@ public class OxoGWrapperWorkflow extends BaseOxoGWrapperWorkflow {
 	enum Pipeline {
 		sanger, dkfz_embl, broad, muse
 	}
+	
 	/**
 	 This will download VCFs for a workflow, based on an object ID(s).
 	 It will perform these operations:
@@ -129,24 +130,41 @@ public class OxoGWrapperWorkflow extends BaseOxoGWrapperWorkflow {
 	private Job getVCF(Job parentJob, Pipeline workflowName, String ... objectIDs) {
 		Job getVCFJob = this.getWorkflow().createBashJob("get VCF for workflow " + workflowName);
 		String outDir = "/datastore/vcf/"+workflowName;
-		String downloadObjects = "";
-		for (String objectID : objectIDs)
+		
+		if (this.downloadMethod.equals("icgc-storage-client"))
 		{
-			downloadObjects += " /icgc/icgc-storage-client/bin/icgc-storage-client url --object-id "+objectID+" ;\n" 
-				+ " /icgc/icgc-storage-client/bin/icgc-storage-client download --object-id " + objectID+" --output-layout bundle --output-dir /downloads/ ;\n "; 
+			String downloadObjects = "";
+			for (String objectID : objectIDs)
+			{
+				downloadObjects += " /icgc/icgc-storage-client/bin/icgc-storage-client url --object-id "+objectID+" ;\n" 
+					+ " /icgc/icgc-storage-client/bin/icgc-storage-client download --object-id " + objectID+" --output-layout bundle --output-dir /downloads/ ;\n "; 
+			}
+			
+			String getVCFCommand = "(( docker run --rm --name get_vcf_"+workflowName+" "
+					+ " -e STORAGE_PROFILE="+this.storageSource+" " 
+				    + " -v "+outDir+"/logs/:/icgc/icgc-storage-client/logs/:rw "
+					+ " -v /datastore/credentials/collab.token:/icgc/icgc-storage-client/conf/application.properties:ro "
+				    + " -v "+outDir+"/:/downloads/:rw"
+		    		+ " icgc/icgc-storage-client /bin/bash -c \" "+downloadObjects+" \" ) && sudo chmod a+rw -R /datastore/vcf )";
+			
+			String moveToFailed = GitUtils.gitMoveCommand("downloading-jobs","failed-jobs",this.JSONlocation + "/" + this.JSONrepoName + "/" + this.JSONfolderName,this.JSONfileName, this.gitMoveTestMode, this.getWorkflowBaseDir() + "/scripts/");				 
+			getVCFCommand += (" || " + moveToFailed);
+			getVCFJob.setCommand(getVCFCommand);
+		}
+		else if (this.downloadMethod.equals("gtdownload"))
+		{
+			String getVCFCommand = "(( docker run --rm --name get_vcf_"+workflowName+" "
+									+ " -v /datastore/credentials/gnos.pem:/gnos.pem "
+								    + " -v "+outDir+"/:/downloads/:rw"
+						    		+ " pancancer/pancancer_upload_download:1.7 /bin/bash -c \""
+						    			+ "gtdownload -k 30 --peer-timeout 120 -p /downloads/ -l /downloads/gtdownload.log -c /gnos.pem";
+
+		}
+		else
+		{
+			throw new RuntimeException("Unknown downloadMethod: "+this.downloadMethod);
 		}
 		
-		String getVCFCommand = "(( docker run --rm --name get_vcf_"+workflowName+" "
-				+ " -e STORAGE_PROFILE="+this.storageSource+" " 
-			    + " -v "+outDir+"/logs/:/icgc/icgc-storage-client/logs/:rw "
-				+ " -v /datastore/credentials/collab.token:/icgc/icgc-storage-client/conf/application.properties:ro "
-			    + " -v "+outDir+"/:/downloads/:rw"
-	    		+ " icgc/icgc-storage-client /bin/bash -c \" "+downloadObjects+" \" ) && sudo chmod a+rw -R /datastore/vcf )";
-		
-		String moveToFailed = GitUtils.gitMoveCommand("downloading-jobs","failed-jobs",this.JSONlocation + "/" + this.JSONrepoName + "/" + this.JSONfolderName,this.JSONfileName, this.gitMoveTestMode, this.getWorkflowBaseDir() + "/scripts/");				 
-		getVCFCommand += (" || " + moveToFailed);
-		
-		getVCFJob.setCommand(getVCFCommand);
 		getVCFJob.addParent(parentJob);
 
 		return getVCFJob;
