@@ -132,8 +132,8 @@ public abstract class BaseOxoGWrapperWorkflow extends AbstractWorkflowDataModel 
 	
 	protected final String workflowURL = "https://github.com/ICGC-TCGA-PanCancer/OxoGWrapperWorkflow/";
 	
-	//Could be "icgc-storage-client" or "download". Maybe add options for aws s3 cli later?
-	protected String downloadMethod = "icgc-storage-client";
+	//Could be "icgc_storage_client" or "gtdownload". Maybe add options for aws s3 cli later?
+	protected String downloadMethod = "icgc_storage_client";
 	
 	/**
 	 * Get a property name that is mandatory

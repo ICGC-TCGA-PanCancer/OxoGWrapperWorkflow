@@ -13,6 +13,8 @@ import java.util.function.Function;
 import java.util.function.Predicate;
 import java.util.stream.Collectors;
 
+import com.github.seqware.DownloaderFactory.DownloadMethod;
+
 import net.sourceforge.seqware.pipeline.workflowV2.model.Job;
 
 public class OxoGWrapperWorkflow extends BaseOxoGWrapperWorkflow {
@@ -72,29 +74,16 @@ public class OxoGWrapperWorkflow extends BaseOxoGWrapperWorkflow {
 	 * @param bamType - is it normal or tumour? This used to determine the name of the directory that the file ends up in.
 	 * @return
 	 */
-	private Job getBAM(Job parentJob, BAMType bamType, String ... objectIDs) {
+	private Job getBAM(Job parentJob, DownloadMethod downloadMethod, BAMType bamType, String ... objectIDs) {
 		Job getBamFileJob = this.getWorkflow().createBashJob("get "+bamType.toString()+" BAM file");
 		getBamFileJob.addParent(parentJob);
 		
-		String downloadObjects = "";
-		
-		for (String objectID : objectIDs)
-		{
-			downloadObjects += "/icgc/icgc-storage-client/bin/icgc-storage-client url --object-id "+objectID+" ;\n" 
-			+ " /icgc/icgc-storage-client/bin/icgc-storage-client download --object-id "
-				+ objectID +" --output-layout bundle --output-dir /downloads/ ;\n";
-		}
-		String storageClientDockerCmdNormal =" docker run --rm --name get_bam_"+bamType+" "
-				+ " -e STORAGE_PROFILE="+this.storageSource+" " 
-			    + " -v /datastore/bam/"+bamType.toString()+"/logs/:/icgc/icgc-storage-client/logs/:rw "
-				+ " -v /datastore/credentials/collab.token:/icgc/icgc-storage-client/conf/application.properties:ro "
-			    + " -v /datastore/bam/"+bamType.toString()+"/:/downloads/:rw"
-	    		+ " icgc/icgc-storage-client /bin/bash -c "
-	    		+ " \" "+downloadObjects+" \"";
+		String outDir = "/datastore/bam/";
+		WorkflowFileDownloader downloader = DownloaderFactory.createDownloader(downloadMethod);
 		
 		String moveToFailed = GitUtils.gitMoveCommand("downloading-jobs","failed-jobs",this.JSONlocation + "/" + this.JSONrepoName + "/" + this.JSONfolderName,this.JSONfileName, this.gitMoveTestMode, this.getWorkflowBaseDir() + "/scripts/");
-		
-		getBamFileJob.setCommand("( "+storageClientDockerCmdNormal+" ) || "+moveToFailed);
+		String getBamCommandString = downloader.getDownloadCommandString(outDir, bamType.toString(), objectIDs);
+		getBamFileJob.setCommand("( "+getBamCommandString+" ) || "+moveToFailed);
 
 		return getBamFileJob;
 	}
@@ -127,43 +116,15 @@ public class OxoGWrapperWorkflow extends BaseOxoGWrapperWorkflow {
 	 * @param objectID
 	 * @return
 	 */
-	private Job getVCF(Job parentJob, Pipeline workflowName, String ... objectIDs) {
+	private Job getVCF(Job parentJob, DownloadMethod downloadMethod, Pipeline workflowName, String ... objectIDs) {
 		Job getVCFJob = this.getWorkflow().createBashJob("get VCF for workflow " + workflowName);
 		String outDir = "/datastore/vcf/"+workflowName;
+		String moveToFailed = GitUtils.gitMoveCommand("downloading-jobs","failed-jobs",this.JSONlocation + "/" + this.JSONrepoName + "/" + this.JSONfolderName,this.JSONfileName, this.gitMoveTestMode, this.getWorkflowBaseDir() + "/scripts/");
+		WorkflowFileDownloader downloader = DownloaderFactory.createDownloader(downloadMethod);
 		
-		if (this.downloadMethod.equals("icgc-storage-client"))
-		{
-			String downloadObjects = "";
-			for (String objectID : objectIDs)
-			{
-				downloadObjects += " /icgc/icgc-storage-client/bin/icgc-storage-client url --object-id "+objectID+" ;\n" 
-					+ " /icgc/icgc-storage-client/bin/icgc-storage-client download --object-id " + objectID+" --output-layout bundle --output-dir /downloads/ ;\n "; 
-			}
-			
-			String getVCFCommand = "(( docker run --rm --name get_vcf_"+workflowName+" "
-					+ " -e STORAGE_PROFILE="+this.storageSource+" " 
-				    + " -v "+outDir+"/logs/:/icgc/icgc-storage-client/logs/:rw "
-					+ " -v /datastore/credentials/collab.token:/icgc/icgc-storage-client/conf/application.properties:ro "
-				    + " -v "+outDir+"/:/downloads/:rw"
-		    		+ " icgc/icgc-storage-client /bin/bash -c \" "+downloadObjects+" \" ) && sudo chmod a+rw -R /datastore/vcf )";
-			
-			String moveToFailed = GitUtils.gitMoveCommand("downloading-jobs","failed-jobs",this.JSONlocation + "/" + this.JSONrepoName + "/" + this.JSONfolderName,this.JSONfileName, this.gitMoveTestMode, this.getWorkflowBaseDir() + "/scripts/");				 
-			getVCFCommand += (" || " + moveToFailed);
-			getVCFJob.setCommand(getVCFCommand);
-		}
-		else if (this.downloadMethod.equals("gtdownload"))
-		{
-			String getVCFCommand = "(( docker run --rm --name get_vcf_"+workflowName+" "
-									+ " -v /datastore/credentials/gnos.pem:/gnos.pem "
-								    + " -v "+outDir+"/:/downloads/:rw"
-						    		+ " pancancer/pancancer_upload_download:1.7 /bin/bash -c \""
-						    			+ "gtdownload -k 30 --peer-timeout 120 -p /downloads/ -l /downloads/gtdownload.log -c /gnos.pem";
-
-		}
-		else
-		{
-			throw new RuntimeException("Unknown downloadMethod: "+this.downloadMethod);
-		}
+		String getVCFCommand = downloader.getDownloadCommandString(outDir, workflowName.toString(), objectIDs);
+		getVCFCommand += (" || " + moveToFailed);
+		getVCFJob.setCommand(getVCFCommand);
 		
 		getVCFJob.addParent(parentJob);
 
@@ -857,19 +818,22 @@ public class OxoGWrapperWorkflow extends BaseOxoGWrapperWorkflow {
 			if (!skipDownload) {
 				//Download jobs. VCFs downloading serial. Trying to download all in parallel seems to put too great a strain on the system 
 				//since the icgc-storage-client can make full use of all cores on a multi-core system. 
-				Job downloadSangerVCFs = this.getVCF(move2download, Pipeline.sanger, this.sangerSNVVCFObjectID, this.sangerSNVIndexObjectID,
+				
+				DownloadMethod downloadMethod = DownloadMethod.valueOf(this.downloadMethod);
+				
+				Job downloadSangerVCFs = this.getVCF(move2download, downloadMethod, Pipeline.sanger, this.sangerSNVVCFObjectID, this.sangerSNVIndexObjectID,
 												this.sangerSVVCFObjectID, this.sangerSVIndexObjectID,
 												this.sangerIndelVCFObjectID, this.sangerIndelIndexObjectID);
-				Job downloadDkfzEmblVCFs = this.getVCF(downloadSangerVCFs, Pipeline.dkfz_embl, this.dkfzemblSNVVCFObjectID, this.dkfzemblSNVIndexObjectID,
+				Job downloadDkfzEmblVCFs = this.getVCF(downloadSangerVCFs, downloadMethod, Pipeline.dkfz_embl, this.dkfzemblSNVVCFObjectID, this.dkfzemblSNVIndexObjectID,
 											this.dkfzemblSVVCFObjectID, this.dkfzemblSVIndexObjectID,
 											this.dkfzemblIndelVCFObjectID, this.dkfzemblIndelIndexObjectID);
-				Job downloadBroadVCFs = this.getVCF(downloadDkfzEmblVCFs, Pipeline.broad, this.broadSNVVCFObjectID, this.broadSNVIndexObjectID,
+				Job downloadBroadVCFs = this.getVCF(downloadDkfzEmblVCFs, downloadMethod, Pipeline.broad, this.broadSNVVCFObjectID, this.broadSNVIndexObjectID,
 											this.broadSVVCFObjectID, this.broadSVIndexObjectID,
 											this.broadIndelVCFObjectID, this.broadIndelIndexObjectID);
-				Job downloadMuseVCFs = this.getVCF(downloadBroadVCFs, Pipeline.muse, this.museSNVVCFObjectID, this.museSNVIndexObjectID);
+				Job downloadMuseVCFs = this.getVCF(downloadBroadVCFs, downloadMethod, Pipeline.muse, this.museSNVVCFObjectID, this.museSNVIndexObjectID);
 				// Once VCFs are downloaded, download the BAMs.
-				Job downloadNormalBam = this.getBAM(downloadMuseVCFs, BAMType.normal, this.bamNormalIndexObjectID,this.bamNormalObjectID);
-				Job downloadTumourBam = this.getBAM(downloadNormalBam, BAMType.tumour, this.bamTumourIndexObjectID,this.bamTumourObjectID);
+				Job downloadNormalBam = this.getBAM(downloadMuseVCFs, downloadMethod, BAMType.normal, this.bamNormalIndexObjectID,this.bamNormalObjectID);
+				Job downloadTumourBam = this.getBAM(downloadNormalBam, downloadMethod, BAMType.tumour, this.bamTumourIndexObjectID,this.bamTumourObjectID);
 				
 				// After we've downloaded all VCFs on a per-workflow basis, we also need to do a vcfcombine 
 				// on the *types* of VCFs, for the minibam generator. The per-workflow combined VCFs will
