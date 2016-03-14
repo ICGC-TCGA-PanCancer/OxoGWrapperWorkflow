@@ -1,12 +1,5 @@
 package com.github.seqware;
 
-import java.io.IOException;
-import java.net.URI;
-import java.net.URISyntaxException;
-import java.nio.file.Files;
-import java.nio.file.Path;
-import java.nio.file.Paths;
-import java.nio.file.StandardOpenOption;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
@@ -27,22 +20,6 @@ public class OxoGWrapperWorkflow extends BaseOxoGWrapperWorkflow {
 			+ " the rCRS mitochondrial sequence (AC:NC_012920), Human herpesvirus 4 type 1 (AC:NC_007605) and the concatenated decoy sequences (hs37d5cs.fa.gz)."
 			+ " Variant calls may not be present for all contigs in this reference.";
 
-	/**
-	 * Generates a rules file that is used for the variant program that produces minibams.
-	 * NOTE: currently injecting the rules inline in the call to variantbam so the rules file won't actually be used...
-	 * @throws URISyntaxException
-	 * @throws IOException
-	 */
-	private void generateRulesFile() throws URISyntaxException, IOException
-	{
-		Path pathToPaddingRules = Paths.get(new URI("file:////datastore/padding_rules.txt"));
-		String paddingFileString = "pad["+this.svPadding+"];mlregion@/sv.vcf\n"+
-									"pad["+this.snvPadding+"];mlregion@/snv.vcf\n"+
-									"pad["+this.indelPadding+"];mlregion@/indel.vcf\n";
-		
-		Files.write(pathToPaddingRules, paddingFileString.getBytes(), StandardOpenOption.CREATE);
-	}
-	
 	/**
 	 * Copy the credentials files from ~/.gnos to /datastore/credentials
 	 * @param parentJob
@@ -89,6 +66,7 @@ public class OxoGWrapperWorkflow extends BaseOxoGWrapperWorkflow {
 
 		return getBamFileJob;
 	}
+
 	private Job getBAM(Job parentJob, DownloadMethod downloadMethod, BAMType bamType, List<String> objectIDs) {
 		return getBAM(parentJob, downloadMethod, bamType, (String[]) objectIDs.toArray());
 	}
@@ -174,11 +152,11 @@ public class OxoGWrapperWorkflow extends BaseOxoGWrapperWorkflow {
 	 * Yes, install tabix as a part of the workflow. It's not in the seqware_whitestar or seqware_whitestar_pancancer container, so
 	 * install it here.
 	 */
-	private Job installTabix(Job parent)
+	private Job installTools(Job parent)
 	{
-		Job installTabixJob = this.getWorkflow().createBashJob("install tabix and bgzip");
+		Job installTabixJob = this.getWorkflow().createBashJob("install tools: tabix and bgzip");
 		
-		installTabixJob.setCommand("sudo apt-get install tabix");
+		installTabixJob.setCommand("sudo apt-get install tabix ");
 		installTabixJob.addParent(parent);
 		return installTabixJob;
 	}
@@ -805,7 +783,7 @@ public class OxoGWrapperWorkflow extends BaseOxoGWrapperWorkflow {
 	public void buildWorkflow() {
 		try {
 			this.init();
-			this.generateRulesFile();
+
 			// Pull the repo.
 			Job configJob = GitUtils.gitConfig(this.getWorkflow(), this.GITname, this.GITemail);
 			
@@ -814,7 +792,7 @@ public class OxoGWrapperWorkflow extends BaseOxoGWrapperWorkflow {
 			Job pullRepo = GitUtils.pullRepo(this.getWorkflow(), this.GITPemFile, this.JSONrepo, this.JSONrepoName, this.JSONlocation);
 			pullRepo.addParent(copy);
 			
-			Job installTabix = this.installTabix(pullRepo);
+			Job installTabix = this.installTools(pullRepo);
 			
 			// indicate job is in downloading stage.
 			String pathToScripts = this.getWorkflowBaseDir() + "/scripts";
@@ -823,9 +801,7 @@ public class OxoGWrapperWorkflow extends BaseOxoGWrapperWorkflow {
 			if (!skipDownload) {
 				//Download jobs. VCFs downloading serial. Trying to download all in parallel seems to put too great a strain on the system 
 				//since the icgc-storage-client can make full use of all cores on a multi-core system. 
-				
 				DownloadMethod downloadMethod = DownloadMethod.valueOf(this.downloadMethod);
-				
 				BiFunction<List<String>, String, List<String>> selectObjectsForDownload = (objectIDs, gnosID) ->
 				{
 					switch (downloadMethod)
@@ -838,7 +814,6 @@ public class OxoGWrapperWorkflow extends BaseOxoGWrapperWorkflow {
 							return null;
 					}
 				};
-				
 				Job downloadSangerVCFs = this.getVCF(move2download, downloadMethod, Pipeline.sanger, selectObjectsForDownload.apply( Arrays.asList(this.sangerSNVVCFObjectID, this.sangerSNVIndexObjectID,
 												this.sangerSVVCFObjectID, this.sangerSVIndexObjectID,
 												this.sangerIndelVCFObjectID, this.sangerIndelIndexObjectID), this.sangerGnosID) );
