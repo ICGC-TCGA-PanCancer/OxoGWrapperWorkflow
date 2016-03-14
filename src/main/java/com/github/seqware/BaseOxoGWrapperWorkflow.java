@@ -132,6 +132,9 @@ public abstract class BaseOxoGWrapperWorkflow extends AbstractWorkflowDataModel 
 	
 	protected final String workflowURL = "https://github.com/ICGC-TCGA-PanCancer/OxoGWrapperWorkflow/";
 	
+	//Could be "icgc-storage-client" or "download". Maybe add options for aws s3 cli later?
+	protected String downloadMethod = "icgc-storage-client";
+	
 	/**
 	 * Get a property name that is mandatory
 	 * @param propName The name of the property
@@ -279,6 +282,10 @@ public abstract class BaseOxoGWrapperWorkflow extends AbstractWorkflowDataModel 
 
 			if (hasPropertyAndNotNull("studyRefNameOverride")) {
 				this.studyRefNameOverride = getProperty("studyRefNameOverride");
+			}
+			
+			if (hasPropertyAndNotNull("downloadMethod")) {
+				this.downloadMethod = getProperty("downloadMethod");
 			}
 			
 		} catch (Exception e) {
