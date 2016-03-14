@@ -493,11 +493,6 @@ public class OxoGWrapperWorkflow extends BaseOxoGWrapperWorkflow {
 		// The tar file contains all results.
 		Job generateAnalysisFilesVCFs = this.getWorkflow().createBashJob("generate_analysis_files_for_VCF_upload");
 		String moveToFailed = GitUtils.gitMoveCommand("uploading-jobs","failed-jobs",this.JSONlocation + "/" + this.JSONrepoName + "/" + this.JSONfolderName,this.JSONfileName, this.gitMoveTestMode, this.getWorkflowBaseDir() + "/scripts/");
-		//Files to upload:
-		//OxoG-filtered VCFs
-		//minibams
-		//normalized indels
-		//annotated VCFs
 		
 		//Files need to be copied to the staging directory
 		String vcfs = "";
@@ -600,8 +595,6 @@ public class OxoGWrapperWorkflow extends BaseOxoGWrapperWorkflow {
 		generateAnalysisFilesVCFs.addParent(parentJob);
 		
 		//get the UUID that was submitted with the metadata
-		//copyGTUploadFiles.getCommand().addArgument("VCF_UUID=$(grep server_path /datastore/files_for_upload/manifest.xml  | sed 's/.*server_path=\\\"\\(.*\\)\\\" .*/\1/g')\n");
-		
 		Job generateAnalysisFilesBAMs = this.getWorkflow().createBashJob("generate_analysis_files_for_BAM_upload");
 		
 		String bams = "";
@@ -705,7 +698,6 @@ public class OxoGWrapperWorkflow extends BaseOxoGWrapperWorkflow {
 		//If a filepath contains the phrase "extracted" then it contains SNVs that were extracted from an INDEL.
 		if (vcfPath.contains("extracted"))
 		{
-			//outDir+= "snvs_from_indels/";
 			containerName += "_SNVs-from-INDELs";
 			commandName += "_SNVs-from-INDELs";
 			annotatedFileName = annotatedFileName.replace(inputType, "SNVs_from_INDELs");
@@ -883,13 +875,13 @@ public class OxoGWrapperWorkflow extends BaseOxoGWrapperWorkflow {
 			this.sangerIndelName = addPassFilteredSuffix.apply(this.sangerIndelName);
 			this.sangerSVName = addPassFilteredSuffix.apply(this.sangerSVName);
 
-			this.broadSNVName = addPassFilteredSuffix.apply(this.broadSNVName);//.replace(".vcf.gz", ".pass-filtered.vcf.gz");
-			this.broadIndelName = addPassFilteredSuffix.apply(this.broadIndelName);//.replace(".vcf.gz", ".pass-filtered.vcf.gz");
-			this.broadSVName = addPassFilteredSuffix.apply(this.broadSVName);//.replace(".vcf.gz", ".pass-filtered.vcf.gz");
+			this.broadSNVName = addPassFilteredSuffix.apply(this.broadSNVName);
+			this.broadIndelName = addPassFilteredSuffix.apply(this.broadIndelName);
+			this.broadSVName = addPassFilteredSuffix.apply(this.broadSVName);
 			
-			this.dkfzEmblSNVName = addPassFilteredSuffix.apply(this.dkfzEmblSNVName);//.replace(".vcf.gz", ".pass-filtered.vcf.gz");
-			this.dkfzEmblIndelName = addPassFilteredSuffix.apply(this.dkfzEmblIndelName);//.replace(".vcf.gz", ".pass-filtered.vcf.gz");
-			this.dkfzEmblSVName = addPassFilteredSuffix.apply(this.dkfzEmblSVName);//.replace(".vcf.gz", ".pass-filtered.vcf.gz");
+			this.dkfzEmblSNVName = addPassFilteredSuffix.apply(this.dkfzEmblSNVName);
+			this.dkfzEmblIndelName = addPassFilteredSuffix.apply(this.dkfzEmblIndelName);
+			this.dkfzEmblSVName = addPassFilteredSuffix.apply(this.dkfzEmblSVName);
 			
 			// OxoG will run after move2running. Move2running will run after all the jobs that perform input file downloads and file preprocessing have finished.  
 			Job sangerPreprocessVCF = this.preProcessIndelVCF(sangerPassFilter, Pipeline.sanger,"/"+ this.sangerGnosID +"/"+ this.sangerIndelName);
@@ -899,18 +891,16 @@ public class OxoGWrapperWorkflow extends BaseOxoGWrapperWorkflow {
 			Job combineVCFsByType = this.combineVCFsByType( sangerPreprocessVCF, dkfzEmblPreprocessVCF, broadPreprocessVCF);
 			
 			Job oxoG = this.doOxoG(combineVCFsByType);
-			//Job oxoGSnvsFromIndels = this.doOxoGSnvsFromIndels(oxoG);
 			// variantbam jobs will run parallel to each other. variant seems to only use a *single* core, but runs long ( 60 - 120 min on OpenStack);
 			Job normalVariantBam = this.doVariantBam(combineVCFsByType,BAMType.normal,"/datastore/bam/normal/"+this.normalBamGnosID+"/"+this.normalBAMFileName);
 			Job tumourVariantBam = this.doVariantBam(combineVCFsByType,BAMType.tumour,"/datastore/bam/tumour/"+this.tumourBamGnosID+"/"+this.tumourBAMFileName);
 
-			List<Job> annotationJobs = this.doAnnotations(/*oxoGSnvsFromIndels,*/ tumourVariantBam, normalVariantBam, oxoG);
+			List<Job> annotationJobs = this.doAnnotations(tumourVariantBam, normalVariantBam, oxoG);
 			
 			//Now do the Upload
 			if (!skipUpload)
 			{
 				// indicate job is in uploading stage.
-				//Job move2uploading = GitUtils.gitMove("running-jobs", "uploading-jobs", this.getWorkflow(), this.JSONlocation, this.JSONrepoName, this.JSONfolderName, this.GITname, this.GITemail, this.gitMoveTestMode, this.JSONfileName, pathToScripts , indelAnnotatorJob, snvAnnotatorJob, snvFromIndelAnnotatorJob, oxoG, oxoGSnvsFromIndels, normalVariantBam, tumourVariantBam);
 				Job move2uploading = this.gitMove( "running-jobs", "uploading-jobs", annotationJobs.toArray(new Job[annotationJobs.size()]));
 				Job uploadResults = doUpload(move2uploading);
 				// indicate job is complete.
@@ -918,7 +908,6 @@ public class OxoGWrapperWorkflow extends BaseOxoGWrapperWorkflow {
 			}
 			else
 			{
-				//GitUtils.gitMove( "running-jobs", "completed-jobs", this.getWorkflow(), this.JSONlocation, this.JSONrepoName, this.JSONfolderName, this.GITname, this.GITemail, this.gitMoveTestMode, this.JSONfileName ,pathToScripts,  indelAnnotatorJob, snvAnnotatorJob, snvFromIndelAnnotatorJob, oxoG, oxoGSnvsFromIndels, normalVariantBam, tumourVariantBam);
 				this.gitMove( "running-jobs", "completed-jobs",annotationJobs.toArray(new Job[annotationJobs.size()]));
 			}
 			System.out.println(this.filesForUpload);
