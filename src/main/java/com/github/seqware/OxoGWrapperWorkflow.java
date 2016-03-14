@@ -8,7 +8,9 @@ import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.nio.file.StandardOpenOption;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
+import java.util.function.BiFunction;
 import java.util.function.Function;
 import java.util.function.Predicate;
 import java.util.stream.Collectors;
@@ -87,6 +89,9 @@ public class OxoGWrapperWorkflow extends BaseOxoGWrapperWorkflow {
 
 		return getBamFileJob;
 	}
+	private Job getBAM(Job parentJob, DownloadMethod downloadMethod, BAMType bamType, List<String> objectIDs) {
+		return getBAM(parentJob, downloadMethod, bamType, (String[]) objectIDs.toArray());
+	}
 
 	/**
 	 * Defines the different pipelines:
@@ -131,6 +136,10 @@ public class OxoGWrapperWorkflow extends BaseOxoGWrapperWorkflow {
 		return getVCFJob;
 	}
 
+	private Job getVCF(Job parentJob, DownloadMethod downloadMethod, Pipeline workflowName, List<String> objectIDs) {
+		return this.getVCF(parentJob, downloadMethod, workflowName, (String[]) objectIDs.toArray());
+	}
+	
 	/**
 	 * Perform filtering on all VCF files for a given workflow.
 	 * Filtering involves removing lines that are not "PASS" or "."
@@ -821,19 +830,32 @@ public class OxoGWrapperWorkflow extends BaseOxoGWrapperWorkflow {
 				
 				DownloadMethod downloadMethod = DownloadMethod.valueOf(this.downloadMethod);
 				
-				Job downloadSangerVCFs = this.getVCF(move2download, downloadMethod, Pipeline.sanger, this.sangerSNVVCFObjectID, this.sangerSNVIndexObjectID,
+				BiFunction<List<String>, String, List<String>> selectObjectsForDownload = (objectIDs, gnosID) ->
+				{
+					switch (downloadMethod)
+					{
+						case icgc_storage_client:
+							return objectIDs;
+						case gtdownload:
+							return Arrays.asList(gnosID);
+						default:
+							return null;
+					}
+				};
+				
+				Job downloadSangerVCFs = this.getVCF(move2download, downloadMethod, Pipeline.sanger, selectObjectsForDownload.apply( Arrays.asList(this.sangerSNVVCFObjectID, this.sangerSNVIndexObjectID,
 												this.sangerSVVCFObjectID, this.sangerSVIndexObjectID,
-												this.sangerIndelVCFObjectID, this.sangerIndelIndexObjectID);
-				Job downloadDkfzEmblVCFs = this.getVCF(downloadSangerVCFs, downloadMethod, Pipeline.dkfz_embl, this.dkfzemblSNVVCFObjectID, this.dkfzemblSNVIndexObjectID,
+												this.sangerIndelVCFObjectID, this.sangerIndelIndexObjectID), this.sangerGnosID) );
+				Job downloadDkfzEmblVCFs = this.getVCF(downloadSangerVCFs, downloadMethod, Pipeline.dkfz_embl, selectObjectsForDownload.apply( Arrays.asList(this.dkfzemblSNVVCFObjectID, this.dkfzemblSNVIndexObjectID,
 											this.dkfzemblSVVCFObjectID, this.dkfzemblSVIndexObjectID,
-											this.dkfzemblIndelVCFObjectID, this.dkfzemblIndelIndexObjectID);
-				Job downloadBroadVCFs = this.getVCF(downloadDkfzEmblVCFs, downloadMethod, Pipeline.broad, this.broadSNVVCFObjectID, this.broadSNVIndexObjectID,
+											this.dkfzemblIndelVCFObjectID, this.dkfzemblIndelIndexObjectID),this.dkfzemblGnosID) );
+				Job downloadBroadVCFs = this.getVCF(downloadDkfzEmblVCFs, downloadMethod, Pipeline.broad, selectObjectsForDownload.apply( Arrays.asList(this.broadSNVVCFObjectID, this.broadSNVIndexObjectID,
 											this.broadSVVCFObjectID, this.broadSVIndexObjectID,
-											this.broadIndelVCFObjectID, this.broadIndelIndexObjectID);
-				Job downloadMuseVCFs = this.getVCF(downloadBroadVCFs, downloadMethod, Pipeline.muse, this.museSNVVCFObjectID, this.museSNVIndexObjectID);
+											this.broadIndelVCFObjectID, this.broadIndelIndexObjectID), this.broadGnosID));
+				Job downloadMuseVCFs = this.getVCF(downloadBroadVCFs, downloadMethod, Pipeline.muse, selectObjectsForDownload.apply( Arrays.asList(this.museSNVVCFObjectID, this.museSNVIndexObjectID),this.museGnosID));
 				// Once VCFs are downloaded, download the BAMs.
-				Job downloadNormalBam = this.getBAM(downloadMuseVCFs, downloadMethod, BAMType.normal, this.bamNormalIndexObjectID,this.bamNormalObjectID);
-				Job downloadTumourBam = this.getBAM(downloadNormalBam, downloadMethod, BAMType.tumour, this.bamTumourIndexObjectID,this.bamTumourObjectID);
+				Job downloadNormalBam = this.getBAM(downloadMuseVCFs, downloadMethod, BAMType.normal, selectObjectsForDownload.apply( Arrays.asList( this.bamNormalIndexObjectID,this.bamNormalObjectID),this.normalBamGnosID));
+				Job downloadTumourBam = this.getBAM(downloadNormalBam, downloadMethod, BAMType.tumour,selectObjectsForDownload.apply( Arrays.asList(  this.bamTumourIndexObjectID,this.bamTumourObjectID), this.tumourBamGnosID));
 				
 				// After we've downloaded all VCFs on a per-workflow basis, we also need to do a vcfcombine 
 				// on the *types* of VCFs, for the minibam generator. The per-workflow combined VCFs will
@@ -906,4 +928,6 @@ public class OxoGWrapperWorkflow extends BaseOxoGWrapperWorkflow {
 			throw new RuntimeException ("Exception caught: "+e.getMessage(), e);
 		}
 	}
+
+	
 }
