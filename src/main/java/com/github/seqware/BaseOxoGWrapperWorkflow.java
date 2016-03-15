@@ -135,6 +135,13 @@ public abstract class BaseOxoGWrapperWorkflow extends AbstractWorkflowDataModel 
 	//Could be "icgc_storage_client" or "gtdownload". Maybe add options for aws s3 cli later?
 	protected String downloadMethod = "icgc_storage_client";
 	
+	protected String sangerGNOSRepo;
+	protected String broadGNOSRepo;
+	protected String dkfzEmblGNOSRepo;
+	protected String museGNOSRepo;
+	protected String normalBamGNOSRepo;
+	protected String tumourBamGNOSRepo;
+	
 	/**
 	 * Get a property name that is mandatory
 	 * @param propName The name of the property
@@ -287,6 +294,27 @@ public abstract class BaseOxoGWrapperWorkflow extends AbstractWorkflowDataModel 
 			if (hasPropertyAndNotNull("downloadMethod")) {
 				this.downloadMethod = getProperty("downloadMethod");
 			}
+			
+			//These are only needed if the user is using gtdownload.
+			if (hasPropertyAndNotNull(JSONUtils.SANGER_DOWNLOAD_URL)) {
+				this.sangerGNOSRepo = getProperty(JSONUtils.SANGER_DOWNLOAD_URL);
+			}
+			if (hasPropertyAndNotNull(JSONUtils.BROAD_DOWNLOAD_URL)) {
+				this.broadGNOSRepo = getProperty(JSONUtils.BROAD_DOWNLOAD_URL);
+			}
+			if (hasPropertyAndNotNull(JSONUtils.DKFZ_EMBL_DOWNLOAD_URL)) {
+				this.dkfzEmblGNOSRepo = getProperty(JSONUtils.DKFZ_EMBL_DOWNLOAD_URL);
+			}
+			if (hasPropertyAndNotNull(JSONUtils.MUSE_DOWNLOAD_URL)) {
+				this.museGNOSRepo = getProperty(JSONUtils.MUSE_DOWNLOAD_URL);
+			}
+			if (hasPropertyAndNotNull(JSONUtils.NORMAL_BAM_DOWNLOAD_URL)) {
+				this.normalBamGNOSRepo = getProperty(JSONUtils.NORMAL_BAM_DOWNLOAD_URL);
+			}
+			if (hasPropertyAndNotNull(JSONUtils.TUMOUR_BAM_DOWNLOAD_URL)) {
+				this.tumourBamGNOSRepo = getProperty(JSONUtils.TUMOUR_BAM_DOWNLOAD_URL);
+			}
+
 			
 		} catch (Exception e) {
 			throw new RuntimeException("Exception encountered during workflow init: "+e.getMessage(),e);
