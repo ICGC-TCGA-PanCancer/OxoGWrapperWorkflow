@@ -16,7 +16,7 @@ public class GNOSDownloader implements WorkflowFileDownloader {
 				+ " -v /datastore/credentials/gnos.key:/gnos.key "
 			    + " -v "+downloadDir+"/:/downloads/:rw"
 	    		+ " pancancer/pancancer_upload_download:1.7 /bin/bash -c \""
-	    			+ "gtdownload -k 30 --peer-timeout 120 -p /downloads/ -l /downloads/gtdownload.log -c /gnos.key "+objectIDs[0]+" \" ) ";
+	    			+ "sudo gtdownload -k 30 --peer-timeout 120 -p /downloads/ -l /downloads/gtdownload.log -c /gnos.key "+objectIDs[0]+" \" ) ";
 
 		return getFilesCommand;
 	}

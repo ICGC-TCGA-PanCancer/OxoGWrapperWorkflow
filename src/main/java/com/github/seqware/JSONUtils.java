@@ -126,7 +126,7 @@ public abstract class JSONUtils {
 		List<String> gnosIDInfo = (List<String>) parsedJSON.read(path, List.class);
 		String gnosID = ((List<String>)gnosIDInfo).get(0);
 		
-		repoURL += "cghub/data/analysis/download/96e252b8-911a-44c7-abc6-b924845e0be6"+gnosID;
+		repoURL += "cghub/data/analysis/download/"+gnosID;
 		
 		return repoURL;
 	}
