@@ -105,17 +105,26 @@ public abstract class JSONUtils {
 		String repoURL = "";
 
 		DocumentContext parsedJSON = JsonPath.using(jsonPathConfig).parse(jsonFile);
-		String path = "$.."+workflowNameInJson+".gnos_repo";
-		if (workflowNameInJson.equals("tumor"))
+		String path = "$.."+workflowNameInJson+".gnos_repo[0]";
+		if (workflowNameInJson.equals("tumors"))
 		{
-			path = "$.."+workflowNameInJson+".*.gnos_repo";
+			path = "$.."+workflowNameInJson+".*.gnos_repo[0]";
 		}
 		List<String> repoInfo = (List<String>) parsedJSON.read(path, List.class);
 		//There should only be one element anyway. Multitumour will have to be handled differently.
-		repoURL = repoInfo.get(0);
-
-		path = "$.."+workflowNameInJson+".gnos";
-		String gnosID = (String) parsedJSON.read(path, String.class);
+		repoURL = ((List<String>)repoInfo).get(0);
+		//repoURL = repoInfo;
+		
+		if (workflowNameInJson.equals("tumors"))
+		{
+			path = "$.."+workflowNameInJson+".*.gnos_id";
+		}
+		else
+		{
+			path = "$.."+workflowNameInJson+".gnos_id";
+		}
+		List<String> gnosIDInfo = (List<String>) parsedJSON.read(path, List.class);
+		String gnosID = ((List<String>)gnosIDInfo).get(0);
 		
 		repoURL += "cghub/data/analysis/download/96e252b8-911a-44c7-abc6-b924845e0be6"+gnosID;
 		
