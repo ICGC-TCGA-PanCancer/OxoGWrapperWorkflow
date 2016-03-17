@@ -1,17 +1,14 @@
 package com.github.seqware;
 
-import java.io.IOException;
-import java.net.URI;
-import java.net.URISyntaxException;
-import java.nio.file.Files;
-import java.nio.file.Path;
-import java.nio.file.Paths;
-import java.nio.file.StandardOpenOption;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
+import java.util.function.BiFunction;
 import java.util.function.Function;
 import java.util.function.Predicate;
 import java.util.stream.Collectors;
+
+import com.github.seqware.DownloaderFactory.DownloadMethod;
 
 import net.sourceforge.seqware.pipeline.workflowV2.model.Job;
 
@@ -23,22 +20,6 @@ public class OxoGWrapperWorkflow extends BaseOxoGWrapperWorkflow {
 			+ " the rCRS mitochondrial sequence (AC:NC_012920), Human herpesvirus 4 type 1 (AC:NC_007605) and the concatenated decoy sequences (hs37d5cs.fa.gz)."
 			+ " Variant calls may not be present for all contigs in this reference.";
 
-	/**
-	 * Generates a rules file that is used for the variant program that produces minibams.
-	 * NOTE: currently injecting the rules inline in the call to variantbam so the rules file won't actually be used...
-	 * @throws URISyntaxException
-	 * @throws IOException
-	 */
-	private void generateRulesFile() throws URISyntaxException, IOException
-	{
-		Path pathToPaddingRules = Paths.get(new URI("file:////datastore/padding_rules.txt"));
-		String paddingFileString = "pad["+this.svPadding+"];mlregion@/sv.vcf\n"+
-									"pad["+this.snvPadding+"];mlregion@/snv.vcf\n"+
-									"pad["+this.indelPadding+"];mlregion@/indel.vcf\n";
-		
-		Files.write(pathToPaddingRules, paddingFileString.getBytes(), StandardOpenOption.CREATE);
-	}
-	
 	/**
 	 * Copy the credentials files from ~/.gnos to /datastore/credentials
 	 * @param parentJob
@@ -72,31 +53,22 @@ public class OxoGWrapperWorkflow extends BaseOxoGWrapperWorkflow {
 	 * @param bamType - is it normal or tumour? This used to determine the name of the directory that the file ends up in.
 	 * @return
 	 */
-	private Job getBAM(Job parentJob, BAMType bamType, String ... objectIDs) {
+	private Job getBAM(Job parentJob, DownloadMethod downloadMethod, BAMType bamType, String ... objectIDs) {
 		Job getBamFileJob = this.getWorkflow().createBashJob("get "+bamType.toString()+" BAM file");
 		getBamFileJob.addParent(parentJob);
 		
-		String downloadObjects = "";
-		
-		for (String objectID : objectIDs)
-		{
-			downloadObjects += "/icgc/icgc-storage-client/bin/icgc-storage-client url --object-id "+objectID+" ;\n" 
-			+ " /icgc/icgc-storage-client/bin/icgc-storage-client download --object-id "
-				+ objectID +" --output-layout bundle --output-dir /downloads/ ;\n";
-		}
-		String storageClientDockerCmdNormal =" docker run --rm --name get_bam_"+bamType+" "
-				+ " -e STORAGE_PROFILE="+this.storageSource+" " 
-			    + " -v /datastore/bam/"+bamType.toString()+"/logs/:/icgc/icgc-storage-client/logs/:rw "
-				+ " -v /datastore/credentials/collab.token:/icgc/icgc-storage-client/conf/application.properties:ro "
-			    + " -v /datastore/bam/"+bamType.toString()+"/:/downloads/:rw"
-	    		+ " icgc/icgc-storage-client /bin/bash -c "
-	    		+ " \" "+downloadObjects+" \"";
+		String outDir = "/datastore/bam/";
+		WorkflowFileDownloader downloader = DownloaderFactory.createDownloader(downloadMethod);
 		
 		String moveToFailed = GitUtils.gitMoveCommand("downloading-jobs","failed-jobs",this.JSONlocation + "/" + this.JSONrepoName + "/" + this.JSONfolderName,this.JSONfileName, this.gitMoveTestMode, this.getWorkflowBaseDir() + "/scripts/");
-		
-		getBamFileJob.setCommand("( "+storageClientDockerCmdNormal+" ) || "+moveToFailed);
+		String getBamCommandString = downloader.getDownloadCommandString(outDir, bamType.toString(), objectIDs);
+		getBamFileJob.setCommand("( "+getBamCommandString+" ) || "+moveToFailed);
 
 		return getBamFileJob;
+	}
+
+	private Job getBAM(Job parentJob, DownloadMethod downloadMethod, BAMType bamType, List<String> objectIDs) {
+		return getBAM(parentJob, downloadMethod, bamType, (String[]) objectIDs.toArray());
 	}
 
 	/**
@@ -113,6 +85,7 @@ public class OxoGWrapperWorkflow extends BaseOxoGWrapperWorkflow {
 	enum Pipeline {
 		sanger, dkfz_embl, broad, muse
 	}
+	
 	/**
 	 This will download VCFs for a workflow, based on an object ID(s).
 	 It will perform these operations:
@@ -126,32 +99,25 @@ public class OxoGWrapperWorkflow extends BaseOxoGWrapperWorkflow {
 	 * @param objectID
 	 * @return
 	 */
-	private Job getVCF(Job parentJob, Pipeline workflowName, String ... objectIDs) {
+	private Job getVCF(Job parentJob, DownloadMethod downloadMethod, Pipeline workflowName, String ... objectIDs) {
 		Job getVCFJob = this.getWorkflow().createBashJob("get VCF for workflow " + workflowName);
 		String outDir = "/datastore/vcf/"+workflowName;
-		String downloadObjects = "";
-		for (String objectID : objectIDs)
-		{
-			downloadObjects += " /icgc/icgc-storage-client/bin/icgc-storage-client url --object-id "+objectID+" ;\n" 
-				+ " /icgc/icgc-storage-client/bin/icgc-storage-client download --object-id " + objectID+" --output-layout bundle --output-dir /downloads/ ;\n "; 
-		}
+		String moveToFailed = GitUtils.gitMoveCommand("downloading-jobs","failed-jobs",this.JSONlocation + "/" + this.JSONrepoName + "/" + this.JSONfolderName,this.JSONfileName, this.gitMoveTestMode, this.getWorkflowBaseDir() + "/scripts/");
+		WorkflowFileDownloader downloader = DownloaderFactory.createDownloader(downloadMethod);
 		
-		String getVCFCommand = "(( docker run --rm --name get_vcf_"+workflowName+" "
-				+ " -e STORAGE_PROFILE="+this.storageSource+" " 
-			    + " -v "+outDir+"/logs/:/icgc/icgc-storage-client/logs/:rw "
-				+ " -v /datastore/credentials/collab.token:/icgc/icgc-storage-client/conf/application.properties:ro "
-			    + " -v "+outDir+"/:/downloads/:rw"
-	    		+ " icgc/icgc-storage-client /bin/bash -c \" "+downloadObjects+" \" ) && sudo chmod a+rw -R /datastore/vcf )";
-		
-		String moveToFailed = GitUtils.gitMoveCommand("downloading-jobs","failed-jobs",this.JSONlocation + "/" + this.JSONrepoName + "/" + this.JSONfolderName,this.JSONfileName, this.gitMoveTestMode, this.getWorkflowBaseDir() + "/scripts/");				 
+		String getVCFCommand = downloader.getDownloadCommandString(outDir, workflowName.toString(), objectIDs);
 		getVCFCommand += (" || " + moveToFailed);
-		
 		getVCFJob.setCommand(getVCFCommand);
+		
 		getVCFJob.addParent(parentJob);
 
 		return getVCFJob;
 	}
 
+	private Job getVCF(Job parentJob, DownloadMethod downloadMethod, Pipeline workflowName, List<String> objectIDs) {
+		return this.getVCF(parentJob, downloadMethod, workflowName, (String[]) objectIDs.toArray());
+	}
+	
 	/**
 	 * Perform filtering on all VCF files for a given workflow.
 	 * Filtering involves removing lines that are not "PASS" or "."
@@ -186,11 +152,11 @@ public class OxoGWrapperWorkflow extends BaseOxoGWrapperWorkflow {
 	 * Yes, install tabix as a part of the workflow. It's not in the seqware_whitestar or seqware_whitestar_pancancer container, so
 	 * install it here.
 	 */
-	private Job installTabix(Job parent)
+	private Job installTools(Job parent)
 	{
-		Job installTabixJob = this.getWorkflow().createBashJob("install tabix and bgzip");
+		Job installTabixJob = this.getWorkflow().createBashJob("install tools: tabix and bgzip");
 		
-		installTabixJob.setCommand("sudo apt-get install tabix");
+		installTabixJob.setCommand("sudo apt-get install tabix ");
 		installTabixJob.addParent(parent);
 		return installTabixJob;
 	}
@@ -477,12 +443,16 @@ public class OxoGWrapperWorkflow extends BaseOxoGWrapperWorkflow {
 			this.filesForUpload.add(this.tumourMinibamPath+".bai");
 		}
 		
-		
 		if (!this.skipVariantBam)
 		{
 			String command = DockerCommandCreator.createVariantBamCommand(bamType, minibamName+".bam", bamPath, this.snvVCF, this.svVCF, this.indelVCF, this.svPadding, this.snvPadding, this.indelPadding);
 			
-			command = "(( [ -d /datastore/variantbam_results/ ] || mkdir /datastore/variantbam_results ) && sudo chmod a+rw -R /datastore/variantbam_results/ && " + command + " ) ";//\\\n && ( cp /datastore/variantbam_results/"+minibamName+".bam /datastore/files_for_upload/ && cp /datastore/variantbam_results/"+minibamName+".bam.bai ) \\\n";
+			// There will be two jobs trying to run variantbam at the same time and I think sometimes, they both check for the existence of /datastore/variantbam_results AT THE EXACT SAME TIME 
+			// so they both try to create it, then one fails and has to retry. But this messes up the process of moving job files to failed-jobs because variantbak will succeed on retry BUT the 
+			// job file will still be in the failed-jobs directory because there's no easy way to move it out.
+			// Ugly workaround: if the bam type is NORMAL, sleep for a few seconds. That should let the tumour variantbam job get far enough ahead to create the directory properly.
+			String sleep = bamType == BAMType.normal ? " sleep 10 && " : "" ;
+			command = sleep + "(( [ -d /datastore/variantbam_results/ ] || mkdir /datastore/variantbam_results ) && sudo chmod a+rw -R /datastore/variantbam_results/ && " + command + " ) ";
 			
 			String moveToFailed = GitUtils.gitMoveCommand("running-jobs","failed-jobs",this.JSONlocation + "/" + this.JSONrepoName + "/" + this.JSONfolderName,this.JSONfileName, this.gitMoveTestMode, this.getWorkflowBaseDir() + "/scripts/");
 			command += (" || " + moveToFailed);
@@ -505,11 +475,6 @@ public class OxoGWrapperWorkflow extends BaseOxoGWrapperWorkflow {
 		// The tar file contains all results.
 		Job generateAnalysisFilesVCFs = this.getWorkflow().createBashJob("generate_analysis_files_for_VCF_upload");
 		String moveToFailed = GitUtils.gitMoveCommand("uploading-jobs","failed-jobs",this.JSONlocation + "/" + this.JSONrepoName + "/" + this.JSONfolderName,this.JSONfileName, this.gitMoveTestMode, this.getWorkflowBaseDir() + "/scripts/");
-		//Files to upload:
-		//OxoG-filtered VCFs
-		//minibams
-		//normalized indels
-		//annotated VCFs
 		
 		//Files need to be copied to the staging directory
 		String vcfs = "";
@@ -612,8 +577,6 @@ public class OxoGWrapperWorkflow extends BaseOxoGWrapperWorkflow {
 		generateAnalysisFilesVCFs.addParent(parentJob);
 		
 		//get the UUID that was submitted with the metadata
-		//copyGTUploadFiles.getCommand().addArgument("VCF_UUID=$(grep server_path /datastore/files_for_upload/manifest.xml  | sed 's/.*server_path=\\\"\\(.*\\)\\\" .*/\1/g')\n");
-		
 		Job generateAnalysisFilesBAMs = this.getWorkflow().createBashJob("generate_analysis_files_for_BAM_upload");
 		
 		String bams = "";
@@ -717,7 +680,6 @@ public class OxoGWrapperWorkflow extends BaseOxoGWrapperWorkflow {
 		//If a filepath contains the phrase "extracted" then it contains SNVs that were extracted from an INDEL.
 		if (vcfPath.contains("extracted"))
 		{
-			//outDir+= "snvs_from_indels/";
 			containerName += "_SNVs-from-INDELs";
 			commandName += "_SNVs-from-INDELs";
 			annotatedFileName = annotatedFileName.replace(inputType, "SNVs_from_INDELs");
@@ -821,7 +783,7 @@ public class OxoGWrapperWorkflow extends BaseOxoGWrapperWorkflow {
 	public void buildWorkflow() {
 		try {
 			this.init();
-			this.generateRulesFile();
+
 			// Pull the repo.
 			Job configJob = GitUtils.gitConfig(this.getWorkflow(), this.GITname, this.GITemail);
 			
@@ -830,7 +792,7 @@ public class OxoGWrapperWorkflow extends BaseOxoGWrapperWorkflow {
 			Job pullRepo = GitUtils.pullRepo(this.getWorkflow(), this.GITPemFile, this.JSONrepo, this.JSONrepoName, this.JSONlocation);
 			pullRepo.addParent(copy);
 			
-			Job installTabix = this.installTabix(pullRepo);
+			Job installTabix = this.installTools(pullRepo);
 			
 			// indicate job is in downloading stage.
 			String pathToScripts = this.getWorkflowBaseDir() + "/scripts";
@@ -839,19 +801,32 @@ public class OxoGWrapperWorkflow extends BaseOxoGWrapperWorkflow {
 			if (!skipDownload) {
 				//Download jobs. VCFs downloading serial. Trying to download all in parallel seems to put too great a strain on the system 
 				//since the icgc-storage-client can make full use of all cores on a multi-core system. 
-				Job downloadSangerVCFs = this.getVCF(move2download, Pipeline.sanger, this.sangerSNVVCFObjectID, this.sangerSNVIndexObjectID,
+				DownloadMethod downloadMethod = DownloadMethod.valueOf(this.downloadMethod);
+				BiFunction<List<String>, String, List<String>> selectObjectsForDownload = (objectIDs, gnosID) ->
+				{
+					switch (downloadMethod)
+					{
+						case icgcStorageClient:
+							return objectIDs;
+						case gtdownload:
+							return Arrays.asList(gnosID);
+						default:
+							return null;
+					}
+				};
+				Job downloadSangerVCFs = this.getVCF(move2download, downloadMethod, Pipeline.sanger, selectObjectsForDownload.apply( Arrays.asList(this.sangerSNVVCFObjectID, this.sangerSNVIndexObjectID,
 												this.sangerSVVCFObjectID, this.sangerSVIndexObjectID,
-												this.sangerIndelVCFObjectID, this.sangerIndelIndexObjectID);
-				Job downloadDkfzEmblVCFs = this.getVCF(downloadSangerVCFs, Pipeline.dkfz_embl, this.dkfzemblSNVVCFObjectID, this.dkfzemblSNVIndexObjectID,
+												this.sangerIndelVCFObjectID, this.sangerIndelIndexObjectID), this.sangerGNOSRepo) );
+				Job downloadDkfzEmblVCFs = this.getVCF(downloadSangerVCFs, downloadMethod, Pipeline.dkfz_embl, selectObjectsForDownload.apply( Arrays.asList(this.dkfzemblSNVVCFObjectID, this.dkfzemblSNVIndexObjectID,
 											this.dkfzemblSVVCFObjectID, this.dkfzemblSVIndexObjectID,
-											this.dkfzemblIndelVCFObjectID, this.dkfzemblIndelIndexObjectID);
-				Job downloadBroadVCFs = this.getVCF(downloadDkfzEmblVCFs, Pipeline.broad, this.broadSNVVCFObjectID, this.broadSNVIndexObjectID,
+											this.dkfzemblIndelVCFObjectID, this.dkfzemblIndelIndexObjectID),this.dkfzEmblGNOSRepo) );
+				Job downloadBroadVCFs = this.getVCF(downloadDkfzEmblVCFs, downloadMethod, Pipeline.broad, selectObjectsForDownload.apply( Arrays.asList(this.broadSNVVCFObjectID, this.broadSNVIndexObjectID,
 											this.broadSVVCFObjectID, this.broadSVIndexObjectID,
-											this.broadIndelVCFObjectID, this.broadIndelIndexObjectID);
-				Job downloadMuseVCFs = this.getVCF(downloadBroadVCFs, Pipeline.muse, this.museSNVVCFObjectID, this.museSNVIndexObjectID);
+											this.broadIndelVCFObjectID, this.broadIndelIndexObjectID), this.broadGNOSRepo));
+				Job downloadMuseVCFs = this.getVCF(downloadBroadVCFs, downloadMethod, Pipeline.muse, selectObjectsForDownload.apply( Arrays.asList(this.museSNVVCFObjectID, this.museSNVIndexObjectID),this.museGNOSRepo));
 				// Once VCFs are downloaded, download the BAMs.
-				Job downloadNormalBam = this.getBAM(downloadMuseVCFs, BAMType.normal, this.bamNormalIndexObjectID,this.bamNormalObjectID);
-				Job downloadTumourBam = this.getBAM(downloadNormalBam, BAMType.tumour, this.bamTumourIndexObjectID,this.bamTumourObjectID);
+				Job downloadNormalBam = this.getBAM(downloadMuseVCFs, downloadMethod, BAMType.normal, selectObjectsForDownload.apply( Arrays.asList( this.bamNormalIndexObjectID,this.bamNormalObjectID),this.normalBamGNOSRepo));
+				Job downloadTumourBam = this.getBAM(downloadNormalBam, downloadMethod, BAMType.tumour,selectObjectsForDownload.apply( Arrays.asList(  this.bamTumourIndexObjectID,this.bamTumourObjectID), this.tumourBamGNOSRepo));
 				
 				// After we've downloaded all VCFs on a per-workflow basis, we also need to do a vcfcombine 
 				// on the *types* of VCFs, for the minibam generator. The per-workflow combined VCFs will
@@ -879,13 +854,13 @@ public class OxoGWrapperWorkflow extends BaseOxoGWrapperWorkflow {
 			this.sangerIndelName = addPassFilteredSuffix.apply(this.sangerIndelName);
 			this.sangerSVName = addPassFilteredSuffix.apply(this.sangerSVName);
 
-			this.broadSNVName = addPassFilteredSuffix.apply(this.broadSNVName);//.replace(".vcf.gz", ".pass-filtered.vcf.gz");
-			this.broadIndelName = addPassFilteredSuffix.apply(this.broadIndelName);//.replace(".vcf.gz", ".pass-filtered.vcf.gz");
-			this.broadSVName = addPassFilteredSuffix.apply(this.broadSVName);//.replace(".vcf.gz", ".pass-filtered.vcf.gz");
+			this.broadSNVName = addPassFilteredSuffix.apply(this.broadSNVName);
+			this.broadIndelName = addPassFilteredSuffix.apply(this.broadIndelName);
+			this.broadSVName = addPassFilteredSuffix.apply(this.broadSVName);
 			
-			this.dkfzEmblSNVName = addPassFilteredSuffix.apply(this.dkfzEmblSNVName);//.replace(".vcf.gz", ".pass-filtered.vcf.gz");
-			this.dkfzEmblIndelName = addPassFilteredSuffix.apply(this.dkfzEmblIndelName);//.replace(".vcf.gz", ".pass-filtered.vcf.gz");
-			this.dkfzEmblSVName = addPassFilteredSuffix.apply(this.dkfzEmblSVName);//.replace(".vcf.gz", ".pass-filtered.vcf.gz");
+			this.dkfzEmblSNVName = addPassFilteredSuffix.apply(this.dkfzEmblSNVName);
+			this.dkfzEmblIndelName = addPassFilteredSuffix.apply(this.dkfzEmblIndelName);
+			this.dkfzEmblSVName = addPassFilteredSuffix.apply(this.dkfzEmblSVName);
 			
 			// OxoG will run after move2running. Move2running will run after all the jobs that perform input file downloads and file preprocessing have finished.  
 			Job sangerPreprocessVCF = this.preProcessIndelVCF(sangerPassFilter, Pipeline.sanger,"/"+ this.sangerGnosID +"/"+ this.sangerIndelName);
@@ -895,18 +870,16 @@ public class OxoGWrapperWorkflow extends BaseOxoGWrapperWorkflow {
 			Job combineVCFsByType = this.combineVCFsByType( sangerPreprocessVCF, dkfzEmblPreprocessVCF, broadPreprocessVCF);
 			
 			Job oxoG = this.doOxoG(combineVCFsByType);
-			//Job oxoGSnvsFromIndels = this.doOxoGSnvsFromIndels(oxoG);
 			// variantbam jobs will run parallel to each other. variant seems to only use a *single* core, but runs long ( 60 - 120 min on OpenStack);
 			Job normalVariantBam = this.doVariantBam(combineVCFsByType,BAMType.normal,"/datastore/bam/normal/"+this.normalBamGnosID+"/"+this.normalBAMFileName);
 			Job tumourVariantBam = this.doVariantBam(combineVCFsByType,BAMType.tumour,"/datastore/bam/tumour/"+this.tumourBamGnosID+"/"+this.tumourBAMFileName);
 
-			List<Job> annotationJobs = this.doAnnotations(/*oxoGSnvsFromIndels,*/ tumourVariantBam, normalVariantBam, oxoG);
+			List<Job> annotationJobs = this.doAnnotations(tumourVariantBam, normalVariantBam, oxoG);
 			
 			//Now do the Upload
 			if (!skipUpload)
 			{
 				// indicate job is in uploading stage.
-				//Job move2uploading = GitUtils.gitMove("running-jobs", "uploading-jobs", this.getWorkflow(), this.JSONlocation, this.JSONrepoName, this.JSONfolderName, this.GITname, this.GITemail, this.gitMoveTestMode, this.JSONfileName, pathToScripts , indelAnnotatorJob, snvAnnotatorJob, snvFromIndelAnnotatorJob, oxoG, oxoGSnvsFromIndels, normalVariantBam, tumourVariantBam);
 				Job move2uploading = this.gitMove( "running-jobs", "uploading-jobs", annotationJobs.toArray(new Job[annotationJobs.size()]));
 				Job uploadResults = doUpload(move2uploading);
 				// indicate job is complete.
@@ -914,7 +887,6 @@ public class OxoGWrapperWorkflow extends BaseOxoGWrapperWorkflow {
 			}
 			else
 			{
-				//GitUtils.gitMove( "running-jobs", "completed-jobs", this.getWorkflow(), this.JSONlocation, this.JSONrepoName, this.JSONfolderName, this.GITname, this.GITemail, this.gitMoveTestMode, this.JSONfileName ,pathToScripts,  indelAnnotatorJob, snvAnnotatorJob, snvFromIndelAnnotatorJob, oxoG, oxoGSnvsFromIndels, normalVariantBam, tumourVariantBam);
 				this.gitMove( "running-jobs", "completed-jobs",annotationJobs.toArray(new Job[annotationJobs.size()]));
 			}
 			System.out.println(this.filesForUpload);
@@ -924,4 +896,6 @@ public class OxoGWrapperWorkflow extends BaseOxoGWrapperWorkflow {
 			throw new RuntimeException ("Exception caught: "+e.getMessage(), e);
 		}
 	}
+
+	
 }

@@ -89,7 +89,48 @@ public abstract class JSONUtils {
 	static final String DKFZEMBL_VCF_INFO = "dkfzemblVcfInfo";
 	static final String BROAD_VCF_INFO = "broadVcfInfo";
 	static final String MUSE_VCF_INFO = "museVcfInfo";
+	
+	// The URLS must end up looking like this:
+	// https://gtrepo-ebi.annailabs.com/cghub/data/analysis/download/96e252b8-911a-44c7-abc6-b924845e0be6
+	// They are of the form ${available_repos[0]}/cghub/data/analysis/download/${GNOS_id}
+	static final String SANGER_DOWNLOAD_URL = "sanger_download_url";
+	static final String BROAD_DOWNLOAD_URL = "broad_download_url";
+	static final String DKFZ_EMBL_DOWNLOAD_URL = "dkfz_embl_download_url";
+	static final String MUSE_DOWNLOAD_URL = "muse_download_url";
+	static final String NORMAL_BAM_DOWNLOAD_URL = "normal_bam_download_url";
+	static final String TUMOUR_BAM_DOWNLOAD_URL = "tumour_bam_download_url";
 
+	private static String extractRepoInfo(File jsonFile, Configuration jsonPathConfig, String workflowNameInJson) throws IOException
+	{
+		String repoURL = "";
+
+		DocumentContext parsedJSON = JsonPath.using(jsonPathConfig).parse(jsonFile);
+		String path = "$.."+workflowNameInJson+".gnos_repo[0]";
+		if (workflowNameInJson.equals("tumors"))
+		{
+			path = "$.."+workflowNameInJson+".*.gnos_repo[0]";
+		}
+		List<String> repoInfo = (List<String>) parsedJSON.read(path, List.class);
+		//There should only be one element anyway. Multitumour will have to be handled differently.
+		repoURL = ((List<String>)repoInfo).get(0);
+		//repoURL = repoInfo;
+		
+		if (workflowNameInJson.equals("tumors"))
+		{
+			path = "$.."+workflowNameInJson+".*.gnos_id";
+		}
+		else
+		{
+			path = "$.."+workflowNameInJson+".gnos_id";
+		}
+		List<String> gnosIDInfo = (List<String>) parsedJSON.read(path, List.class);
+		String gnosID = ((List<String>)gnosIDInfo).get(0);
+		
+		repoURL += "cghub/data/analysis/download/"+gnosID;
+		
+		return repoURL;
+	}
+	
 	@SuppressWarnings("unchecked")
 	private static Map<String, Object> extractFileInfo(File jsonFile, Configuration jsonPathConfig,
 			String workflowNameInJson) throws IOException {
@@ -226,6 +267,22 @@ public abstract class JSONUtils {
 			// Get project code
 			String projectCode = (String) (parsedJSON.read("$.project_code", String.class));
 			results.put(PROJECT_CODE, projectCode);
+			
+			// get the repo info
+			String sangerRepo = extractRepoInfo(jsonFile, jsonPathConfig, "sanger");
+			String broadRepo = extractRepoInfo(jsonFile, jsonPathConfig, "broad");
+			String dkfzEmblRepo = extractRepoInfo(jsonFile, jsonPathConfig, "dkfz_embl");
+			String museRepo = extractRepoInfo(jsonFile, jsonPathConfig, "muse");
+			String normalBamRepo = extractRepoInfo(jsonFile, jsonPathConfig, "normal");
+			String tumourBamRepo = extractRepoInfo(jsonFile, jsonPathConfig, "tumors");
+			
+			results.put(SANGER_DOWNLOAD_URL, sangerRepo);
+			results.put(BROAD_DOWNLOAD_URL, broadRepo);
+			results.put(DKFZ_EMBL_DOWNLOAD_URL, dkfzEmblRepo);
+			results.put(MUSE_DOWNLOAD_URL, museRepo);
+			results.put(NORMAL_BAM_DOWNLOAD_URL, normalBamRepo);
+			results.put(TUMOUR_BAM_DOWNLOAD_URL, tumourBamRepo);
+			
 
 		} catch (IOException e) {
 			// TODO Auto-generated catch block

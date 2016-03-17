@@ -58,7 +58,6 @@ else:
                   ' git push'
     
 for i in range(60): # try up to 60 times. If there are MANY clients trying to check-in at once this might be necessary. 
-    exit_code = 0
     sleepAmt = random.uniform(0,(2*i)+5)
     time.sleep(sleepAmt)
     print ("git mv attempt #"+str(i)+ ", after sleeping for "+str(sleepAmt)+" seconds.")
@@ -67,18 +66,17 @@ for i in range(60): # try up to 60 times. If there are MANY clients trying to ch
     process = subprocess.Popen(command, shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE )
     out, err = process.communicate()
 
+    print("Command result:\n"+out) 
+
     if process.returncode == 0 :
         if dest_dir == 'failed-jobs':
             print ("moved to failed, exiting script with error code 1 to interrupt workflow!")
-            exit_code = 1
+            sys.exit(1)
         else:
-            # succeeded
-            exit_code = 0
-        sys.exit(exit_code)
+            sys.exit(0)
     else:
         print('Error while moving the file: '+file_name+'.\nError message: {}\n\nRetrying...'.format(err))
         if test_mode == 'true' :
             print("In TEST mode, so file move will *not* be retried. Exiting without error, so workflow can continue.")
-            exit_code = 0
-            sys.exit(exit_code)
+            sys.exit(0)
     
