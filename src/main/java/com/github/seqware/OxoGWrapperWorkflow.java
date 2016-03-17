@@ -806,7 +806,7 @@ public class OxoGWrapperWorkflow extends BaseOxoGWrapperWorkflow {
 				{
 					switch (downloadMethod)
 					{
-						case icgc_storage_client:
+						case icgcStorageClient:
 							return objectIDs;
 						case gtdownload:
 							return Arrays.asList(gnosID);

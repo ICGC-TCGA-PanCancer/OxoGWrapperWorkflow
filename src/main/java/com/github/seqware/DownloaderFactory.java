@@ -9,7 +9,7 @@ public abstract class DownloaderFactory {
 
 	enum DownloadMethod
 	{
-		gtdownload, icgc_storage_client, s3;
+		gtdownload, icgcStorageClient, s3
 	}
 	
 	static public WorkflowFileDownloader createDownloader(DownloadMethod downloadMethod)
@@ -17,7 +17,7 @@ public abstract class DownloaderFactory {
 		WorkflowFileDownloader downloader = null;
 		
 		switch (downloadMethod) {
-		case icgc_storage_client:
+		case icgcStorageClient:
 			downloader = new ICGCStorageDownloader();
 			break;
 		case gtdownload:
