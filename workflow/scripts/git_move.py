@@ -66,10 +66,10 @@ for i in range(60): # try up to 60 times. If there are MANY clients trying to ch
     process = subprocess.Popen(command, shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE )
     out, err = process.communicate()
 
-    print("Command result:\n"+out) 
+    print("Return code: "+process.returncode+"\nCommand result:\n"+out) 
 
     if process.returncode == 0 :
-        if dest_dir == 'failed-jobs':
+        if 'failed-jobs' in full_path_to_dest:
             print ("moved to failed, exiting script with error code 1 to interrupt workflow!")
             sys.exit(1)
         else:
