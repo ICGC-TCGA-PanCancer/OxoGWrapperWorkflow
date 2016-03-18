@@ -1,5 +1,10 @@
 # CHANGELOG
 
+## 1.1.0
+ - Input files can now be downloaded using gtdownload. To do this, add a new property to you INI file: downloadMethod.
+This can have one of two (for now) options: "gtdownload" and "icgcStorageClient".
+ -  The timestamps of workflow state transitions will be injected in the JSON files before they are moved in github. They will look something like this: "transition_to_downloading-jobs_timestamp":"2016-03-18T15:00:00"
+
 ## 1.0.4
  - Fixed a bug in git_move.py
 
