@@ -2,6 +2,7 @@ package com.github.seqware;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 
 import net.sourceforge.seqware.pipeline.workflowV2.AbstractWorkflowDataModel;
 
@@ -142,6 +143,21 @@ public abstract class BaseOxoGWrapperWorkflow extends AbstractWorkflowDataModel 
 	protected String normalBamGNOSRepo;
 	protected String tumourBamGNOSRepo;
 	
+	protected String tumourBamIndexFileName;
+	protected String normalBamIndexFileName;
+	protected String sangerSNVIndexFileName;
+	protected String sangerSVIndexFileName;
+	protected String sangerINDELIndexFileName;
+	protected String broadSNVIndexFileName;
+	protected String broadSVIndexFileName;
+	protected String broadINDELIndexFileName;
+	protected String dkfzEmblSNVIndexFileName;
+	protected String dkfzEmblSVIndexFileName;
+	protected String dkfzEmblINDELIndexFileName;
+	protected String museSNVIndexFileName;
+	
+	protected Map<String,String> objectToFilenames;
+	
 	/**
 	 * Get a property name that is mandatory
 	 * @param propName The name of the property
@@ -235,6 +251,48 @@ public abstract class BaseOxoGWrapperWorkflow extends AbstractWorkflowDataModel 
 			
 			this.normalBamGnosID= this.getMandatoryProperty(JSONUtils.BAM_NORMAL_GNOS_ID);
 			this.tumourBamGnosID= this.getMandatoryProperty(JSONUtils.BAM_TUMOUR_GNOS_ID);
+
+			this.normalBamIndexFileName = this.getMandatoryProperty(JSONUtils.NORMAL_BAM_INDEX_FILE_NAME);
+			this.tumourBamIndexFileName = this.getMandatoryProperty(JSONUtils.TUMOUR_BAM_INDEX_FILE_NAME);
+			this.sangerSNVIndexFileName = this.getMandatoryProperty(JSONUtils.SANGER_SNV_INDEX_FILE_NAME);
+			this.sangerSVIndexFileName = this.getMandatoryProperty(JSONUtils.SANGER_SV_INDEX_FILE_NAME);
+			this.sangerINDELIndexFileName = this.getMandatoryProperty(JSONUtils.SANGER_INDEL_INDEX_FILE_NAME);
+			this.broadSNVIndexFileName = this.getMandatoryProperty(JSONUtils.BROAD_SNV_INDEX_FILE_NAME);
+			this.broadSVIndexFileName = this.getMandatoryProperty(JSONUtils.BROAD_SV_INDEX_FILE_NAME);
+			this.broadINDELIndexFileName = this.getMandatoryProperty(JSONUtils.BROAD_INDEL_INDEX_FILE_NAME);
+			this.dkfzEmblSNVIndexFileName = this.getMandatoryProperty(JSONUtils.DKFZ_EMBL_SNV_INDEX_FILE_NAME);
+			this.dkfzEmblSVIndexFileName = this.getMandatoryProperty(JSONUtils.DKFZ_EMBL_SV_INDEX_FILE_NAME);
+			this.dkfzEmblINDELIndexFileName = this.getMandatoryProperty(JSONUtils.DKFZ_EMBL_INDEL_INDEX_FILE_NAME);
+			this.museSNVIndexFileName = this.getMandatoryProperty(JSONUtils.MUSE_SNV_INDEX_FILE_NAME);
+			
+			this.objectToFilenames.put(this.bamNormalObjectID, this.normalBAMFileName);
+			this.objectToFilenames.put(this.bamTumourObjectID, this.tumourBAMFileName);
+			this.objectToFilenames.put(this.bamNormalIndexObjectID, this.normalBamIndexFileName);
+			this.objectToFilenames.put(this.bamTumourIndexObjectID, this.tumourBamIndexFileName);
+
+			this.objectToFilenames.put(this.sangerSNVVCFObjectID, this.sangerSNVName);
+			this.objectToFilenames.put(this.sangerSVVCFObjectID, this.sangerSVName);
+			this.objectToFilenames.put(this.sangerIndelVCFObjectID, this.sangerIndelName);
+			this.objectToFilenames.put(this.sangerSNVIndexObjectID, this.sangerSNVIndexFileName);
+			this.objectToFilenames.put(this.sangerSVIndexObjectID, this.sangerSVIndexFileName);
+			this.objectToFilenames.put(this.sangerIndelIndexObjectID, this.sangerINDELIndexFileName);
+
+			this.objectToFilenames.put(this.broadSNVVCFObjectID, this.broadSNVName);
+			this.objectToFilenames.put(this.broadSVVCFObjectID, this.broadSVName);
+			this.objectToFilenames.put(this.broadIndelVCFObjectID, this.broadIndelName);
+			this.objectToFilenames.put(this.broadSNVIndexObjectID, this.broadSNVIndexFileName);
+			this.objectToFilenames.put(this.broadSVIndexObjectID, this.broadSVIndexFileName);
+			this.objectToFilenames.put(this.broadIndelIndexObjectID, this.broadINDELIndexFileName);
+			
+			this.objectToFilenames.put(this.dkfzemblSNVVCFObjectID, this.dkfzEmblSNVName);
+			this.objectToFilenames.put(this.dkfzemblSVVCFObjectID, this.dkfzEmblSVName);
+			this.objectToFilenames.put(this.dkfzemblIndelVCFObjectID, this.dkfzEmblIndelName);
+			this.objectToFilenames.put(this.dkfzemblSNVIndexObjectID, this.dkfzEmblSNVIndexFileName);
+			this.objectToFilenames.put(this.dkfzemblSVIndexObjectID, this.dkfzEmblSVIndexFileName);
+			this.objectToFilenames.put(this.dkfzemblIndelIndexObjectID, this.dkfzEmblINDELIndexFileName);
+			
+			this.objectToFilenames.put(this.museSNVVCFObjectID, this.museSNVName);
+			this.objectToFilenames.put(this.museSNVIndexObjectID, this.museSNVIndexFileName);
 			
 			this.uploadKey= this.getMandatoryProperty("uploadKey");
 			this.gnosKey= this.getMandatoryProperty("gnosKey");
