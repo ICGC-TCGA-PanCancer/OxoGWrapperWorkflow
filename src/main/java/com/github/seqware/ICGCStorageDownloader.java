@@ -16,7 +16,7 @@ public class ICGCStorageDownloader implements WorkflowFileDownloader {
 	
 	/**
 	 * @param downloadDir - the directory to download into.
-	 * @param workflowName - will be appended to downloadDir, and also used in the running docker container name.
+	 * @param workflowName - used in the running docker container name.
 	 * @param objectIDs - a list of all object IDs to download. a series of icgc-storage-client commands will be executed, one for each object ID.
 	 * These commands will all be executed in the SAME container. 
 	 */
@@ -30,7 +30,7 @@ public class ICGCStorageDownloader implements WorkflowFileDownloader {
 				+ " /icgc/icgc-storage-client/bin/icgc-storage-client download --object-id " + objectID+" --output-layout bundle --output-dir /downloads/ ;\n "; 
 		}
 		
-		String getFilesCommand = "(( docker run --rm --name get_vcf_"+workflowName+" "
+		String getFilesCommand = "(( docker run --rm --name get_"+workflowName+" "
 				+ " -e STORAGE_PROFILE="+this.storageSource+" " 
 			    + " -v "+downloadDir+"/logs/:/icgc/icgc-storage-client/logs/:rw "
 				+ " -v /datastore/credentials/collab.token:/icgc/icgc-storage-client/conf/application.properties:ro "

@@ -57,7 +57,7 @@ public class OxoGWrapperWorkflow extends BaseOxoGWrapperWorkflow {
 		Job getBamFileJob = this.getWorkflow().createBashJob("get "+bamType.toString()+" BAM file");
 		getBamFileJob.addParent(parentJob);
 		
-		String outDir = "/datastore/bam/";
+		String outDir = "/datastore/bam/"+bamType.toString()+"/";
 		WorkflowFileDownloader downloader = DownloaderFactory.createDownloader(downloadMethod,this.storageSource);
 		
 		String moveToFailed = GitUtils.gitMoveCommand("downloading-jobs","failed-jobs",this.JSONlocation + "/" + this.JSONrepoName + "/" + this.JSONfolderName,this.JSONfileName, this.gitMoveTestMode, this.getWorkflowBaseDir() + "/scripts/");
