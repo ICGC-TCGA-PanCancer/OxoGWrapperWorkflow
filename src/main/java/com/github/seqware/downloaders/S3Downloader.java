@@ -12,7 +12,7 @@ public class S3Downloader implements WorkflowFileDownloader {
 			String[] parts = s.split(":");
 			String objectID = parts[0];
 			String fileName = parts[1];
-			getFilesCommand += " aws s3 cp "+urlPrefix+objectID + " " + fileName + " ; \n";
+			getFilesCommand += " aws s3 cp "+urlPrefix+objectID + " " + downloadDir+"/"+ fileName + " ; \n";
 		}
 		getFilesCommand = " ( " + getFilesCommand + " ) ";
 		return getFilesCommand;
