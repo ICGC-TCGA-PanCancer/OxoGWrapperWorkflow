@@ -810,8 +810,11 @@ public class OxoGWrapperWorkflow extends BaseOxoGWrapperWorkflow {
 							return objectIDs;
 						case gtdownload:
 							return Arrays.asList(gnosID);
+						case s3:
+							//For S3 downloader, it will take a list of strings. The strings are of the pattern: <object_id>:<file_name> and it will download all object IDs to the paired filename.
+							return objectIDs.stream().map(s -> s+":"+this.objectToFilenames.get(s)).collect(Collectors.toList());
 						default:
-							return null;
+							throw new RuntimeException("Unknown downloadMethod: "+downloadMethod+ ", Exiting now!");
 					}
 				};
 				Job downloadSangerVCFs = this.getVCF(move2download, downloadMethod, Pipeline.sanger, selectObjectsForDownload.apply( Arrays.asList(this.sangerSNVVCFObjectID, this.sangerSNVIndexObjectID,

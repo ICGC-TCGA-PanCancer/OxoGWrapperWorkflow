@@ -24,7 +24,9 @@ public abstract class DownloaderFactory {
 		case gtdownload:
 			downloader = new GNOSDownloader();
 			break;
-		//TODO: implement a downloader for S3
+		case s3:
+			downloader = new S3Downloader();
+			break;
 		default:
 			throw new RuntimeException("download method: "+downloadMethod+" is unknown! Aborting.");
 		}
