@@ -2,17 +2,19 @@ package com.github.seqware.downloaders;
 
 public class S3Downloader implements WorkflowFileDownloader {
 
-	private String fileName;
-
-	public S3Downloader(String fileName) {
-		this.fileName = fileName;
-	}
-	
 	@Override
 	public String getDownloadCommandString(String downloadDir, String workflowName, String... objectIDs) {
-		
-		String getFilesCommand = "( aws s3 cp s3://oicr.icgc/data/"+objectIDs[0]+"  "+fileName+")";
-		
+		//TODO: allow URL prefix to be parameterized from the INI file
+		String getFilesCommand = "";
+		String urlPrefix =  "s3://oicr.icgc/data/";
+		for (String s : objectIDs)
+		{
+			String[] parts = s.split(":");
+			String objectID = parts[0];
+			String fileName = parts[1];
+			getFilesCommand += " aws s3 cp "+urlPrefix+objectID + " " + fileName + " ; \n";
+		}
+		getFilesCommand = " ( " + getFilesCommand + " ) ";
 		return getFilesCommand;
 	}
 
