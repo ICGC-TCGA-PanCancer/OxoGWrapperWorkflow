@@ -840,27 +840,6 @@ public class OxoGWrapperWorkflow extends BaseOxoGWrapperWorkflow {
 				workflowURLs.put(BAMType.normal.toString(), this.normalBamGNOSRepoURL);
 				workflowURLs.put(BAMType.tumour.toString(), this.tumourBamGNOSRepoURL);
 				
-/*				Function<String,List<String>> selectObjectsForGTDownload = (gnosURL) ->
-				{
-					return Arrays.asList(gnosURL);
-				};
-				
-				Function<String,List<String>> selectObjectsForS3Download = (workflowName) ->
-				{
-					//For S3 downloader, it will take a list of strings. The strings are of the pattern: <object_id>:<file_name> and it will download all object IDs to the paired filename.
-					//We prepend the GNOS ID to the filename because other processes have an expectation (from icgc-storage-client and gtdownload) the files will be in a 
-					//directory named with the GNOS ID.
-					List<String> objects = workflowObjectIDs.get(workflowName);
-					List<String> s3Mappings = objects.stream().map(s -> s + ":" + this.workflowNamestoGnosIds.get(workflowName) + "/" + this.objectToFilenames.get(s) ).collect(Collectors.toList());
-					//List<String> s3Mappings = objectIDs.stream().map(s ->  s+":"+this.workflowNamestoGnosIds.get(workflowName)+"/"+this.objectToFilenames.get(s)).collect(Collectors.toList() );
-					return s3Mappings;
-				};
-				
-				Function<String, List<String>> selectObjectsForICGCStorageClientDownload = (workflowName) ->
-				{
-					return workflowObjectIDs.get(workflowName);
-				};
-*/				
 				Function<String,List<String>> chooseObjects = (s) -> 
 				{
 					switch (downloadMethod)
@@ -880,26 +859,10 @@ public class OxoGWrapperWorkflow extends BaseOxoGWrapperWorkflow {
 							// gtdownloader - look up the GNOS URL, return as list with single item. 
 							return Arrays.asList(workflowURLs.get(s));
 						default:
-							return null;
+							throw new RuntimeException("Unknown download method: "+downloadMethod);
 					}
 				};
 				
-				/*BiFunction<List<String>, String, List<String>> selectObjectsForDownload = (objectIDs, gnosID) ->
-				{
-					switch (downloadMethod)
-					{
-						case icgcStorageClient:
-							return objectIDs;
-						case gtdownload:
-							return Arrays.asList(gnosID);
-						case s3:
-							//For S3 downloader, it will take a list of strings. The strings are of the pattern: <object_id>:<file_name> and it will download all object IDs to the paired filename.
-							List<String> s3Mappings = objectIDs.stream().map(s -> s+":"+this.objectToFilenames.get(s)).collect(Collectors.toList() );
-							return s3Mappings;
-						default:
-							throw new RuntimeException("Unknown downloadMethod: "+downloadMethod+ ", Exiting now!");
-					}
-				};*/
 				Job downloadSangerVCFs = this.getVCF(move2download, downloadMethod, Pipeline.sanger, chooseObjects.apply( Pipeline.sanger.toString() ) );
 				Job downloadDkfzEmblVCFs = this.getVCF(downloadSangerVCFs, downloadMethod, Pipeline.dkfz_embl, chooseObjects.apply( Pipeline.dkfz_embl.toString() ) );
 				Job downloadBroadVCFs = this.getVCF(downloadDkfzEmblVCFs, downloadMethod, Pipeline.broad, chooseObjects.apply( Pipeline.broad.toString() ) );
