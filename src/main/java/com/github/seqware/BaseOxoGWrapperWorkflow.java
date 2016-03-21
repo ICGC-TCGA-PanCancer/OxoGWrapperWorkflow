@@ -5,6 +5,8 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
+import com.github.seqware.downloaders.DownloaderFactory.DownloadMethod;
+
 import net.sourceforge.seqware.pipeline.workflowV2.AbstractWorkflowDataModel;
 
 public abstract class BaseOxoGWrapperWorkflow extends AbstractWorkflowDataModel {
@@ -355,23 +357,14 @@ public abstract class BaseOxoGWrapperWorkflow extends AbstractWorkflowDataModel 
 			}
 			
 			//These are only needed if the user is using gtdownload.
-			if (hasPropertyAndNotNull(JSONUtils.SANGER_DOWNLOAD_URL)) {
-				this.sangerGNOSRepo = getProperty(JSONUtils.SANGER_DOWNLOAD_URL);
-			}
-			if (hasPropertyAndNotNull(JSONUtils.BROAD_DOWNLOAD_URL)) {
-				this.broadGNOSRepo = getProperty(JSONUtils.BROAD_DOWNLOAD_URL);
-			}
-			if (hasPropertyAndNotNull(JSONUtils.DKFZ_EMBL_DOWNLOAD_URL)) {
-				this.dkfzEmblGNOSRepo = getProperty(JSONUtils.DKFZ_EMBL_DOWNLOAD_URL);
-			}
-			if (hasPropertyAndNotNull(JSONUtils.MUSE_DOWNLOAD_URL)) {
-				this.museGNOSRepo = getProperty(JSONUtils.MUSE_DOWNLOAD_URL);
-			}
-			if (hasPropertyAndNotNull(JSONUtils.NORMAL_BAM_DOWNLOAD_URL)) {
-				this.normalBamGNOSRepo = getProperty(JSONUtils.NORMAL_BAM_DOWNLOAD_URL);
-			}
-			if (hasPropertyAndNotNull(JSONUtils.TUMOUR_BAM_DOWNLOAD_URL)) {
-				this.tumourBamGNOSRepo = getProperty(JSONUtils.TUMOUR_BAM_DOWNLOAD_URL);
+			if (this.downloadMethod != null && !this.downloadMethod.equals("") && this.downloadMethod.equals(DownloadMethod.gtdownload))
+			{
+				this.sangerGNOSRepo = this.getMandatoryProperty(JSONUtils.SANGER_DOWNLOAD_URL);
+				this.broadGNOSRepo = this.getMandatoryProperty(JSONUtils.BROAD_DOWNLOAD_URL);
+				this.dkfzEmblGNOSRepo = this.getMandatoryProperty(JSONUtils.DKFZ_EMBL_DOWNLOAD_URL);
+				this.museGNOSRepo = this.getMandatoryProperty(JSONUtils.MUSE_DOWNLOAD_URL);
+				this.normalBamGNOSRepo = this.getMandatoryProperty(JSONUtils.NORMAL_BAM_DOWNLOAD_URL);
+				this.tumourBamGNOSRepo = this.getMandatoryProperty(JSONUtils.TUMOUR_BAM_DOWNLOAD_URL);
 			}
 
 			
