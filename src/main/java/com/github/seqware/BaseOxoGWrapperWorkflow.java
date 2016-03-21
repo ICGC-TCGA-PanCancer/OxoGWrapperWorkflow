@@ -1,6 +1,7 @@
 package com.github.seqware;
 
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
@@ -156,7 +157,7 @@ public abstract class BaseOxoGWrapperWorkflow extends AbstractWorkflowDataModel 
 	protected String dkfzEmblINDELIndexFileName;
 	protected String museSNVIndexFileName;
 	
-	protected Map<String,String> objectToFilenames;
+	protected Map<String,String> objectToFilenames = new HashMap<String,String>(26);
 	
 	/**
 	 * Get a property name that is mandatory
