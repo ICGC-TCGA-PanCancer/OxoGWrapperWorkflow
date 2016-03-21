@@ -34,7 +34,18 @@ public class OxoGWrapperWorkflow extends BaseOxoGWrapperWorkflow {
 		Job copy = this.getWorkflow().createBashJob("copy /home/ubuntu/.gnos");
 		copy.setCommand("mkdir /datastore/credentials && cp -r /home/ubuntu/.gnos/* /datastore/credentials && ls -l /datastore/credentials");
 		copy.addParent(parentJob);
-		return copy;
+		
+		if (this.downloadMethod.equals(DownloadMethod.s3.toString()))
+		{
+			Job s3Setup = this.getWorkflow().createBashJob("s3 credentials setup");
+			s3Setup.setCommand("mkdir ~/.aws && cp /datastore/credentials/config ~/.aws/credentials");
+			s3Setup.addParent(copy);
+			return s3Setup;
+		}
+		else
+		{
+			return copy;
+		}
 	}
 	
 	/**
@@ -68,7 +79,7 @@ public class OxoGWrapperWorkflow extends BaseOxoGWrapperWorkflow {
 	}
 
 	private Job getBAM(Job parentJob, DownloadMethod downloadMethod, BAMType bamType, List<String> objectIDs) {
-		return getBAM(parentJob, downloadMethod, bamType, (String[]) objectIDs.toArray());
+		return getBAM(parentJob, downloadMethod, bamType, objectIDs.toArray(new String[objectIDs.size()]));
 	}
 
 	/**
@@ -115,8 +126,9 @@ public class OxoGWrapperWorkflow extends BaseOxoGWrapperWorkflow {
 	}
 
 	private Job getVCF(Job parentJob, DownloadMethod downloadMethod, Pipeline workflowName, List<String> objectIDs) {
-		return this.getVCF(parentJob, downloadMethod, workflowName, (String[]) objectIDs.toArray());
+		return this.getVCF(parentJob, downloadMethod, workflowName, objectIDs.toArray(new String[objectIDs.size()]));
 	}
+	
 	
 	/**
 	 * Perform filtering on all VCF files for a given workflow.
@@ -812,7 +824,8 @@ public class OxoGWrapperWorkflow extends BaseOxoGWrapperWorkflow {
 							return Arrays.asList(gnosID);
 						case s3:
 							//For S3 downloader, it will take a list of strings. The strings are of the pattern: <object_id>:<file_name> and it will download all object IDs to the paired filename.
-							return objectIDs.stream().map(s -> s+":"+this.objectToFilenames.get(s)).collect(Collectors.toList());
+							List<String> s3Mappings = objectIDs.stream().map(s -> s+":"+this.objectToFilenames.get(s)).collect(Collectors.toList() );
+							return s3Mappings;
 						default:
 							throw new RuntimeException("Unknown downloadMethod: "+downloadMethod+ ", Exiting now!");
 					}
