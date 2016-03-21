@@ -139,12 +139,12 @@ public abstract class BaseOxoGWrapperWorkflow extends AbstractWorkflowDataModel 
 	//Could be "icgc_storage_client" or "gtdownload". Maybe add options for aws s3 cli later?
 	protected String downloadMethod = "icgc_storage_client";
 	
-	protected String sangerGNOSRepo;
-	protected String broadGNOSRepo;
-	protected String dkfzEmblGNOSRepo;
-	protected String museGNOSRepo;
-	protected String normalBamGNOSRepo;
-	protected String tumourBamGNOSRepo;
+	protected String sangerGNOSRepoURL;
+	protected String broadGNOSRepoURL;
+	protected String dkfzEmblGNOSRepoURL;
+	protected String museGNOSRepoURL;
+	protected String normalBamGNOSRepoURL;
+	protected String tumourBamGNOSRepoURL;
 	
 	protected String tumourBamIndexFileName;
 	protected String normalBamIndexFileName;
@@ -160,6 +160,8 @@ public abstract class BaseOxoGWrapperWorkflow extends AbstractWorkflowDataModel 
 	protected String museSNVIndexFileName;
 	
 	protected Map<String,String> objectToFilenames = new HashMap<String,String>(26);
+	
+	protected Map<String,String> workflowNamestoGnosIds = new HashMap<String,String>(6);
 	
 	/**
 	 * Get a property name that is mandatory
@@ -254,6 +256,13 @@ public abstract class BaseOxoGWrapperWorkflow extends AbstractWorkflowDataModel 
 			
 			this.normalBamGnosID= this.getMandatoryProperty(JSONUtils.BAM_NORMAL_GNOS_ID);
 			this.tumourBamGnosID= this.getMandatoryProperty(JSONUtils.BAM_TUMOUR_GNOS_ID);
+			
+			this.workflowNamestoGnosIds.put(OxoGWrapperWorkflow.Pipeline.sanger.toString(), this.sangerGnosID);
+			this.workflowNamestoGnosIds.put(OxoGWrapperWorkflow.Pipeline.broad.toString(), this.broadGnosID);
+			this.workflowNamestoGnosIds.put(OxoGWrapperWorkflow.Pipeline.dkfz_embl.toString(), this.dkfzemblGnosID);
+			this.workflowNamestoGnosIds.put(OxoGWrapperWorkflow.Pipeline.muse.toString(), this.museGnosID);
+			this.workflowNamestoGnosIds.put(OxoGWrapperWorkflow.BAMType.normal.toString(), this.normalBamGnosID);
+			this.workflowNamestoGnosIds.put(OxoGWrapperWorkflow.BAMType.tumour.toString(), this.tumourBamGnosID);
 
 			this.normalBamIndexFileName = this.getMandatoryProperty(JSONUtils.NORMAL_BAM_INDEX_FILE_NAME);
 			this.tumourBamIndexFileName = this.getMandatoryProperty(JSONUtils.TUMOUR_BAM_INDEX_FILE_NAME);
@@ -359,12 +368,12 @@ public abstract class BaseOxoGWrapperWorkflow extends AbstractWorkflowDataModel 
 			//These are only needed if the user is using gtdownload.
 			if (this.downloadMethod != null && !this.downloadMethod.equals("") && this.downloadMethod.equals(DownloadMethod.gtdownload))
 			{
-				this.sangerGNOSRepo = this.getMandatoryProperty(JSONUtils.SANGER_DOWNLOAD_URL);
-				this.broadGNOSRepo = this.getMandatoryProperty(JSONUtils.BROAD_DOWNLOAD_URL);
-				this.dkfzEmblGNOSRepo = this.getMandatoryProperty(JSONUtils.DKFZ_EMBL_DOWNLOAD_URL);
-				this.museGNOSRepo = this.getMandatoryProperty(JSONUtils.MUSE_DOWNLOAD_URL);
-				this.normalBamGNOSRepo = this.getMandatoryProperty(JSONUtils.NORMAL_BAM_DOWNLOAD_URL);
-				this.tumourBamGNOSRepo = this.getMandatoryProperty(JSONUtils.TUMOUR_BAM_DOWNLOAD_URL);
+				this.sangerGNOSRepoURL = this.getMandatoryProperty(JSONUtils.SANGER_DOWNLOAD_URL);
+				this.broadGNOSRepoURL = this.getMandatoryProperty(JSONUtils.BROAD_DOWNLOAD_URL);
+				this.dkfzEmblGNOSRepoURL = this.getMandatoryProperty(JSONUtils.DKFZ_EMBL_DOWNLOAD_URL);
+				this.museGNOSRepoURL = this.getMandatoryProperty(JSONUtils.MUSE_DOWNLOAD_URL);
+				this.normalBamGNOSRepoURL = this.getMandatoryProperty(JSONUtils.NORMAL_BAM_DOWNLOAD_URL);
+				this.tumourBamGNOSRepoURL = this.getMandatoryProperty(JSONUtils.TUMOUR_BAM_DOWNLOAD_URL);
 			}
 
 			
