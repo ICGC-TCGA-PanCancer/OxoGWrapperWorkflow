@@ -99,6 +99,19 @@ public abstract class JSONUtils {
 	static final String MUSE_DOWNLOAD_URL = "muse_download_url";
 	static final String NORMAL_BAM_DOWNLOAD_URL = "normal_bam_download_url";
 	static final String TUMOUR_BAM_DOWNLOAD_URL = "tumour_bam_download_url";
+	
+	static final String NORMAL_BAM_INDEX_FILE_NAME = "normal_index_file_name";
+	static final String TUMOUR_BAM_INDEX_FILE_NAME = "tumour_index_file_name";
+	static final String SANGER_SNV_INDEX_FILE_NAME = "sanger_snv_index_file_name";
+	static final String SANGER_SV_INDEX_FILE_NAME = "sanger_sv_index_file_name";
+	static final String SANGER_INDEL_INDEX_FILE_NAME = "sanger_indel_index_file_name";
+	static final String BROAD_SNV_INDEX_FILE_NAME = "broad_snv_index_file_name";
+	static final String BROAD_SV_INDEX_FILE_NAME = "broad_sv_index_file_name";
+	static final String BROAD_INDEL_INDEX_FILE_NAME = "broad_indel_index_file_name";
+	static final String DKFZ_EMBL_SNV_INDEX_FILE_NAME = "dkfz_embl_snv_index_file_name";
+	static final String DKFZ_EMBL_SV_INDEX_FILE_NAME = "dkfz_embl_sv_index_file_name";
+	static final String DKFZ_EMBL_INDEL_INDEX_FILE_NAME = "dkfz_embl_indel_index_file_name";
+	static final String MUSE_SNV_INDEX_FILE_NAME = "muse_snv_index_file_name";
 
 	private static String extractRepoInfo(File jsonFile, Configuration jsonPathConfig, String workflowNameInJson) throws IOException
 	{

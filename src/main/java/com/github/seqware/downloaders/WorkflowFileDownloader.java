@@ -1,4 +1,4 @@
-package com.github.seqware;
+package com.github.seqware.downloaders;
 
 /**
  * Interface for objects that will generate command strings that are used for different types of downloads.

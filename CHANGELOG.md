@@ -1,5 +1,14 @@
 # CHANGELOG
 
+## 1.1.0
+ - Input files can now be downloaded using gtdownload or AWS CLI. To do this, add a new property to you INI file: downloadMethod.
+This can have one of three options:
+	- gtdownload
+	- icgcStorageClient
+	- s3 (You will need to put your AWS credentials in ~/.gnos on the launcher for this to work).
+ - The timestamps of workflow state transitions will be injected in the JSON files before they are moved in github. They will look something like this: "transition_to_downloading-jobs_timestamp":"2016-03-18T15:00:00"
+ - Workflow now uses icgc-storage-client version 1.0.12
+
 ## 1.0.4
  - Fixed a bug in git_move.py
 

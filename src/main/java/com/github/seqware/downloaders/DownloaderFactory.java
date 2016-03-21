@@ -1,4 +1,4 @@
-package com.github.seqware;
+package com.github.seqware.downloaders;
 
 /**
  * Creates an instance of WorkflowFileDownloader.
@@ -7,23 +7,26 @@ package com.github.seqware;
  */
 public abstract class DownloaderFactory {
 
-	enum DownloadMethod
+	public enum DownloadMethod
 	{
 		gtdownload, icgcStorageClient, s3
 	}
 	
-	static public WorkflowFileDownloader createDownloader(DownloadMethod downloadMethod)
+	static public WorkflowFileDownloader createDownloader(DownloadMethod downloadMethod, String ... args)
 	{
 		WorkflowFileDownloader downloader = null;
 		
 		switch (downloadMethod) {
 		case icgcStorageClient:
-			downloader = new ICGCStorageDownloader();
+			String storageSource = args[0];
+			downloader = new ICGCStorageDownloader(storageSource);
 			break;
 		case gtdownload:
 			downloader = new GNOSDownloader();
 			break;
-		//TODO: implement a downloader for S3
+		case s3:
+			downloader = new S3Downloader();
+			break;
 		default:
 			throw new RuntimeException("download method: "+downloadMethod+" is unknown! Aborting.");
 		}
