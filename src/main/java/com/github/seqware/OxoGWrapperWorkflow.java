@@ -7,8 +7,8 @@ import java.util.function.BiFunction;
 import java.util.function.Function;
 import java.util.function.Predicate;
 import java.util.stream.Collectors;
-
-import com.github.seqware.DownloaderFactory.DownloadMethod;
+import com.github.seqware.downloaders.*;
+import com.github.seqware.downloaders.DownloaderFactory.DownloadMethod;
 
 import net.sourceforge.seqware.pipeline.workflowV2.model.Job;
 

@@ -1,4 +1,4 @@
-package com.github.seqware;
+package com.github.seqware.downloaders;
 
 /**
  * A downloader that downloads usign the ICGC Storage Client docker container.

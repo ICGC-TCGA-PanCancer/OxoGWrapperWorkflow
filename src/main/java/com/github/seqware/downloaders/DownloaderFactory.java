@@ -1,4 +1,4 @@
-package com.github.seqware;
+package com.github.seqware.downloaders;
 
 /**
  * Creates an instance of WorkflowFileDownloader.
@@ -7,7 +7,7 @@ package com.github.seqware;
  */
 public abstract class DownloaderFactory {
 
-	enum DownloadMethod
+	public enum DownloadMethod
 	{
 		gtdownload, icgcStorageClient, s3
 	}

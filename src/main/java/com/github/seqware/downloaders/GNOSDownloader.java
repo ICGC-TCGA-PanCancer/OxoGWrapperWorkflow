@@ -1,4 +1,4 @@
-package com.github.seqware;
+package com.github.seqware.downloaders;
 
 public class GNOSDownloader implements WorkflowFileDownloader {
 
