@@ -39,21 +39,10 @@ test_mode = (str(args[5])).lower()
 # Get IP address with bash: hostname -i or try:
 #     ip addr show eth0 | grep "inet " | sed 's/.*inet \(.*\)\/.*/\1/g'
 
-transition_key = 'transition_to_'+dest_dir+'_time'
-transition_value = datetime.datetime.now().isoformat()
 
 full_path_to_src = os.path.join(repo_location, src_dir, file_name)
 full_path_to_dest = os.path.join(repo_location, dest_dir, file_name)
 
-print ("Updating JSON file with transtion timetamp:\n\t"+transition_key+":"+transition_value)
-data = {}
-with open(full_path_to_src,'r') as jsonFile:
-    data = json.load(jsonFile)
-    
-data[transition_key] = transition_value
-
-with open(full_path_to_src,'w+') as jsonFile:
-    json.dump(data, jsonFile)
 
 # TODO: There should be something in here to set the git config username and email. If a workflow is retried, the values set previously
 # will have been lost since they were set in a different docker container.
@@ -71,6 +60,18 @@ else:
                   ' git push'
     
 for i in range(60): # try up to 60 times. If there are MANY clients trying to check-in at once this might be necessary. 
+    transition_key = 'transition_to_'+dest_dir+'_time'
+    transition_value = datetime.datetime.now().isoformat()
+    print ("Updating JSON file with transtion timetamp:\n\t"+transition_key+":"+transition_value)
+    data = {}
+    with open(full_path_to_src,'r') as jsonFile:
+        data = json.load(jsonFile)
+
+    data[transition_key] = transition_value
+    
+    with open(full_path_to_src,'w+') as jsonFile:
+        json.dump(data, jsonFile)
+
     sleepAmt = random.uniform(0,(2*i)+5)
     time.sleep(sleepAmt)
     print ("git mv attempt #"+str(i)+ ", after sleeping for "+str(sleepAmt)+" seconds.")

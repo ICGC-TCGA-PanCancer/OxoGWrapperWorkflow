@@ -35,7 +35,7 @@ public class ICGCStorageDownloader implements WorkflowFileDownloader {
 			    + " -v "+downloadDir+"/logs/:/icgc/icgc-storage-client/logs/:rw "
 				+ " -v /datastore/credentials/collab.token:/icgc/icgc-storage-client/conf/application.properties:ro "
 			    + " -v "+downloadDir+"/:/downloads/:rw"
-	    		+ " icgc/icgc-storage-client:1.0.12 /bin/bash -c \" "+downloadObjects+" \" ) && sudo chmod a+rw -R /datastore/vcf )";
+	    		+ " icgc/icgc-storage-client:1.0.13 /bin/bash -c \" "+downloadObjects+" \" ) && sudo chmod a+rw -R /datastore/vcf )";
 
 		return getFilesCommand;
 	}
