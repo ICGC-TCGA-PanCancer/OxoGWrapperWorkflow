@@ -163,6 +163,11 @@ public abstract class BaseOxoGWrapperWorkflow extends AbstractWorkflowDataModel 
 	
 	protected Map<String,String> workflowNamestoGnosIds = new HashMap<String,String>(6);
 	
+	protected String icgcStorageClientVersion = "latest";
+	protected String compbioNgseasyBaseVersion = "a1.0-002";
+	protected String pancancerUploadDownloadVersion = "1.7";
+	protected String pcawgAnnotator = "latest";
+	
 	/**
 	 * Get a property name that is mandatory
 	 * @param propName The name of the property
