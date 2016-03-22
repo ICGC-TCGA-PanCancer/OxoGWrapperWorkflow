@@ -40,7 +40,7 @@ public class OxoGWrapperWorkflow extends BaseOxoGWrapperWorkflow {
 		if (this.downloadMethod.equals(DownloadMethod.s3.toString()))
 		{
 			Job s3Setup = this.getWorkflow().createBashJob("s3 credentials setup");
-			s3Setup.setCommand("mkdir ~/.aws && cp /datastore/credentials/config ~/.aws/credentials");
+			s3Setup.setCommand("mkdir ~/.aws && cp /datastore/credentials/aws_credentials ~/.aws/credentials");
 			s3Setup.addParent(copy);
 			return s3Setup;
 		}
