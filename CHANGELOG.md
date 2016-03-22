@@ -1,5 +1,10 @@
 # CHANGELOG
 
+## 1.1.1
+ - Use version 1.0.13 of icgc-storage-client
+ - Fix for issue with AWS credentials being clobbered by the launcher
+ - Fix git_mv to set timestamps inside loop
+
 ## 1.1.0
  - Input files can now be downloaded using gtdownload or AWS CLI. To do this, add a new property to you INI file: downloadMethod.
 This can have one of three options:
