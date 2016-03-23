@@ -49,17 +49,29 @@ full_path_to_dest = os.path.join(repo_location, dest_dir, file_name)
 
 print("Getting ready to move "+full_path_to_src+" to "+full_path_to_dest)
 
-command = 'cd {} && '.format(repo_location)
+pre_command = 'cd {} && '.format(repo_location)
+mv_command = ''
 if test_mode == 'true' :
     print ("In test mode - file will only be moved locally.")
-    command = command + 'mv {} {}'.format(full_path_to_src, full_path_to_dest)
+    mv_command = mv_command + ' mv {} {}'.format(full_path_to_src, full_path_to_dest)
 else:
     print ("In \"live\" mode - files will be moved in git")
-    command = command + ' git checkout master && git reset --hard origin/master && git pull && git mv {} {} && '.format(full_path_to_src, full_path_to_dest) + \
+    pre_command = pre_command + ' git checkout master && git reset --hard origin/master && git pull '
+    mv_command = ' git mv {} {} && '.format(full_path_to_src, full_path_to_dest) + \
                   ' git status && git commit -m \'{} to {}: {} \' && '.format(src_dir,dest_dir,file_name) + \
                   ' git push'
     
-for i in range(60): # try up to 60 times. If there are MANY clients trying to check-in at once this might be necessary. 
+for i in range(60): # try up to 60 times. If there are MANY clients trying to check-in at once this might be necessary.
+    sleepAmt = random.uniform(0,(2*i)+5) #Increase max possible sleep time with each retry, makes it less likely that multiple machines will choose the same sleep time in the event of a collision.
+    time.sleep(sleepAmt)
+    print ("git mv attempt #"+str(i)+ ", after sleeping for "+str(sleepAmt)+" seconds.")
+    print("pre-Command to execute will be:\n"+pre_command+"\n\n")
+    
+    process = subprocess.Popen(pre_command, shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE )
+    out, err = process.communicate()
+
+    print("Return code: "+str(process.returncode)+"\nCommand result:\n"+out) 
+
     transition_key = 'transition_to_'+dest_dir+'_time'
     transition_value = datetime.datetime.now().isoformat()
     print ("Updating JSON file with transtion timetamp:\n\t"+transition_key+":"+transition_value)
@@ -72,15 +84,12 @@ for i in range(60): # try up to 60 times. If there are MANY clients trying to ch
     with open(full_path_to_src,'w+') as jsonFile:
         json.dump(data, jsonFile)
 
-    sleepAmt = random.uniform(0,(2*i)+5)
-    time.sleep(sleepAmt)
-    print ("git mv attempt #"+str(i)+ ", after sleeping for "+str(sleepAmt)+" seconds.")
-    print("Command to execute will be:\n"+command+"\n\n")
+    print("move command to execute will be:\n"+mv_command+"\n\n")
     
-    process = subprocess.Popen(command, shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE )
+    process = subprocess.Popen(mv_command, shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE )
     out, err = process.communicate()
 
-    print("Return code: "+str(process.returncode)+"\nCommand result:\n"+out) 
+    print("Return code: "+str(process.returncode)+"\nCommand result:\n"+out)    
 
     if process.returncode == 0 :
         if 'failed-jobs' in full_path_to_dest:

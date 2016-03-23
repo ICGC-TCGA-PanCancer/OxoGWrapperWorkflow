@@ -1,5 +1,8 @@
 # CHANGELOG
 
+## 1.1.2
+ - Fixes to git_mv script
+
 ## 1.1.1
  - Use version 1.0.13 of icgc-storage-client
  - Fix for issue with AWS credentials being clobbered by the launcher
