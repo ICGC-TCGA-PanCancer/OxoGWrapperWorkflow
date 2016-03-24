@@ -886,7 +886,8 @@ public class OxoGWrapperWorkflow extends BaseOxoGWrapperWorkflow {
 			}
 
 			Job statFiles = this.getWorkflow().createBashJob("stat downloaded input files");
-			String statFilesCMD = "";
+			String moveToFailed = GitUtils.gitMoveCommand("running-jobs","failed-jobs",this.JSONlocation + "/" + this.JSONrepoName + "/" + this.JSONfolderName,this.JSONfileName, this.gitMoveTestMode, this.getWorkflowBaseDir() + "/scripts/");
+			String statFilesCMD = "( ";
 			statFilesCMD += "stat /datastore/vcf/"+Pipeline.sanger.toString()+"/"+this.sangerGnosID+"/"+this.sangerSNVName + " && \\\n";
 			statFilesCMD += "stat /datastore/vcf/"+Pipeline.sanger.toString()+"/"+this.sangerGnosID+"/"+this.sangerSNVIndexFileName + " && \\\n";
 			statFilesCMD += "stat /datastore/vcf/"+Pipeline.sanger.toString()+"/"+this.sangerGnosID+"/"+this.sangerSVName + " && \\\n";
@@ -912,7 +913,7 @@ public class OxoGWrapperWorkflow extends BaseOxoGWrapperWorkflow {
 			statFilesCMD += "stat /datastore/vcf/"+Pipeline.muse.toString()+"/"+this.museGnosID+"/"+this.museSNVIndexFileName + " && \\\n";
 
 			statFilesCMD += "stat /datastore/bam/"+BAMType.normal.toString()+"/"+this.normalBamGnosID+"/"+this.normalBAMFileName + " && \\\n";
-			statFilesCMD += "stat /datastore/bam/"+BAMType.tumour.toString()+"/"+this.tumourBamGnosID+"/"+this.tumourBAMFileName + " \n";
+			statFilesCMD += "stat /datastore/bam/"+BAMType.tumour.toString()+"/"+this.tumourBamGnosID+"/"+this.tumourBAMFileName + " ) || "+ moveToFailed;
 			
 			statFiles.setCommand(statFilesCMD);
 			
