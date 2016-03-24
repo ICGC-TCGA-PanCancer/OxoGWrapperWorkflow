@@ -53,11 +53,11 @@ pre_command = 'cd {} && '.format(repo_location)
 mv_command = ''
 if test_mode == 'true' :
     print ("In test mode - file will only be moved locally.")
-    mv_command = mv_command + ' mv {} {}'.format(full_path_to_src, full_path_to_dest)
+    mv_command = pre_command + ' mv {} {}'.format(full_path_to_src, full_path_to_dest)
 else:
     print ("In \"live\" mode - files will be moved in git")
     pre_command = pre_command + ' git checkout master && git reset --hard origin/master && git pull '
-    mv_command = ' git mv {} {} && '.format(full_path_to_src, full_path_to_dest) + \
+    mv_command = 'cd {} && '.format(repo_location) + ' git mv {} {} && '.format(full_path_to_src, full_path_to_dest) + \
                   ' git status && git commit -m \'{} to {}: {} \' && '.format(src_dir,dest_dir,file_name) + \
                   ' git push'
     
@@ -82,7 +82,7 @@ for i in range(60): # try up to 60 times. If there are MANY clients trying to ch
     data[transition_key] = transition_value
     
     with open(full_path_to_src,'w+') as jsonFile:
-        json.dump(data, jsonFile)
+        json.dump(data, jsonFile, sort_keys=True, indent=4)
 
     print("move command to execute will be:\n"+mv_command+"\n\n")
     
@@ -102,4 +102,6 @@ for i in range(60): # try up to 60 times. If there are MANY clients trying to ch
         if test_mode == 'true' :
             print("In TEST mode, so file move will *not* be retried. Exiting without error, so workflow can continue.")
             sys.exit(0)
-    
+
+#if the loop ends, it means that this script failed. 
+sys.exit(1)
