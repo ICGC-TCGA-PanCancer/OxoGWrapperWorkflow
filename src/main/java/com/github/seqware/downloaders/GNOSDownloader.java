@@ -4,16 +4,7 @@ public class GNOSDownloader implements WorkflowFileDownloader {
 
 	private String downloadKey = "";
 	
-	public GNOSDownloader(String downloadKey)
-	{
-		this.downloadKey = downloadKey;
-	}
-	
-	public GNOSDownloader()
-	{
 		
-	}
-	
 	public void setDownloadKey(String downloadKey)
 	{
 		this.downloadKey = downloadKey;
