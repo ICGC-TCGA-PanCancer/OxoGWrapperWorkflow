@@ -5,12 +5,16 @@ import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.function.BiFunction;
 import java.util.function.Function;
 import java.util.function.Predicate;
 import java.util.stream.Collectors;
-import com.github.seqware.downloaders.*;
+
 import com.github.seqware.downloaders.DownloaderFactory.DownloadMethod;
+import com.github.seqware.downloaders.GNOSDownloader;
+import com.github.seqware.downloaders.DownloaderBuilder;
+import com.github.seqware.downloaders.ICGCStorageDownloader;
+import com.github.seqware.downloaders.S3Downloader;
+import com.github.seqware.downloaders.WorkflowFileDownloader;
 
 import net.sourceforge.seqware.pipeline.workflowV2.model.Job;
 
@@ -71,7 +75,21 @@ public class OxoGWrapperWorkflow extends BaseOxoGWrapperWorkflow {
 		getBamFileJob.addParent(parentJob);
 		
 		String outDir = "/datastore/bam/"+bamType.toString()+"/";
-		WorkflowFileDownloader downloader = DownloaderFactory.createDownloader(downloadMethod,this.storageSource);
+		WorkflowFileDownloader downloader;
+		switch (downloadMethod)
+		{
+			case icgcStorageClient:
+				downloader = DownloaderBuilder.of(ICGCStorageDownloader::new).with(ICGCStorageDownloader::setStorageSource, this.storageSource).build();
+				break;
+			case gtdownload:
+				downloader = DownloaderBuilder.of(GNOSDownloader::new).with(GNOSDownloader::setDownloadKey, this.gtDownloadBamKey).build();
+				break;
+			case s3:
+				downloader = DownloaderBuilder.of(S3Downloader::new).build();
+				break;
+			default:
+				throw new RuntimeException("Unknown downloadMethod: "+downloadMethod.toString());
+		}
 		
 		String moveToFailed = GitUtils.gitMoveCommand("downloading-jobs","failed-jobs",this.JSONlocation + "/" + this.JSONrepoName + "/" + this.JSONfolderName,this.JSONfileName, this.gitMoveTestMode, this.getWorkflowBaseDir() + "/scripts/");
 		String getBamCommandString = downloader.getDownloadCommandString(outDir, bamType.toString(), objectIDs);
@@ -116,7 +134,22 @@ public class OxoGWrapperWorkflow extends BaseOxoGWrapperWorkflow {
 		Job getVCFJob = this.getWorkflow().createBashJob("get VCF for workflow " + workflowName);
 		String outDir = "/datastore/vcf/"+workflowName;
 		String moveToFailed = GitUtils.gitMoveCommand("downloading-jobs","failed-jobs",this.JSONlocation + "/" + this.JSONrepoName + "/" + this.JSONfolderName,this.JSONfileName, this.gitMoveTestMode, this.getWorkflowBaseDir() + "/scripts/");
-		WorkflowFileDownloader downloader = DownloaderFactory.createDownloader(downloadMethod, this.storageSource);
+		WorkflowFileDownloader downloader;
+		switch (downloadMethod)
+		{
+			case icgcStorageClient:
+				downloader = DownloaderBuilder.of(ICGCStorageDownloader::new).with(ICGCStorageDownloader::setStorageSource, this.storageSource).build();
+				break;
+			case gtdownload:
+				downloader = DownloaderBuilder.of(GNOSDownloader::new).with(GNOSDownloader::setDownloadKey, this.gtDownloadVcfKey).build();
+				break;
+			case s3:
+				downloader = DownloaderBuilder.of(S3Downloader::new).build();
+				break;
+			default:
+				throw new RuntimeException("Unknown downloadMethod: "+downloadMethod.toString());
+		}
+
 		
 		String getVCFCommand = downloader.getDownloadCommandString(outDir, workflowName.toString(), objectIDs);
 		getVCFCommand += (" || " + moveToFailed);
@@ -885,9 +918,43 @@ public class OxoGWrapperWorkflow extends BaseOxoGWrapperWorkflow {
 				move2running = GitUtils.gitMove("downloading-jobs", "running-jobs", this.getWorkflow(), this.JSONlocation, this.JSONrepoName, this.JSONfolderName, this.GITname, this.GITemail, this.gitMoveTestMode, this.JSONfileName , pathToScripts,move2download);
 			}
 
-			Job sangerPassFilter = this.passFilterWorkflow(Pipeline.sanger, move2running);
-			Job broadPassFilter = this.passFilterWorkflow(Pipeline.broad, move2running);
-			Job dkfzemblPassFilter = this.passFilterWorkflow(Pipeline.dkfz_embl, move2running);
+			Job statFiles = this.getWorkflow().createBashJob("stat downloaded input files");
+			String moveToFailed = GitUtils.gitMoveCommand("running-jobs","failed-jobs",this.JSONlocation + "/" + this.JSONrepoName + "/" + this.JSONfolderName,this.JSONfileName, this.gitMoveTestMode, this.getWorkflowBaseDir() + "/scripts/");
+			String statFilesCMD = "( ";
+			statFilesCMD += "stat /datastore/vcf/"+Pipeline.sanger.toString()+"/"+this.sangerGnosID+"/"+this.sangerSNVName + " && \\\n";
+			statFilesCMD += "stat /datastore/vcf/"+Pipeline.sanger.toString()+"/"+this.sangerGnosID+"/"+this.sangerSNVIndexFileName + " && \\\n";
+			statFilesCMD += "stat /datastore/vcf/"+Pipeline.sanger.toString()+"/"+this.sangerGnosID+"/"+this.sangerSVName + " && \\\n";
+			statFilesCMD += "stat /datastore/vcf/"+Pipeline.sanger.toString()+"/"+this.sangerGnosID+"/"+this.sangerSVIndexFileName + " && \\\n";
+			statFilesCMD += "stat /datastore/vcf/"+Pipeline.sanger.toString()+"/"+this.sangerGnosID+"/"+this.sangerIndelName + " && \\\n";
+			statFilesCMD += "stat /datastore/vcf/"+Pipeline.sanger.toString()+"/"+this.sangerGnosID+"/"+this.sangerINDELIndexFileName + " && \\\n";
+
+			statFilesCMD += "stat /datastore/vcf/"+Pipeline.broad.toString()+"/"+this.broadGnosID+"/"+this.broadSNVName + " && \\\n";
+			statFilesCMD += "stat /datastore/vcf/"+Pipeline.broad.toString()+"/"+this.broadGnosID+"/"+this.broadSNVIndexFileName + " && \\\n";
+			statFilesCMD += "stat /datastore/vcf/"+Pipeline.broad.toString()+"/"+this.broadGnosID+"/"+this.broadSVName + " && \\\n";
+			statFilesCMD += "stat /datastore/vcf/"+Pipeline.broad.toString()+"/"+this.broadGnosID+"/"+this.broadSVIndexFileName + " && \\\n";
+			statFilesCMD += "stat /datastore/vcf/"+Pipeline.broad.toString()+"/"+this.broadGnosID+"/"+this.broadIndelName + " && \\\n";
+			statFilesCMD += "stat /datastore/vcf/"+Pipeline.broad.toString()+"/"+this.broadGnosID+"/"+this.broadINDELIndexFileName + " && \\\n";
+
+			statFilesCMD += "stat /datastore/vcf/"+Pipeline.dkfz_embl.toString()+"/"+this.dkfzemblGnosID+"/"+this.dkfzEmblSNVName + " && \\\n";
+			statFilesCMD += "stat /datastore/vcf/"+Pipeline.dkfz_embl.toString()+"/"+this.dkfzemblGnosID+"/"+this.dkfzEmblSNVIndexFileName + " && \\\n";
+			statFilesCMD += "stat /datastore/vcf/"+Pipeline.dkfz_embl.toString()+"/"+this.dkfzemblGnosID+"/"+this.dkfzEmblSVName + " && \\\n";
+			statFilesCMD += "stat /datastore/vcf/"+Pipeline.dkfz_embl.toString()+"/"+this.dkfzemblGnosID+"/"+this.dkfzEmblSVIndexFileName + " && \\\n";
+			statFilesCMD += "stat /datastore/vcf/"+Pipeline.dkfz_embl.toString()+"/"+this.dkfzemblGnosID+"/"+this.dkfzEmblIndelName + " && \\\n";
+			statFilesCMD += "stat /datastore/vcf/"+Pipeline.dkfz_embl.toString()+"/"+this.dkfzemblGnosID+"/"+this.dkfzEmblINDELIndexFileName + " && \\\n";
+			
+			statFilesCMD += "stat /datastore/vcf/"+Pipeline.muse.toString()+"/"+this.museGnosID+"/"+this.museSNVName + " && \\\n";
+			statFilesCMD += "stat /datastore/vcf/"+Pipeline.muse.toString()+"/"+this.museGnosID+"/"+this.museSNVIndexFileName + " && \\\n";
+
+			statFilesCMD += "stat /datastore/bam/"+BAMType.normal.toString()+"/"+this.normalBamGnosID+"/"+this.normalBAMFileName + " && \\\n";
+			statFilesCMD += "stat /datastore/bam/"+BAMType.tumour.toString()+"/"+this.tumourBamGnosID+"/"+this.tumourBAMFileName + " ) || "+ moveToFailed;
+			
+			statFiles.setCommand(statFilesCMD);
+			
+			statFiles.addParent(move2running);
+			
+			Job sangerPassFilter = this.passFilterWorkflow(Pipeline.sanger, statFiles);
+			Job broadPassFilter = this.passFilterWorkflow(Pipeline.broad, statFiles);
+			Job dkfzemblPassFilter = this.passFilterWorkflow(Pipeline.dkfz_embl, statFiles);
 			// No, we're not going to filter the Muse SNV file.
 			
 

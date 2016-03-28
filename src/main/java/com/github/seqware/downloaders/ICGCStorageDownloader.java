@@ -7,7 +7,7 @@ package com.github.seqware.downloaders;
  */
 public class ICGCStorageDownloader implements WorkflowFileDownloader {
 
-	public ICGCStorageDownloader(String storageSource)
+	public void setStorageSource(String storageSource)
 	{
 		this.storageSource = storageSource;
 	}
