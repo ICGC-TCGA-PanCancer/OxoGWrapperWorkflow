@@ -9,12 +9,11 @@ import java.util.function.Function;
 import java.util.function.Predicate;
 import java.util.stream.Collectors;
 
+import com.github.seqware.downloaders.DownloaderBuilder;
 import com.github.seqware.downloaders.DownloaderFactory.DownloadMethod;
 import com.github.seqware.downloaders.GNOSDownloader;
-import com.github.seqware.downloaders.DownloaderBuilder;
 import com.github.seqware.downloaders.ICGCStorageDownloader;
 import com.github.seqware.downloaders.S3Downloader;
-import com.github.seqware.downloaders.WorkflowFileDownloader;
 
 import net.sourceforge.seqware.pipeline.workflowV2.model.Job;
 
@@ -75,24 +74,23 @@ public class OxoGWrapperWorkflow extends BaseOxoGWrapperWorkflow {
 		getBamFileJob.addParent(parentJob);
 		
 		String outDir = "/datastore/bam/"+bamType.toString()+"/";
-		WorkflowFileDownloader downloader;
+		String getBamCommandString;
 		switch (downloadMethod)
 		{
 			case icgcStorageClient:
-				downloader = DownloaderBuilder.of(ICGCStorageDownloader::new).with(ICGCStorageDownloader::setStorageSource, this.storageSource).build();
+				getBamCommandString = (DownloaderBuilder.of(ICGCStorageDownloader::new).with(ICGCStorageDownloader::setStorageSource, this.storageSource).build()).getDownloadCommandString(outDir, bamType.toString(), objectIDs);
 				break;
 			case gtdownload:
-				downloader = DownloaderBuilder.of(GNOSDownloader::new).with(GNOSDownloader::setDownloadKey, this.gtDownloadBamKey).build();
+				getBamCommandString = (DownloaderBuilder.of(GNOSDownloader::new).with(GNOSDownloader::setDownloadKey, this.gtDownloadBamKey).build()).getDownloadCommandString(outDir, bamType.toString(), objectIDs);
 				break;
 			case s3:
-				downloader = DownloaderBuilder.of(S3Downloader::new).build();
+				getBamCommandString = (DownloaderBuilder.of(S3Downloader::new).build()).getDownloadCommandString(outDir, bamType.toString(), objectIDs);
 				break;
 			default:
 				throw new RuntimeException("Unknown downloadMethod: "+downloadMethod.toString());
 		}
 		
 		String moveToFailed = GitUtils.gitMoveCommand("downloading-jobs","failed-jobs",this.JSONlocation + "/" + this.JSONrepoName + "/" + this.JSONfolderName,this.JSONfileName, this.gitMoveTestMode, this.getWorkflowBaseDir() + "/scripts/");
-		String getBamCommandString = downloader.getDownloadCommandString(outDir, bamType.toString(), objectIDs);
 		getBamFileJob.setCommand("( "+getBamCommandString+" ) || "+moveToFailed);
 
 		return getBamFileJob;
@@ -134,24 +132,23 @@ public class OxoGWrapperWorkflow extends BaseOxoGWrapperWorkflow {
 		Job getVCFJob = this.getWorkflow().createBashJob("get VCF for workflow " + workflowName);
 		String outDir = "/datastore/vcf/"+workflowName;
 		String moveToFailed = GitUtils.gitMoveCommand("downloading-jobs","failed-jobs",this.JSONlocation + "/" + this.JSONrepoName + "/" + this.JSONfolderName,this.JSONfileName, this.gitMoveTestMode, this.getWorkflowBaseDir() + "/scripts/");
-		WorkflowFileDownloader downloader;
+		String getVCFCommand ;
 		switch (downloadMethod)
 		{
 			case icgcStorageClient:
-				downloader = DownloaderBuilder.of(ICGCStorageDownloader::new).with(ICGCStorageDownloader::setStorageSource, this.storageSource).build();
+				//System.out.println("DEBUG: storageSource: "+this.storageSource);
+				getVCFCommand = ( DownloaderBuilder.of(ICGCStorageDownloader::new).with(ICGCStorageDownloader::setStorageSource, this.storageSource).build() ).getDownloadCommandString(outDir, workflowName.toString(), objectIDs);
 				break;
 			case gtdownload:
-				downloader = DownloaderBuilder.of(GNOSDownloader::new).with(GNOSDownloader::setDownloadKey, this.gtDownloadVcfKey).build();
+				//System.out.println("DEBUG: gtDownloadKey: "+this.gtDownloadVcfKey);
+				getVCFCommand = ( DownloaderBuilder.of(GNOSDownloader::new).with(GNOSDownloader::setDownloadKey, this.gtDownloadVcfKey).build() ).getDownloadCommandString(outDir, workflowName.toString(), objectIDs);
 				break;
 			case s3:
-				downloader = DownloaderBuilder.of(S3Downloader::new).build();
+				getVCFCommand = ( DownloaderBuilder.of(S3Downloader::new).build() ).getDownloadCommandString(outDir, workflowName.toString(), objectIDs);;
 				break;
 			default:
 				throw new RuntimeException("Unknown downloadMethod: "+downloadMethod.toString());
 		}
-
-		
-		String getVCFCommand = downloader.getDownloadCommandString(outDir, workflowName.toString(), objectIDs);
 		getVCFCommand += (" || " + moveToFailed);
 		getVCFJob.setCommand(getVCFCommand);
 		
@@ -999,7 +996,7 @@ public class OxoGWrapperWorkflow extends BaseOxoGWrapperWorkflow {
 			{
 				this.gitMove( "running-jobs", "completed-jobs",annotationJobs.toArray(new Job[annotationJobs.size()]));
 			}
-			System.out.println(this.filesForUpload);
+			//System.out.println(this.filesForUpload);
 		}
 		catch (Exception e)
 		{
