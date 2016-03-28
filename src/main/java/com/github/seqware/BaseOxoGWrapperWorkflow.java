@@ -168,6 +168,9 @@ public abstract class BaseOxoGWrapperWorkflow extends AbstractWorkflowDataModel 
 	protected String pancancerUploadDownloadVersion = "1.7";
 	protected String pcawgAnnotator = "latest";
 	
+	protected String gtDownloadBamKey = "";
+	protected String gtDownloadVcfKey = "";
+	
 	/**
 	 * Get a property name that is mandatory
 	 * @param propName The name of the property
@@ -370,15 +373,18 @@ public abstract class BaseOxoGWrapperWorkflow extends AbstractWorkflowDataModel 
 				this.downloadMethod = getProperty("downloadMethod");
 			}
 			
-			//These are only needed if the user is using gtdownload.
-			if (this.downloadMethod != null && !this.downloadMethod.equals("") && this.downloadMethod.equals(DownloadMethod.gtdownload))
+			System.out.println("DEBUG: downloadMethod: "+this.downloadMethod);
+			if (this.downloadMethod != null && !this.downloadMethod.equals("") && this.downloadMethod.equals(DownloadMethod.gtdownload.toString()))
 			{
+				System.out.println("DEBUG: Setting gtdownload-specific config values");
 				this.sangerGNOSRepoURL = this.getMandatoryProperty(JSONUtils.SANGER_DOWNLOAD_URL);
 				this.broadGNOSRepoURL = this.getMandatoryProperty(JSONUtils.BROAD_DOWNLOAD_URL);
 				this.dkfzEmblGNOSRepoURL = this.getMandatoryProperty(JSONUtils.DKFZ_EMBL_DOWNLOAD_URL);
 				this.museGNOSRepoURL = this.getMandatoryProperty(JSONUtils.MUSE_DOWNLOAD_URL);
 				this.normalBamGNOSRepoURL = this.getMandatoryProperty(JSONUtils.NORMAL_BAM_DOWNLOAD_URL);
 				this.tumourBamGNOSRepoURL = this.getMandatoryProperty(JSONUtils.TUMOUR_BAM_DOWNLOAD_URL);
+				this.gtDownloadBamKey = this.getMandatoryProperty("gtDownloadBamKey");
+				this.gtDownloadVcfKey = this.getMandatoryProperty("gtDownloadVcfKey");
 			}
 
 			

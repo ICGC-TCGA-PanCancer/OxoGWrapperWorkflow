@@ -113,6 +113,7 @@ public abstract class JSONUtils {
 	static final String DKFZ_EMBL_INDEL_INDEX_FILE_NAME = "dkfz_embl_indel_index_file_name";
 	static final String MUSE_SNV_INDEX_FILE_NAME = "muse_snv_index_file_name";
 
+
 	private static String extractRepoInfo(File jsonFile, Configuration jsonPathConfig, String workflowNameInJson) throws IOException
 	{
 		String repoURL = "";

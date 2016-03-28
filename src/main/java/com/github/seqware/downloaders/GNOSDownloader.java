@@ -2,6 +2,14 @@ package com.github.seqware.downloaders;
 
 public class GNOSDownloader implements WorkflowFileDownloader {
 
+	private String downloadKey = null;
+	
+		
+	public void setDownloadKey(String downloadKey)
+	{
+		this.downloadKey = downloadKey;
+	}
+	
 	/**
 	 * Download from GNOS.
 	 * @param downloadDir - the directory to download into.
@@ -12,14 +20,33 @@ public class GNOSDownloader implements WorkflowFileDownloader {
 	@Override
 	public String getDownloadCommandString(String downloadDir, String workflowName, String ... objectIDs) {
 
+		if (this.downloadKey == null || this.downloadKey.trim().length() == 0)
+		{
+			throw new RuntimeException("downloadKey cannot be null/empty!");
+		}
+		
+		if (objectIDs.length == 0 || objectIDs[0] == null || objectIDs[0].trim().length() == 0)
+		{
+			throw new RuntimeException("objectIDs is null/empty or the first element is null/empty!");
+		}
+		
+		if (workflowName == null || workflowName.trim().length() == 0)
+		{
+			throw new RuntimeException("workflowName is null/empty!");
+		}
+
+		if (downloadDir == null || downloadDir.trim().length() == 0)
+		{
+			throw new RuntimeException("downloadDir is null/empty!");
+		}
+		
 		String getFilesCommand = "( docker run --rm --name get_"+workflowName+" "
-				+ " -v /datastore/credentials/gnos.key:/gnos.key "
+				+ " -v "+this.downloadKey+":/gnos.key "
 			    + " -v "+downloadDir+"/:/downloads/:rw"
 	    		+ " pancancer/pancancer_upload_download:1.7 /bin/bash -c \""
 	    			+ "sudo gtdownload -k 30 --peer-timeout 120 -p /downloads/ -l /downloads/gtdownload.log -c /gnos.key "+objectIDs[0]+" \" ) ";
 
 		return getFilesCommand;
 	}
-
 
 }

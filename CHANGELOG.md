@@ -1,5 +1,10 @@
 # CHANGELOG
 
+## 1.1.3
+ - stat all files that have been downloaded - sometimes gtdownload will not download a file but the exit code is still 0 so we must `stat` the files to make sure they were actually downloaded properly.
+ - gtdownload process now takes two keys: one for BAMs and once for VCFs. This is for situations where BAMs and VCFs are not hosted in the same place and require different keys for download.
+ - fixes for git_mv script: updated file should now be committed instead of overwritten.
+
 ## 1.1.2
  - Fixes to git_mv script
 
