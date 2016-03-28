@@ -5,34 +5,28 @@ package com.github.seqware.downloaders;
  * @author sshorser
  *
  */
-public abstract class DownloaderFactory {
+public class DownloaderFactory {
 
 	public enum DownloadMethod
 	{
 		gtdownload, icgcStorageClient, s3
 	}
-	
+
 	static public WorkflowFileDownloader createDownloader(DownloadMethod downloadMethod, String ... args)
 	{
-		WorkflowFileDownloader downloader = null;
+		WorkflowFileDownloader downloader;
 		
-		switch (downloadMethod) {
-		case icgcStorageClient:
-			String storageSource = args[0];
-			downloader = new ICGCStorageDownloader(storageSource);
-			break;
-		case gtdownload:
-			downloader = new GNOSDownloader();
-			break;
-		case s3:
-			downloader = new S3Downloader();
-			break;
-		default:
-			throw new RuntimeException("download method: "+downloadMethod+" is unknown! Aborting.");
+		switch (downloadMethod)
+		{
+			case icgcStorageClient:
+				return DownloaderBuilder.of(ICGCStorageDownloader::new).with(ICGCStorageDownloader::setStorageSource, args[0]).build();
+			case gtdownload:
+				return downloader = DownloaderBuilder.of(GNOSDownloader::new).with(GNOSDownloader::setDownloadKey, args[0]).build();
+			case s3:
+				return downloader = DownloaderBuilder.of(S3Downloader::new).build();
+			default:
+				throw new RuntimeException("Unknown downloadMethod: "+downloadMethod.toString());
 		}
-		
-
-		return downloader;
 	}
 	
 }

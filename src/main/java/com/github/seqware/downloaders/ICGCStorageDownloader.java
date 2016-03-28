@@ -11,6 +11,16 @@ public class ICGCStorageDownloader implements WorkflowFileDownloader {
 	{
 		this.storageSource = storageSource;
 	}
+
+	public ICGCStorageDownloader()
+	{
+		this.storageSource = storageSource;
+	}
+	
+	public void setStorageSource(String storageSource)
+	{
+		this.storageSource = storageSource;
+	}
 	
 	private String storageSource;
 	

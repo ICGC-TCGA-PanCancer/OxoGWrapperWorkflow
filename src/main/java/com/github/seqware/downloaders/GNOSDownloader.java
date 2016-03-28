@@ -2,6 +2,23 @@ package com.github.seqware.downloaders;
 
 public class GNOSDownloader implements WorkflowFileDownloader {
 
+	private String downloadKey = "";
+	
+	public GNOSDownloader(String downloadKey)
+	{
+		this.downloadKey = downloadKey;
+	}
+	
+	public GNOSDownloader()
+	{
+		
+	}
+	
+	public void setDownloadKey(String downloadKey)
+	{
+		this.downloadKey = downloadKey;
+	}
+	
 	/**
 	 * Download from GNOS.
 	 * @param downloadDir - the directory to download into.
@@ -13,13 +30,12 @@ public class GNOSDownloader implements WorkflowFileDownloader {
 	public String getDownloadCommandString(String downloadDir, String workflowName, String ... objectIDs) {
 
 		String getFilesCommand = "( docker run --rm --name get_"+workflowName+" "
-				+ " -v /datastore/credentials/gnos.key:/gnos.key "
+				+ " -v "+this.downloadKey+":/gnos.key "
 			    + " -v "+downloadDir+"/:/downloads/:rw"
 	    		+ " pancancer/pancancer_upload_download:1.7 /bin/bash -c \""
 	    			+ "sudo gtdownload -k 30 --peer-timeout 120 -p /downloads/ -l /downloads/gtdownload.log -c /gnos.key "+objectIDs[0]+" \" ) ";
 
 		return getFilesCommand;
 	}
-
 
 }
