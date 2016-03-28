@@ -382,8 +382,8 @@ public abstract class BaseOxoGWrapperWorkflow extends AbstractWorkflowDataModel 
 				this.museGNOSRepoURL = this.getMandatoryProperty(JSONUtils.MUSE_DOWNLOAD_URL);
 				this.normalBamGNOSRepoURL = this.getMandatoryProperty(JSONUtils.NORMAL_BAM_DOWNLOAD_URL);
 				this.tumourBamGNOSRepoURL = this.getMandatoryProperty(JSONUtils.TUMOUR_BAM_DOWNLOAD_URL);
-				this.gtDownloadBamKey = this.getMandatoryProperty(JSONUtils.GT_DOWNLOAD_BAM_KEY);
-				this.gtDownloadVcfKey = this.getMandatoryProperty(JSONUtils.GT_DOWNLOAD_VCF_KEY);
+				this.gtDownloadBamKey = this.getMandatoryProperty("gtDownloadBamKey");
+				this.gtDownloadVcfKey = this.getMandatoryProperty("gtDownloadVcfKey");
 			}
 
 			
