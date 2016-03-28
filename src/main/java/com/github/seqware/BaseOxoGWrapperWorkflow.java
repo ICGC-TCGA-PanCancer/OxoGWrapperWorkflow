@@ -5,7 +5,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
-import com.github.seqware.downloaders.DownloaderFactory.DownloadMethod;
+import com.github.seqware.OxoGWrapperWorkflow.DownloadMethod;
 
 import net.sourceforge.seqware.pipeline.workflowV2.AbstractWorkflowDataModel;
 

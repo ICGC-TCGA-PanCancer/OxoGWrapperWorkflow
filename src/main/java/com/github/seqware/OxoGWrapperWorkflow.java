@@ -10,15 +10,21 @@ import java.util.function.Predicate;
 import java.util.stream.Collectors;
 
 import com.github.seqware.downloaders.DownloaderBuilder;
-import com.github.seqware.downloaders.DownloaderFactory.DownloadMethod;
 import com.github.seqware.downloaders.GNOSDownloader;
 import com.github.seqware.downloaders.ICGCStorageDownloader;
 import com.github.seqware.downloaders.S3Downloader;
 
 import net.sourceforge.seqware.pipeline.workflowV2.model.Job;
 
+
+
 public class OxoGWrapperWorkflow extends BaseOxoGWrapperWorkflow {
 
+	public enum DownloadMethod
+	{
+		gtdownload, icgcStorageClient, s3
+	}
+	
 	private static final String DESCRIPTION_END = " Note the 'ANALYSIS_TYPE' is 'REFERENCE_ASSEMBLY' but a better term to describe this analysis is 'SEQUENCE_VARIATION' as defined by the EGA's SRA 1.5 schema."
 			+ " Please note the reference used for alignment was hs37d, see ftp://ftp.1000genomes.ebi.ac.uk/vol1/ftp/technical/reference/phase2_reference_assembly_sequence/README_human_reference_20110707 for more information."
 			+ " Briefly this is the integrated reference sequence from the GRCh37 primary assembly (chromosomal plus unlocalized and unplaced contigs),"

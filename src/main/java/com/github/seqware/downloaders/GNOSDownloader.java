@@ -19,7 +19,8 @@ public class GNOSDownloader implements WorkflowFileDownloader {
 	 */
 	@Override
 	public String getDownloadCommandString(String downloadDir, String workflowName, String ... objectIDs) {
-
+		WorkflowFileDownloader.checkArgs(downloadDir, workflowName);
+		
 		if (this.downloadKey == null || this.downloadKey.trim().length() == 0)
 		{
 			throw new RuntimeException("downloadKey cannot be null/empty!");
@@ -28,16 +29,6 @@ public class GNOSDownloader implements WorkflowFileDownloader {
 		if (objectIDs.length == 0 || objectIDs[0] == null || objectIDs[0].trim().length() == 0)
 		{
 			throw new RuntimeException("objectIDs is null/empty or the first element is null/empty!");
-		}
-		
-		if (workflowName == null || workflowName.trim().length() == 0)
-		{
-			throw new RuntimeException("workflowName is null/empty!");
-		}
-
-		if (downloadDir == null || downloadDir.trim().length() == 0)
-		{
-			throw new RuntimeException("downloadDir is null/empty!");
 		}
 		
 		String getFilesCommand = "( docker run --rm --name get_"+workflowName+" "

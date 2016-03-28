@@ -18,4 +18,16 @@ public interface WorkflowFileDownloader {
 	 * @return
 	 */
 	String getDownloadCommandString(String downloadDir, String workflowName, String ... objectIDs);
+	
+	static void checkArgs(String downloadDir, String workflowName)
+	{
+		if (workflowName == null || workflowName.trim().length() == 0)
+		{
+			throw new RuntimeException("workflowName cannot be null/empty!");
+		}
+		if (downloadDir == null || downloadDir.trim().length() == 0)
+		{
+			throw new RuntimeException("downloadDir cannot be null/empty!");
+		}
+	}
 }

@@ -4,20 +4,12 @@ public class S3Downloader implements WorkflowFileDownloader {
 
 	@Override
 	public String getDownloadCommandString(String downloadDir, String workflowName, String... objectIDs) {
-		
-		if (workflowName == null || workflowName.trim().length() == 0)
-		{
-			throw new RuntimeException("workflowName cannot be null/empty!");
-		}
-		if (downloadDir == null || downloadDir.trim().length() == 0)
-		{
-			throw new RuntimeException("downloadDir cannot be null/empty!");
-		}
-		if (objectIDs.length == 0 || objectIDs[0] == null || objectIDs[0].trim().length() == 0)
+		WorkflowFileDownloader.checkArgs(downloadDir, workflowName);
+
+		if (objectIDs.length == 0 || objectIDs == null)
 		{
 			throw new RuntimeException("objectIDs is null/empty or the first element is null/empty!");
 		}
-
 		
 		//TODO: allow URL prefix to be parameterized from the INI file
 		String getFilesCommand = "";
