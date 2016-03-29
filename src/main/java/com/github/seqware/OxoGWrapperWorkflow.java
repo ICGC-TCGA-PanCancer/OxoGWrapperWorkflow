@@ -182,7 +182,7 @@ public class OxoGWrapperWorkflow extends BaseOxoGWrapperWorkflow {
 		String moveToFailed = GitUtils.gitMoveCommand("running-jobs","failed-jobs",this.JSONlocation + "/" + this.JSONrepoName + "/" + this.JSONfolderName,this.JSONfileName, this.gitMoveTestMode, this.getWorkflowBaseDir() + "/scripts/");
 		//If we were processing MUSE files we would also need to filter for tier* but we're NOT processing MUSE files so 
 		//we don't need to worry about that for now.
-		passFilter.setCommand("( for f in $(ls /datastore/vcf/"+workflowName+"/*/*.vcf.gz | grep -v pass | tr '\\n' ' ' ) ; do \n"
+		passFilter.setCommand("sudo chmod a+rw -R /datastore/vcf/ \n( for f in $(ls /datastore/vcf/"+workflowName+"/*/*.vcf.gz | grep -v pass | tr '\\n' ' ' ) ; do \n"
 							+ "    echo \"processing $f\" \n"
 							+ "    bgzip -d -c $f | grep -Po \"^#.*$|([^\t]*\t){6}(PASS\t|\\.\t).*\" > ${f/.vcf.gz/}.pass-filtered.vcf \n"
 							+ "    bgzip -f ${f/.vcf.gz/}.pass-filtered.vcf \n"
