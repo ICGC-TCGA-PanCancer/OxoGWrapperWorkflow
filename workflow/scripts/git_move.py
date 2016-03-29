@@ -58,7 +58,7 @@ else:
     print ("In \"live\" mode - files will be moved in git")
     pre_command = pre_command + ' git checkout master && git reset --hard origin/master && git pull '
     mv_command = 'cd {} && '.format(repo_location) + ' git mv {} {} && '.format(full_path_to_src, full_path_to_dest) + \
-                  ' && git add '+full_path_to_dest+' && git status && git commit -m \'{} to {}: {} \' && '.format(src_dir,dest_dir,file_name) + \
+                  ' git add '+full_path_to_dest+' && git status && git commit -m \'{} to {}: {} \' && '.format(src_dir,dest_dir,file_name) + \
                   ' git push'
     
 for i in range(60): # try up to 60 times. If there are MANY clients trying to check-in at once this might be necessary.
