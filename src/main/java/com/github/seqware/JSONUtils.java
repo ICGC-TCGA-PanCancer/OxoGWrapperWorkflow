@@ -6,6 +6,11 @@ import java.io.IOException;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
+import java.util.function.BiFunction;
+import java.util.function.Function;
+import java.util.function.Predicate;
+import java.util.stream.Collectors;
 
 import com.github.seqware.OxoGWrapperWorkflow.VCFType;
 import com.jayway.jsonpath.Configuration;
@@ -112,6 +117,7 @@ public abstract class JSONUtils {
 	static final String DKFZ_EMBL_SV_INDEX_FILE_NAME = "dkfz_embl_sv_index_file_name";
 	static final String DKFZ_EMBL_INDEL_INDEX_FILE_NAME = "dkfz_embl_indel_index_file_name";
 	static final String MUSE_SNV_INDEX_FILE_NAME = "muse_snv_index_file_name";
+	static final String TUMOUR_COUNT = "tumourCount";
 
 
 	private static String extractRepoInfo(File jsonFile, Configuration jsonPathConfig, String workflowNameInJson) throws IOException
@@ -228,23 +234,30 @@ public abstract class JSONUtils {
 			results.put(NORMAL_BAM_INFO, normalInfo);
 			results.put(BAM_NORMAL_GNOS_ID, normalGnosID);
 
-			// Get Tumour BAM object ID
-			Map<String, String> tumourBamInfo = (Map<String, String>) parsedJSON
-					.read("$.tumors[0].files[?(@.file_name=~/.*\\.bam/)]", List.class).get(0);
-			Map<String, String> tumourBaiInfo = (Map<String, String>) parsedJSON
-					.read("$.tumors[0].files[?(@.file_name=~/.*\\.bai/)]", List.class).get(0);
-			String tumourBamMetadataURL = (String) (parsedJSON.read("$.tumors[0].available_repos[0]", Map.class))
-					.keySet().toArray()[0];
-			String tumourGnosID = (String) (parsedJSON.read("$.tumors[0].gnos_id", String.class));
-			tumourBamMetadataURL += "cghub/metadata/analysisFull/" + tumourGnosID;
-			Map<String, Object> tumourInfo = new HashMap<String, Object>(4);
-			tumourInfo.put(DATA, tumourBamInfo);
-			tumourInfo.put(INDEX, tumourBaiInfo);
-			results.put(BAM_TUMOUR_METADATA_URL, tumourBamMetadataURL);
-			tumourInfo.put(TAG, "tumour");
-			results.put(TUMOUR_BAM_INFO, tumourInfo);
-			results.put(BAM_TUMOUR_GNOS_ID, tumourGnosID);
+			// Get Tumour BAM object IDs
+			List<Map<String,Object>> tumours = (List<Map<String,Object>>) parsedJSON.read("$.tumors", List.class);
+			for (int i = 0 ; i < tumours.size(); i++ )
+			{
+				Map<String,Object> tumour = tumours.get(i);
+				List<Map<String,String>> files = (List<Map<String,String>>)(tumour.get("files"));
+				
+				Map<?, ?> tumourBamInfo = files.stream().filter(p -> p.get("file_name").endsWith(".bam")).findFirst().get();
 
+				Map<?, ?> tumourBaiInfo = files.stream().filter(p -> p.get("file_name").endsWith(".bai")).findFirst().get();
+				
+
+				String tumourBamMetadataURL = (String) ((List<Map<String,Object>> )tumour.get("available_repos")).get(0).keySet().toArray()[0];
+				String tumourGnosID = (String) tumour.get("gnos_id");
+				tumourBamMetadataURL += "cghub/metadata/analysisFull/" + tumourGnosID;
+				Map<String, Object> tumourInfo = new HashMap<String, Object>(4);
+				tumourInfo.put(DATA, tumourBamInfo);
+				tumourInfo.put(INDEX, tumourBaiInfo);
+				tumourInfo.put(TAG, "tumour");
+				results.put(BAM_TUMOUR_METADATA_URL+"_"+i, tumourBamMetadataURL);
+				results.put(TUMOUR_BAM_INFO+"_"+i, tumourInfo);
+				results.put(BAM_TUMOUR_GNOS_ID+"_"+i, tumourGnosID);
+			}
+			
 			// Get the aliquot ID from the tumour. This may get more complicated
 			// in multi-tumour scenarios.
 			String aliquotID = (String) (parsedJSON.read("$.tumors[0].aliquot_id", String.class));
