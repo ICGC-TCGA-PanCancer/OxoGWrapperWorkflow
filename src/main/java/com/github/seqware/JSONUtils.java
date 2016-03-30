@@ -86,6 +86,7 @@ public abstract class JSONUtils {
 	static final String DATA = "data";
 	static final String INDEX = "index";
 	static final String TAG = "tag";
+	static final String NUMBER = "number";
 	static final String FILE_TYPE = "filetype";
 
 	static final String NORMAL_BAM_INFO = "normalBamInfo";
@@ -126,23 +127,23 @@ public abstract class JSONUtils {
 
 		DocumentContext parsedJSON = JsonPath.using(jsonPathConfig).parse(jsonFile);
 		String path = "$.."+workflowNameInJson+".gnos_repo[0]";
-		if (workflowNameInJson.equals("tumors"))
-		{
-			path = "$.."+workflowNameInJson+".*.gnos_repo[0]";
-		}
+//		if (workflowNameInJson.equals("tumors"))
+//		{
+//			path = "$.."+workflowNameInJson+".*.gnos_repo[0]";
+//		}
 		List<String> repoInfo = (List<String>) parsedJSON.read(path, List.class);
 		//There should only be one element anyway. Multitumour will have to be handled differently.
 		repoURL = ((List<String>)repoInfo).get(0);
 		//repoURL = repoInfo;
 		
-		if (workflowNameInJson.equals("tumors"))
-		{
-			path = "$.."+workflowNameInJson+".*.gnos_id";
-		}
-		else
-		{
+//		if (workflowNameInJson.equals("tumors"))
+//		{
+//			path = "$.."+workflowNameInJson+".*.gnos_id";
+//		}
+//		else
+//		{
 			path = "$.."+workflowNameInJson+".gnos_id";
-		}
+//		}
 		List<String> gnosIDInfo = (List<String>) parsedJSON.read(path, List.class);
 		String gnosID = ((List<String>)gnosIDInfo).get(0);
 		
@@ -238,24 +239,43 @@ public abstract class JSONUtils {
 			List<Map<String,Object>> tumours = (List<Map<String,Object>>) parsedJSON.read("$.tumors", List.class);
 			for (int i = 0 ; i < tumours.size(); i++ )
 			{
+				final String iStr = String.valueOf(i);
 				Map<String,Object> tumour = tumours.get(i);
 				List<Map<String,String>> files = (List<Map<String,String>>)(tumour.get("files"));
+				//Extract the submaps that contain info for bam/bai files.
+				Map<String, String> tumourBamInfo = files.stream().filter(p -> p.get("file_name").endsWith(".bam")).findFirst().get();
+				Map<String, String> tumourBaiInfo = files.stream().filter(p -> p.get("file_name").endsWith(".bai")).findFirst().get();
 				
-				Map<?, ?> tumourBamInfo = files.stream().filter(p -> p.get("file_name").endsWith(".bam")).findFirst().get();
-
-				Map<?, ?> tumourBaiInfo = files.stream().filter(p -> p.get("file_name").endsWith(".bai")).findFirst().get();
-				
-
-				String tumourBamMetadataURL = (String) ((List<Map<String,Object>> )tumour.get("available_repos")).get(0).keySet().toArray()[0];
+				//Now, inject the index into the keys of the maps, so that it comes out in the INI file as "tumour_file_name_1=...", "tumour_index_file_name_2=...", etc...
+//				Map<String, String> tumourBamInfo = tmpTumourBamInfo.entrySet().stream().
+//														collect(Collectors.toMap(
+//																	km -> km.getKey() + "_" + iStr ,
+//																	vm -> String.valueOf(vm.getValue())));
+				tumourBamInfo = tumourBamInfo.entrySet().stream().
+												collect(Collectors.toMap(
+												km -> km.getKey() + "_" + iStr ,
+												vm -> String.valueOf(vm.getValue())));
+//				Map<String, String> tumourBaiInfo = tmpTumourBaiInfo.entrySet().stream().
+//														collect(Collectors.toMap(
+//																	km -> km.getKey() + "_" + iStr ,
+//																	vm -> String.valueOf(vm.getValue())));
+				tumourBaiInfo = tumourBaiInfo.entrySet().stream().
+												collect(Collectors.toMap(
+												km -> km.getKey() + "_" + iStr ,
+												vm -> String.valueOf(vm.getValue())));
+				String tumourBamMetadataURL = (String) ((List<Map<String,Object>>) tumour.get("available_repos")).get(0).keySet().toArray()[0];
 				String tumourGnosID = (String) tumour.get("gnos_id");
 				tumourBamMetadataURL += "cghub/metadata/analysisFull/" + tumourGnosID;
 				Map<String, Object> tumourInfo = new HashMap<String, Object>(4);
 				tumourInfo.put(DATA, tumourBamInfo);
 				tumourInfo.put(INDEX, tumourBaiInfo);
 				tumourInfo.put(TAG, "tumour");
+				tumourInfo.put(NUMBER, i);
 				results.put(BAM_TUMOUR_METADATA_URL+"_"+i, tumourBamMetadataURL);
 				results.put(TUMOUR_BAM_INFO+"_"+i, tumourInfo);
 				results.put(BAM_TUMOUR_GNOS_ID+"_"+i, tumourGnosID);
+				String tumourBamRepo =  ((List<String>)tumour.get("gnos_repo")).get(0) + "cghub/data/analysis/download/"+tumourGnosID;
+				results.put(TUMOUR_BAM_DOWNLOAD_URL+"_"+i,  tumourBamRepo);
 			}
 			
 			// Get the aliquot ID from the tumour. This may get more complicated
@@ -301,15 +321,12 @@ public abstract class JSONUtils {
 			String dkfzEmblRepo = extractRepoInfo(jsonFile, jsonPathConfig, "dkfz_embl");
 			String museRepo = extractRepoInfo(jsonFile, jsonPathConfig, "muse");
 			String normalBamRepo = extractRepoInfo(jsonFile, jsonPathConfig, "normal");
-			String tumourBamRepo = extractRepoInfo(jsonFile, jsonPathConfig, "tumors");
 			
 			results.put(SANGER_DOWNLOAD_URL, sangerRepo);
 			results.put(BROAD_DOWNLOAD_URL, broadRepo);
 			results.put(DKFZ_EMBL_DOWNLOAD_URL, dkfzEmblRepo);
 			results.put(MUSE_DOWNLOAD_URL, museRepo);
 			results.put(NORMAL_BAM_DOWNLOAD_URL, normalBamRepo);
-			results.put(TUMOUR_BAM_DOWNLOAD_URL, tumourBamRepo);
-			
 
 		} catch (IOException e) {
 			// TODO Auto-generated catch block

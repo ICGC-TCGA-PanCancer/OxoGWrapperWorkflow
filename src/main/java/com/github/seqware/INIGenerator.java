@@ -35,28 +35,19 @@ public class INIGenerator {
 			} else if (m.get(k) instanceof Map) {
 				// System.out.println(prefix + " " + m.get(k));
 				String newPrefix = prefix.equals("") ? "" : prefix;
-
 				@SuppressWarnings("unchecked")
 				Map<String, Object> submap = (Map<String, Object>) m.get(k);
-				
 				if (submap.containsKey(JSONUtils.TAG)) {
 					newPrefix = (String) submap.get(JSONUtils.TAG);
-				} else if (k.equals(JSONUtils.DATA) 
+				}
+				else if (k.equals(JSONUtils.DATA) 
 						|| k.equals(JSONUtils.INDEX)
 						|| k.equals(VCFType.sv.toString())
 						|| k.equals(VCFType.sv.toString())
 						|| k.equals(VCFType.indel.toString())
 						|| k.equals(VCFType.snv.toString())) {
 					newPrefix += "_" + k;
-				} /*else if (k.equals(JSONUtils.INDEX)) {
-					newPrefix += "_" + k;
-				} else if (k.equals(VCFType.sv.toString())) {
-					newPrefix += "_" + k;
-				} else if (k.equals(VCFType.indel.toString())) {
-					newPrefix += "_" + k;
-				} else if (k.equals(VCFType.snv.toString())) {
-					newPrefix += "_" + k;
-				}*/
+				}
 				sb.append(mapToINI(submap, newPrefix));
 			}
 		}
