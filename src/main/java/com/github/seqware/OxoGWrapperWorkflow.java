@@ -5,6 +5,7 @@ import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.function.BinaryOperator;
 import java.util.function.Function;
 import java.util.function.Predicate;
 import java.util.stream.Collectors;
@@ -393,6 +394,20 @@ public class OxoGWrapperWorkflow extends BaseOxoGWrapperWorkflow {
 									+ "fi\n ";
 		if (!skipOxoG)
 		{
+			Function<TumourInfo,String> mapper = new Function<TumourInfo, String>() {
+				@Override
+				public String apply(TumourInfo t) {
+					return " /datafiles/BAM/tumour/" + t.getTumourBamGnosID() + "/" + t.getTumourBAMFileName() + " \\\n";
+				}
+			}; 
+			
+			BinaryOperator<String> accumulator = new BinaryOperator<String>() {
+				@Override
+				public String apply(String t, String u) {
+					return t += u;
+				}
+			};
+			
 			String oxogMounts = " -v /refdata/:/cga/fh/pcawg_pipeline/refdata/ \\\n"
 					+ " -v /datastore/oxog_workspace/:/cga/fh/pcawg_pipeline/jobResults_pipette/jobs/"+this.aliquotID+"/:rw \\\n" 
 					+ " -v /datastore/bam/:/datafiles/BAM/ \\\n"
@@ -402,9 +417,12 @@ public class OxoGWrapperWorkflow extends BaseOxoGWrapperWorkflow {
 					+ " -v /datastore/vcf/"+Pipeline.muse+"/"+this.museGnosID+"/"+"/:/datafiles/VCF/"+Pipeline.muse+"/ \\\n"
 					+ " ${EXTRACTED_SNV_MOUNT} \\\n"
 					+ " -v /datastore/oxog_results/:/cga/fh/pcawg_pipeline/jobResults_pipette/results:rw \\\n";
+			
 			String oxogCommand = "/cga/fh/pcawg_pipeline/pipelines/run_one_pipeline.bash pcawg /cga/fh/pcawg_pipeline/pipelines/oxog_pipeline.py \\\n"
 					+ this.aliquotID + " \\\n"
-					+ " /datafiles/BAM/tumour/" + this.tumourBamGnosID + "/" + this.tumourBAMFileName + " \\\n" 
+					//genereate a string of the tumours' gnos IDs and file names.
+					//Can the OxoG filter handle more than 1 tumour at a time?
+					+ this.tumours.stream().map(mapper).reduce(accumulator)
 					+ " /datafiles/BAM/normal/" +this.normalBamGnosID + "/" +  this.normalBAMFileName + " \\\n" 
 					+ " " + this.oxoQScore + " \\\n"
 					+ " /datafiles/VCF/"+Pipeline.sanger+"/" + this.sangerSNVName + " \\\n"
@@ -474,7 +492,7 @@ public class OxoGWrapperWorkflow extends BaseOxoGWrapperWorkflow {
 	 * @param bamPath - The path to the input BAM file.
 	 * @return
 	 */
-	private Job doVariantBam(Job parent, BAMType bamType, String bamPath) {
+	private Job doVariantBam(Job parent, BAMType bamType, String bamPath, String tumourBAMFileName, String tumourMinibamPath) {
 		Job runOxoGWorkflow = this.getWorkflow().createBashJob("run "+bamType+" variantbam");
 
 		String minibamName = "";
@@ -487,10 +505,10 @@ public class OxoGWrapperWorkflow extends BaseOxoGWrapperWorkflow {
 		}
 		else
 		{
-			minibamName = this.tumourBAMFileName.replace(".bam", "_minibam");
-			this.tumourMinibamPath = "/datastore/variantbam_results/"+minibamName+".bam";
-			this.filesForUpload.add(this.tumourMinibamPath);
-			this.filesForUpload.add(this.tumourMinibamPath+".bai");
+			minibamName = tumourBAMFileName.replace(".bam", "_minibam");
+			tumourMinibamPath = "/datastore/variantbam_results/"+minibamName+".bam";
+			this.filesForUpload.add(tumourMinibamPath);
+			this.filesForUpload.add(tumourMinibamPath+".bai");
 		}
 		
 		if (!this.skipVariantBam)
@@ -604,7 +622,7 @@ public class OxoGWrapperWorkflow extends BaseOxoGWrapperWorkflow {
 				+ "\nDESCRIPTIONFILE\n"
 				+ " perl -I /opt/gt-download-upload-wrapper/gt-download-upload-wrapper-2.0.13/lib/ /opt/vcf-uploader/vcf-uploader-2.0.9/gnos_upload_vcf.pl \\\n"
 					+ " --gto-only --key /gnos.key --upload-url "+this.gnosMetadataUploadURL+" "
-					+ " --metadata-urls "+this.normalMetdataURL+","+this.tumourMetdataURL+" \\\n"
+					+ " --metadata-urls "+this.normalMetdataURL+","+this.tumours.stream().map(t -> t.getTumourMetdataURL()).reduce("", (a,b)->a+=b+"," )+" \\\n"
 					+ " --vcfs "+vcfs+"$SNV_FROM_INDEL_OXOG \\\n"
 					+ " --tarballs "+tars+"$SNV_FROM_INDEL_TARBALL \\\n"
 					+ " --tarball-md5sum-files "+tarMD5Sums+"$SNV_FROM_INDEL_TARBALL_MD5 \\\n"
@@ -668,7 +686,7 @@ public class OxoGWrapperWorkflow extends BaseOxoGWrapperWorkflow {
 				+ "\nDESCRIPTIONFILE\n"
 				+ " perl -I /opt/gt-download-upload-wrapper/gt-download-upload-wrapper-2.0.13/lib/ /opt/vcf-uploader/vcf-uploader-2.0.9/gnos_upload_vcf.pl \\\n"
 					+ " --gto-only --key /gnos.key --upload-url "+this.gnosMetadataUploadURL+" "
-					+ " --metadata-urls "+this.normalMetdataURL+","+this.tumourMetdataURL+" \\\n"
+					+ " --metadata-urls "+this.normalMetdataURL+","+this.tumours.stream().map(t -> t.getTumourMetdataURL()).reduce("", (a,b)->a+=b+"," )+" \\\n"
 					+ " --bams "+bams+" \\\n"
 					+ " --bam-bais "+bamIndicies+" \\\n"
 					+ " --bam-md5sum-files "+bamMD5Sums+" \\\n"
@@ -721,12 +739,12 @@ public class OxoGWrapperWorkflow extends BaseOxoGWrapperWorkflow {
 	 * @param parents - List of parent jobs.
 	 * @return
 	 */
-	private Job runAnnotator(String inputType, Pipeline workflowName, String vcfPath, String tumourBamPath, String normalBamPath, Job ...parents)
+	private Job runAnnotator(String inputType, Pipeline workflowName, String vcfPath, String tumourBamPath, String normalBamPath, String tumourGnosID, Job ...parents)
 	{
 		String outDir = "/datastore/files_for_upload/";
 		String containerName = "pcawg-annotator_"+workflowName+"_"+inputType;
 		String commandName ="run annotator for "+workflowName+" "+inputType;
-		String annotatedFileName = this.aliquotID+"_annotated_"+workflowName+"_"+inputType+".vcf";
+		String annotatedFileName = this.aliquotID+"_annotated_"+workflowName+"_"+inputType+"_tumour_"+tumourGnosID+".vcf";
 		//If a filepath contains the phrase "extracted" then it contains SNVs that were extracted from an INDEL.
 		if (vcfPath.contains("extracted"))
 		{
@@ -805,23 +823,31 @@ public class OxoGWrapperWorkflow extends BaseOxoGWrapperWorkflow {
 		//Remember: MUSE files do not get PASS-filtered. Also, there is no INDEL so there cannot be any SNVs extracted from INDELs.
 		String museOxogSNVFileName = this.filesForUpload.stream().filter(p -> p.contains("MUSE") && p.endsWith("somatic.snv_mnv.oxoG.vcf.gz")).collect(Collectors.toList()).get(0);
 		
-		Job broadIndelAnnotatorJob = this.runAnnotator("indel", Pipeline.broad, this.broadNormalizedIndelVCFName, this.tumourMinibamPath,this.normalMinibamPath, parents);
-		Job dfkzEmblIndelAnnotatorJob = this.runAnnotator("indel", Pipeline.dkfz_embl, this.dkfzEmblNormalizedIndelVCFName, this.tumourMinibamPath, this.normalMinibamPath, broadIndelAnnotatorJob);
-		Job sangerIndelAnnotatorJob = this.runAnnotator("indel", Pipeline.sanger, this.sangerNormalizedIndelVCFName, this.tumourMinibamPath, this.normalMinibamPath, dfkzEmblIndelAnnotatorJob);
+		for (int i = 0; i < this.tumours.size(); i++)
+		{
+			TumourInfo tInf = this.tumours.get(i);
+			Job broadIndelAnnotatorJob = this.runAnnotator("indel", Pipeline.broad, this.broadNormalizedIndelVCFName, tInf.getTumourMinibamPath(),this.normalMinibamPath, tInf.getTumourBamGnosID(), parents);
+			Job dfkzEmblIndelAnnotatorJob = this.runAnnotator("indel", Pipeline.dkfz_embl, this.dkfzEmblNormalizedIndelVCFName, tInf.getTumourMinibamPath(), this.normalMinibamPath, tInf.getTumourBamGnosID(), broadIndelAnnotatorJob);
+			Job sangerIndelAnnotatorJob = this.runAnnotator("indel", Pipeline.sanger, this.sangerNormalizedIndelVCFName, tInf.getTumourMinibamPath(), this.normalMinibamPath, tInf.getTumourBamGnosID(), dfkzEmblIndelAnnotatorJob);
+	
+			Job broadSNVAnnotatorJob = this.runAnnotator("SNV", Pipeline.broad,broadOxogSNVFileName, tInf.getTumourMinibamPath(), this.normalMinibamPath, tInf.getTumourBamGnosID(), parents);
+			Job dfkzEmblSNVAnnotatorJob = this.runAnnotator("SNV", Pipeline.dkfz_embl,dkfzEmbleOxogSNVFileName, tInf.getTumourMinibamPath(), this.normalMinibamPath, tInf.getTumourBamGnosID(), broadSNVAnnotatorJob);
+			Job sangerSNVAnnotatorJob = this.runAnnotator("SNV",Pipeline.sanger,sangerOxogSNVFileName, tInf.getTumourMinibamPath(), this.normalMinibamPath, tInf.getTumourBamGnosID(), dfkzEmblSNVAnnotatorJob);
+			Job museSNVAnnotatorJob = this.runAnnotator("SNV",Pipeline.muse,museOxogSNVFileName, tInf.getTumourMinibamPath(), this.normalMinibamPath, tInf.getTumourBamGnosID(), dfkzEmblSNVAnnotatorJob);
+	
+			Job broadSNVFromIndelAnnotatorJob = this.runAnnotator("SNV",Pipeline.broad, broadOxoGSNVFromIndelFileName, tInf.getTumourMinibamPath(), this.normalMinibamPath, tInf.getTumourBamGnosID(), parents);
+			Job dfkzEmblSNVFromIndelAnnotatorJob = this.runAnnotator("SNV",Pipeline.dkfz_embl, dkfzEmblOxoGSNVFromIndelFileName, tInf.getTumourMinibamPath(), this.normalMinibamPath, tInf.getTumourBamGnosID(), broadSNVFromIndelAnnotatorJob);
+			Job sangerSNVFromIndelAnnotatorJob = this.runAnnotator("SNV",Pipeline.sanger, sangerOxoGSNVFromIndelFileName, tInf.getTumourMinibamPath(), this.normalMinibamPath, tInf.getTumourBamGnosID(), dfkzEmblSNVFromIndelAnnotatorJob);
 
-		Job broadSNVAnnotatorJob = this.runAnnotator("SNV", Pipeline.broad,broadOxogSNVFileName, this.tumourMinibamPath, this.normalMinibamPath, parents);
-		Job dfkzEmblSNVAnnotatorJob = this.runAnnotator("SNV", Pipeline.dkfz_embl,dkfzEmbleOxogSNVFileName, this.tumourMinibamPath, this.normalMinibamPath, broadSNVAnnotatorJob);
-		Job sangerSNVAnnotatorJob = this.runAnnotator("SNV",Pipeline.sanger,sangerOxogSNVFileName, this.tumourMinibamPath, this.normalMinibamPath, dfkzEmblSNVAnnotatorJob);
-		Job museSNVAnnotatorJob = this.runAnnotator("SNV",Pipeline.muse,museOxogSNVFileName, this.tumourMinibamPath, this.normalMinibamPath, dfkzEmblSNVAnnotatorJob);
-
-		Job broadSNVFromIndelAnnotatorJob = this.runAnnotator("SNV",Pipeline.broad, broadOxoGSNVFromIndelFileName, this.tumourMinibamPath, this.normalMinibamPath, parents);
-		Job dfkzEmblSNVFromIndelAnnotatorJob = this.runAnnotator("SNV",Pipeline.dkfz_embl, dkfzEmblOxoGSNVFromIndelFileName, this.tumourMinibamPath, this.normalMinibamPath, broadSNVFromIndelAnnotatorJob);
-		Job sangerSNVFromIndelAnnotatorJob = this.runAnnotator("SNV",Pipeline.sanger, sangerOxoGSNVFromIndelFileName, this.tumourMinibamPath, this.normalMinibamPath, dfkzEmblSNVFromIndelAnnotatorJob);
-		
-		finalAnnotatorJobs.add(sangerSNVFromIndelAnnotatorJob);
-		finalAnnotatorJobs.add(sangerSNVAnnotatorJob);
-		finalAnnotatorJobs.add(sangerIndelAnnotatorJob);
-		finalAnnotatorJobs.add(museSNVAnnotatorJob);
+			finalAnnotatorJobs.add(sangerSNVFromIndelAnnotatorJob);
+			finalAnnotatorJobs.add(sangerSNVAnnotatorJob);
+			finalAnnotatorJobs.add(sangerIndelAnnotatorJob);
+			finalAnnotatorJobs.add(museSNVAnnotatorJob);
+		}
+//		finalAnnotatorJobs.add(sangerSNVFromIndelAnnotatorJob);
+//		finalAnnotatorJobs.add(sangerSNVAnnotatorJob);
+//		finalAnnotatorJobs.add(sangerIndelAnnotatorJob);
+//		finalAnnotatorJobs.add(museSNVAnnotatorJob);
 
 		return finalAnnotatorJobs;
 	}
@@ -874,7 +900,10 @@ public class OxoGWrapperWorkflow extends BaseOxoGWrapperWorkflow {
 				workflowURLs.put(Pipeline.dkfz_embl.toString(), this.dkfzEmblGNOSRepoURL);
 				workflowURLs.put(Pipeline.muse.toString(), this.museGNOSRepoURL);
 				workflowURLs.put(BAMType.normal.toString(), this.normalBamGNOSRepoURL);
-				workflowURLs.put(BAMType.tumour.toString(), this.tumourBamGNOSRepoURL);
+				for (int i =0 ; i < this.tumours.size(); i++)
+				{
+					workflowURLs.put(BAMType.tumour.toString()+"_"+i, tumours.get(i).getTumourBamGNOSRepoURL());
+				}
 				
 				Function<String,List<String>> chooseObjects = (s) -> 
 				{
@@ -905,7 +934,23 @@ public class OxoGWrapperWorkflow extends BaseOxoGWrapperWorkflow {
 				Job downloadMuseVCFs = this.getVCF(downloadBroadVCFs, downloadMethod, Pipeline.muse, chooseObjects.apply( Pipeline.muse.toString() ) );
 				// Once VCFs are downloaded, download the BAMs.
 				Job downloadNormalBam = this.getBAM(downloadMuseVCFs, downloadMethod, BAMType.normal, chooseObjects.apply( BAMType.normal.toString() ) );
-				Job downloadTumourBam = this.getBAM(downloadNormalBam, downloadMethod, BAMType.tumour,chooseObjects.apply( BAMType.tumour.toString() ) );
+				
+				//create a list of jobs to download all tumours.
+				List<Job> getTumourJobs = new ArrayList<Job>(this.tumours.size());
+				for (int i = 0 ; i < this.tumours.size(); i++)
+				{	
+					Job downloadTumourBam;
+					//download the tumours sequentially.
+					if (i==0)
+					{
+						downloadTumourBam = this.getBAM(downloadNormalBam, downloadMethod, BAMType.tumour,chooseObjects.apply( BAMType.tumour.toString() ) );
+					}
+					else
+					{
+						downloadTumourBam = this.getBAM(getTumourJobs.get(i-1), downloadMethod, BAMType.tumour,chooseObjects.apply( BAMType.tumour.toString() ) );
+					}
+					getTumourJobs.add(downloadTumourBam);
+				}
 				
 				// After we've downloaded all VCFs on a per-workflow basis, we also need to do a vcfcombine 
 				// on the *types* of VCFs, for the minibam generator. The per-workflow combined VCFs will
@@ -914,7 +959,7 @@ public class OxoGWrapperWorkflow extends BaseOxoGWrapperWorkflow {
 				// indicate job is running.
 				move2running = GitUtils.gitMove( "downloading-jobs", "running-jobs", this.getWorkflow(),
 						this.JSONlocation, this.JSONrepoName, this.JSONfolderName, this.GITname, this.GITemail, this.gitMoveTestMode, this.JSONfileName, pathToScripts
-						, downloadSangerVCFs, downloadDkfzEmblVCFs, downloadBroadVCFs, downloadMuseVCFs, downloadNormalBam, downloadTumourBam);
+						, downloadSangerVCFs, downloadDkfzEmblVCFs, downloadBroadVCFs, downloadMuseVCFs, downloadNormalBam, getTumourJobs.get(getTumourJobs.size()-1));
 			}
 			else {
 				// If user is skipping download, then we will just move directly to runnning...
@@ -948,8 +993,16 @@ public class OxoGWrapperWorkflow extends BaseOxoGWrapperWorkflow {
 			statFilesCMD += "stat /datastore/vcf/"+Pipeline.muse.toString()+"/"+this.museGnosID+"/"+this.museSNVName + " && \\\n";
 			statFilesCMD += "stat /datastore/vcf/"+Pipeline.muse.toString()+"/"+this.museGnosID+"/"+this.museSNVIndexFileName + " && \\\n";
 
+			//stat all tumour BAMS
+			for (int i = 0 ; i < this.tumours.size() ; i++)
+			{
+				statFilesCMD += "stat /datastore/bam/"+BAMType.tumour.toString()+"/"+this.tumours.get(i).getTumourBamGnosID()+"/"+this.tumours.get(i).getTumourBAMFileName() + " && \\\n";
+				statFilesCMD += "stat /datastore/bam/"+BAMType.tumour.toString()+"/"+this.tumours.get(i).getTumourBamGnosID()+"/"+this.tumours.get(i).getTumourBamIndexFileName() + " && \\\n";
+			}
+
 			statFilesCMD += "stat /datastore/bam/"+BAMType.normal.toString()+"/"+this.normalBamGnosID+"/"+this.normalBAMFileName + " && \\\n";
-			statFilesCMD += "stat /datastore/bam/"+BAMType.tumour.toString()+"/"+this.tumourBamGnosID+"/"+this.tumourBAMFileName + " ) || "+ moveToFailed;
+			statFilesCMD += "stat /datastore/bam/"+BAMType.normal.toString()+"/"+this.normalBamGnosID+"/"+this.normalBamIndexFileName + " \\\n";
+			statFilesCMD += " ) || "+ moveToFailed;
 			
 			statFiles.setCommand(statFilesCMD);
 			
@@ -984,10 +1037,17 @@ public class OxoGWrapperWorkflow extends BaseOxoGWrapperWorkflow {
 			
 			Job oxoG = this.doOxoG(combineVCFsByType);
 			// variantbam jobs will run parallel to each other. variant seems to only use a *single* core, but runs long ( 60 - 120 min on OpenStack);
-			Job normalVariantBam = this.doVariantBam(combineVCFsByType,BAMType.normal,"/datastore/bam/normal/"+this.normalBamGnosID+"/"+this.normalBAMFileName);
-			Job tumourVariantBam = this.doVariantBam(combineVCFsByType,BAMType.tumour,"/datastore/bam/tumour/"+this.tumourBamGnosID+"/"+this.tumourBAMFileName);
-
-			List<Job> annotationJobs = this.doAnnotations(tumourVariantBam, normalVariantBam, oxoG);
+			Job normalVariantBam = this.doVariantBam(combineVCFsByType,BAMType.normal,"/datastore/bam/normal/"+this.normalBamGnosID+"/"+this.normalBAMFileName,this.normalBamGnosID, this.normalMinibamPath);
+			
+			List<Job> parentJobsToAnnotationJobs = new ArrayList<Job>(this.tumours.size());
+			for (int i = 0; i < this.tumours.size() ; i ++)
+			{
+				Job tumourVariantBam = this.doVariantBam(combineVCFsByType,BAMType.tumour,"/datastore/bam/tumour/"+this.tumours.get(i).getTumourBamGnosID()+"/"+this.tumours.get(i).getTumourBAMFileName(), this.tumours.get(i).getTumourBamGnosID(), this.tumours.get(i).getTumourMinibamPath());
+				parentJobsToAnnotationJobs.add(tumourVariantBam);
+			}
+			parentJobsToAnnotationJobs.add (normalVariantBam);
+			parentJobsToAnnotationJobs.add (oxoG);
+			List<Job> annotationJobs = this.doAnnotations( parentJobsToAnnotationJobs.toArray(new Job[parentJobsToAnnotationJobs.size()]));
 			
 			//Now do the Upload
 			if (!skipUpload)

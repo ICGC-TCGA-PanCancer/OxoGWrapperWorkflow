@@ -10,6 +10,9 @@ import com.github.seqware.OxoGWrapperWorkflow.DownloadMethod;
 import net.sourceforge.seqware.pipeline.workflowV2.AbstractWorkflowDataModel;
 
 public abstract class BaseOxoGWrapperWorkflow extends AbstractWorkflowDataModel {
+	
+	
+	
 	//ugh... so many fields. There's probably a better way to do this, just no time right now.
 	protected String oxoQScore = "";
 	protected String donorID;
@@ -59,10 +62,10 @@ public abstract class BaseOxoGWrapperWorkflow extends AbstractWorkflowDataModel 
 	protected String GITPemFile = "";
 
 	//These will be needed so that vcf-uploader can generate the analysis.xml and manifest.xml files
-	protected String tumourMetdataURL;
+	//protected String tumourMetdataURL;
 	protected String normalMetdataURL;
 	
-	protected String tumourBAMFileName;
+	//protected String tumourBAMFileName;
 	protected String normalBAMFileName;
 	protected String sangerSNVName;
 	protected String dkfzEmblSNVName;
@@ -112,7 +115,7 @@ public abstract class BaseOxoGWrapperWorkflow extends AbstractWorkflowDataModel 
 	
 	//Path to reference file usd for normalization, *relative* to /refdata/
 	protected String refFile = "public/Homo_sapiens_assembly19.fasta";
-	protected String tumourBamGnosID;
+	//protected String tumourBamGnosID;
 	protected String normalBamGnosID;
 	protected String uploadKey;
 	protected String gnosKey;
@@ -124,7 +127,7 @@ public abstract class BaseOxoGWrapperWorkflow extends AbstractWorkflowDataModel 
 	protected boolean skipAnnotation = false;
 	
 	protected String normalMinibamPath;
-	protected String tumourMinibamPath;
+	//protected String tumourMinibamPath;
 	
 	protected String gnosMetadataUploadURL = "https://gtrepo-osdc-icgc.annailabs.com";
 	
@@ -144,9 +147,9 @@ public abstract class BaseOxoGWrapperWorkflow extends AbstractWorkflowDataModel 
 	protected String dkfzEmblGNOSRepoURL;
 	protected String museGNOSRepoURL;
 	protected String normalBamGNOSRepoURL;
-	protected String tumourBamGNOSRepoURL;
+	//protected String tumourBamGNOSRepoURL;
 	
-	protected String tumourBamIndexFileName;
+	//protected String tumourBamIndexFileName;
 	protected String normalBamIndexFileName;
 	protected String sangerSNVIndexFileName;
 	protected String sangerSVIndexFileName;
@@ -171,6 +174,10 @@ public abstract class BaseOxoGWrapperWorkflow extends AbstractWorkflowDataModel 
 	protected String gtDownloadBamKey = "";
 	protected String gtDownloadVcfKey = "";
 	
+	protected int tumourCount;
+	
+	List<TumourInfo> tumours ;
+	
 	/**
 	 * Get a property name that is mandatory
 	 * @param propName The name of the property
@@ -192,6 +199,32 @@ public abstract class BaseOxoGWrapperWorkflow extends AbstractWorkflowDataModel 
 	 */
 	protected void init() {
 		try {
+			if (hasPropertyAndNotNull("downloadMethod")) {
+				this.downloadMethod = getProperty("downloadMethod");
+			}
+			
+			this.tumourCount = Integer.valueOf(this.getMandatoryProperty(JSONUtils.TUMOUR_COUNT));
+			
+			tumours = new ArrayList<TumourInfo>(tumourCount);
+			
+			for (int i = 0; i < tumourCount; i++)
+			{
+				TumourInfo tInf = new TumourInfo();
+				tInf.setTumourMetdataURL( this.getMandatoryProperty(JSONUtils.BAM_TUMOUR_METADATA_URL+"_"+i));
+				tInf.setTumourBAMFileName(this.getMandatoryProperty(JSONUtils.BAM_TUMOUR_FILE_NAME+"_"+i));
+				tInf.setTumourBamGnosID( this.getMandatoryProperty(JSONUtils.BAM_TUMOUR_GNOS_ID+"_"+i));
+				tInf.setTumourBamIndexFileName ( this.getMandatoryProperty(JSONUtils.TUMOUR_BAM_INDEX_FILE_NAME+"_"+i));
+				tInf.setBamTumourObjectID  (this.getMandatoryProperty(JSONUtils.BAM_TUMOUR_OBJECT_ID+"_"+i));
+				
+				this.workflowNamestoGnosIds.put(OxoGWrapperWorkflow.BAMType.tumour.toString()+"_"+i, tInf.getTumourBamGnosID());
+				this.objectToFilenames.put(tInf.getBamTumourObjectID(), tInf.getTumourBAMFileName());
+				this.objectToFilenames.put(tInf.getBamTumourIndexObjectID(), tInf.getTumourBamIndexFileName());
+				
+				if (this.downloadMethod != null && !this.downloadMethod.equals("") && this.downloadMethod.equals(DownloadMethod.gtdownload.toString()))
+				{
+					tInf.setTumourBamGNOSRepoURL ( this.getMandatoryProperty(JSONUtils.TUMOUR_BAM_DOWNLOAD_URL+"_"+i) );
+				}
+			}
 			
 			this.oxoQScore = this.getMandatoryProperty(JSONUtils.OXOQ_SCORE);
 			this.JSONrepo = this.getMandatoryProperty("JSONrepo");
@@ -207,7 +240,7 @@ public abstract class BaseOxoGWrapperWorkflow extends AbstractWorkflowDataModel 
 			this.bamNormalObjectID = this.getMandatoryProperty(JSONUtils.BAM_NORMAL_OBJECT_ID);
 			this.normalMetdataURL = this.getMandatoryProperty(JSONUtils.BAM_NORMAL_METADATA_URL);
 			this.bamTumourObjectID = this.getMandatoryProperty(JSONUtils.BAM_TUMOUR_OBJECT_ID);
-			this.tumourMetdataURL = this.getMandatoryProperty(JSONUtils.BAM_TUMOUR_METADATA_URL);
+			//this.tumourMetdataURL = this.getMandatoryProperty(JSONUtils.BAM_TUMOUR_METADATA_URL);
 			this.sangerSNVVCFObjectID = this.getMandatoryProperty(JSONUtils.SANGER_SNV_VCF_OBJECT_ID);
 			this.dkfzemblSNVVCFObjectID = this.getMandatoryProperty(JSONUtils.DKFZEMBL_SNV_VCF_OBJECT_ID);
 			this.broadSNVVCFObjectID = this.getMandatoryProperty(JSONUtils.BROAD_SNV_VCF_OBJECT_ID);
@@ -218,7 +251,7 @@ public abstract class BaseOxoGWrapperWorkflow extends AbstractWorkflowDataModel 
 			this.GITPemFile = this.getMandatoryProperty("GITPemFile");
 
 			this.normalBAMFileName = this.getMandatoryProperty(JSONUtils.BAM_NORMAL_FILE_NAME);
-			this.tumourBAMFileName = this.getMandatoryProperty(JSONUtils.BAM_TUMOUR_FILE_NAME);
+			//this.tumourBAMFileName = this.getMandatoryProperty(JSONUtils.BAM_TUMOUR_FILE_NAME);
 			
 			this.sangerSNVName = this.getMandatoryProperty(JSONUtils.SANGER_SNV_VCF_NAME);
 			this.broadSNVName = this.getMandatoryProperty(JSONUtils.BROAD_SNV_VCF_NAME);
@@ -263,17 +296,17 @@ public abstract class BaseOxoGWrapperWorkflow extends AbstractWorkflowDataModel 
 			this.museGnosID = this.getMandatoryProperty(JSONUtils.MUSE_GNOS_ID);
 			
 			this.normalBamGnosID= this.getMandatoryProperty(JSONUtils.BAM_NORMAL_GNOS_ID);
-			this.tumourBamGnosID= this.getMandatoryProperty(JSONUtils.BAM_TUMOUR_GNOS_ID);
+			//this.tumourBamGnosID= this.getMandatoryProperty(JSONUtils.BAM_TUMOUR_GNOS_ID);
 			
 			this.workflowNamestoGnosIds.put(OxoGWrapperWorkflow.Pipeline.sanger.toString(), this.sangerGnosID);
 			this.workflowNamestoGnosIds.put(OxoGWrapperWorkflow.Pipeline.broad.toString(), this.broadGnosID);
 			this.workflowNamestoGnosIds.put(OxoGWrapperWorkflow.Pipeline.dkfz_embl.toString(), this.dkfzemblGnosID);
 			this.workflowNamestoGnosIds.put(OxoGWrapperWorkflow.Pipeline.muse.toString(), this.museGnosID);
 			this.workflowNamestoGnosIds.put(OxoGWrapperWorkflow.BAMType.normal.toString(), this.normalBamGnosID);
-			this.workflowNamestoGnosIds.put(OxoGWrapperWorkflow.BAMType.tumour.toString(), this.tumourBamGnosID);
+			//this.workflowNamestoGnosIds.put(OxoGWrapperWorkflow.BAMType.tumour.toString(), this.tumourBamGnosID);
 
 			this.normalBamIndexFileName = this.getMandatoryProperty(JSONUtils.NORMAL_BAM_INDEX_FILE_NAME);
-			this.tumourBamIndexFileName = this.getMandatoryProperty(JSONUtils.TUMOUR_BAM_INDEX_FILE_NAME);
+			//this.tumourBamIndexFileName = this.getMandatoryProperty(JSONUtils.TUMOUR_BAM_INDEX_FILE_NAME);
 			this.sangerSNVIndexFileName = this.getMandatoryProperty(JSONUtils.SANGER_SNV_INDEX_FILE_NAME);
 			this.sangerSVIndexFileName = this.getMandatoryProperty(JSONUtils.SANGER_SV_INDEX_FILE_NAME);
 			this.sangerINDELIndexFileName = this.getMandatoryProperty(JSONUtils.SANGER_INDEL_INDEX_FILE_NAME);
@@ -286,9 +319,9 @@ public abstract class BaseOxoGWrapperWorkflow extends AbstractWorkflowDataModel 
 			this.museSNVIndexFileName = this.getMandatoryProperty(JSONUtils.MUSE_SNV_INDEX_FILE_NAME);
 			
 			this.objectToFilenames.put(this.bamNormalObjectID, this.normalBAMFileName);
-			this.objectToFilenames.put(this.bamTumourObjectID, this.tumourBAMFileName);
+			//this.objectToFilenames.put(this.bamTumourObjectID, this.tumourBAMFileName);
 			this.objectToFilenames.put(this.bamNormalIndexObjectID, this.normalBamIndexFileName);
-			this.objectToFilenames.put(this.bamTumourIndexObjectID, this.tumourBamIndexFileName);
+			//this.objectToFilenames.put(this.bamTumourIndexObjectID, this.tumourBamIndexFileName);
 
 			this.objectToFilenames.put(this.sangerSNVVCFObjectID, this.sangerSNVName);
 			this.objectToFilenames.put(this.sangerSVVCFObjectID, this.sangerSVName);
@@ -369,11 +402,7 @@ public abstract class BaseOxoGWrapperWorkflow extends AbstractWorkflowDataModel 
 				this.studyRefNameOverride = getProperty("studyRefNameOverride");
 			}
 			
-			if (hasPropertyAndNotNull("downloadMethod")) {
-				this.downloadMethod = getProperty("downloadMethod");
-			}
-			
-			System.out.println("DEBUG: downloadMethod: "+this.downloadMethod);
+						System.out.println("DEBUG: downloadMethod: "+this.downloadMethod);
 			if (this.downloadMethod != null && !this.downloadMethod.equals("") && this.downloadMethod.equals(DownloadMethod.gtdownload.toString()))
 			{
 				System.out.println("DEBUG: Setting gtdownload-specific config values");
@@ -382,7 +411,7 @@ public abstract class BaseOxoGWrapperWorkflow extends AbstractWorkflowDataModel 
 				this.dkfzEmblGNOSRepoURL = this.getMandatoryProperty(JSONUtils.DKFZ_EMBL_DOWNLOAD_URL);
 				this.museGNOSRepoURL = this.getMandatoryProperty(JSONUtils.MUSE_DOWNLOAD_URL);
 				this.normalBamGNOSRepoURL = this.getMandatoryProperty(JSONUtils.NORMAL_BAM_DOWNLOAD_URL);
-				this.tumourBamGNOSRepoURL = this.getMandatoryProperty(JSONUtils.TUMOUR_BAM_DOWNLOAD_URL);
+				//this.tumourBamGNOSRepoURL = this.getMandatoryProperty(JSONUtils.TUMOUR_BAM_DOWNLOAD_URL);
 				this.gtDownloadBamKey = this.getMandatoryProperty("gtDownloadBamKey");
 				this.gtDownloadVcfKey = this.getMandatoryProperty("gtDownloadVcfKey");
 			}

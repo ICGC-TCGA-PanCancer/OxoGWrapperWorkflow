@@ -1,14 +1,14 @@
 package com.github.seqware;
 
 class TumourInfo {
-	String tumourMetdataURL;
-	String tumourBAMFileName;
-	String tumourBamGnosID;
-	String tumourMinibamPath;
-	String tumourBamGNOSRepoURL;
-	String tumourBamIndexFileName;
-	String bamTumourIndexObjectID;
-	String bamTumourObjectID;
+	private String tumourMetdataURL;
+	private String tumourBAMFileName;
+	private String tumourBamGnosID;
+	private String tumourMinibamPath;
+	private String tumourBamGNOSRepoURL;
+	private String tumourBamIndexFileName;
+	private String bamTumourIndexObjectID;
+	private String bamTumourObjectID;
 
 	public String getTumourMetdataURL() {
 		return this.tumourMetdataURL;
