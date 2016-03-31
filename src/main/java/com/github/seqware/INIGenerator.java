@@ -26,13 +26,7 @@ public class INIGenerator {
 		StringBuilder sb = new StringBuilder();
 
 		for (String k : m.keySet()) {
-			if (m.get(k) instanceof String) {
-				// System.out.println(prefix + " " + m.get(k));
-				// Some things *don't* need to be printed
-				if (!(k.equals(JSONUtils.TAG))) {
-					sb.append(prefix.equals("") ? "" : prefix + "_").append(k).append(" = ").append(m.get(k)).append("\n");
-				}
-			} else if (m.get(k) instanceof Map) {
+			if (m.get(k) instanceof Map) {
 				// System.out.println(prefix + " " + m.get(k));
 				String newPrefix = prefix.equals("") ? "" : prefix;
 				@SuppressWarnings("unchecked")
@@ -50,6 +44,13 @@ public class INIGenerator {
 				}
 				sb.append(mapToINI(submap, newPrefix));
 			}
+			else {
+				// System.out.println(prefix + " " + m.get(k));
+				// Some things *don't* need to be printed
+				if (!(k.equals(JSONUtils.TAG))) {
+					sb.append(prefix.equals("") ? "" : prefix + "_").append(k).append(" = ").append(m.get(k)).append("\n");
+				}
+			}  
 		}
 		return sb.toString();
 	}
