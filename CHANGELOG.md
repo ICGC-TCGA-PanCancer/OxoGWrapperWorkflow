@@ -1,5 +1,9 @@
 # CHANGELOG
 
+## 1.1.4
+ - Hotfix: Fixed a bug where the Sanger SNV index file was being referenced instead of the SV file. This was causing problems for Workers that used the S3 download method as two index files would get downloaded with the same name, and then the job that stats all files to ensure that they all exist would fail.
+ 
+
 ## 1.1.3
  - stat all files that have been downloaded - sometimes gtdownload will not download a file but the exit code is still 0 so we must `stat` the files to make sure they were actually downloaded properly.
  - gtdownload process now takes two keys: one for BAMs and once for VCFs. This is for situations where BAMs and VCFs are not hosted in the same place and require different keys for download.
