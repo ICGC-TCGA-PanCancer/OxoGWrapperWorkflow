@@ -1,15 +1,12 @@
 package com.github.seqware;
 
 import java.io.File;
-import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.Optional;
-import java.util.function.BiFunction;
+import java.util.Map.Entry;
 import java.util.function.Function;
-import java.util.function.Predicate;
 import java.util.stream.Collectors;
 
 import com.github.seqware.OxoGWrapperWorkflow.VCFType;
@@ -127,26 +124,12 @@ public abstract class JSONUtils {
 
 		DocumentContext parsedJSON = JsonPath.using(jsonPathConfig).parse(jsonFile);
 		String path = "$.."+workflowNameInJson+".gnos_repo[0]";
-//		if (workflowNameInJson.equals("tumors"))
-//		{
-//			path = "$.."+workflowNameInJson+".*.gnos_repo[0]";
-//		}
-		List<String> repoInfo = (List<String>) parsedJSON.read(path, List.class);
+		@SuppressWarnings("unchecked") List<String> repoInfo = (List<String>) parsedJSON.read(path, List.class);
 		//There should only be one element anyway. Multitumour will have to be handled differently.
 		repoURL = ((List<String>)repoInfo).get(0);
-		//repoURL = repoInfo;
-		
-//		if (workflowNameInJson.equals("tumors"))
-//		{
-//			path = "$.."+workflowNameInJson+".*.gnos_id";
-//		}
-//		else
-//		{
-			path = "$.."+workflowNameInJson+".gnos_id";
-//		}
-		List<String> gnosIDInfo = (List<String>) parsedJSON.read(path, List.class);
+		path = "$.."+workflowNameInJson+".gnos_id";
+		@SuppressWarnings("unchecked") List<String> gnosIDInfo = (List<String>) parsedJSON.read(path, List.class);
 		String gnosID = ((List<String>)gnosIDInfo).get(0);
-		
 		repoURL += "cghub/data/analysis/download/"+gnosID;
 		
 		return repoURL;
@@ -237,32 +220,24 @@ public abstract class JSONUtils {
 
 			// Get Tumour BAM object IDs
 			List<Map<String,Object>> tumours = (List<Map<String,Object>>) parsedJSON.read("$.tumors", List.class);
+			results.put(TUMOUR_COUNT, tumours.size() );
 			for (int i = 0 ; i < tumours.size(); i++ )
 			{
 				final String iStr = String.valueOf(i);
 				Map<String,Object> tumour = tumours.get(i);
 				List<Map<String,String>> files = (List<Map<String,String>>)(tumour.get("files"));
+
 				//Extract the submaps that contain info for bam/bai files.
 				Map<String, String> tumourBamInfo = files.stream().filter(p -> p.get("file_name").endsWith(".bam")).findFirst().get();
 				Map<String, String> tumourBaiInfo = files.stream().filter(p -> p.get("file_name").endsWith(".bai")).findFirst().get();
 				
 				//Now, inject the index into the keys of the maps, so that it comes out in the INI file as "tumour_file_name_1=...", "tumour_index_file_name_2=...", etc...
-//				Map<String, String> tumourBamInfo = tmpTumourBamInfo.entrySet().stream().
-//														collect(Collectors.toMap(
-//																	km -> km.getKey() + "_" + iStr ,
-//																	vm -> String.valueOf(vm.getValue())));
-				tumourBamInfo = tumourBamInfo.entrySet().stream().
-												collect(Collectors.toMap(
-												km -> km.getKey() + "_" + iStr ,
-												vm -> String.valueOf(vm.getValue())));
-//				Map<String, String> tumourBaiInfo = tmpTumourBaiInfo.entrySet().stream().
-//														collect(Collectors.toMap(
-//																	km -> km.getKey() + "_" + iStr ,
-//																	vm -> String.valueOf(vm.getValue())));
-				tumourBaiInfo = tumourBaiInfo.entrySet().stream().
-												collect(Collectors.toMap(
-												km -> km.getKey() + "_" + iStr ,
-												vm -> String.valueOf(vm.getValue())));
+				Function<? super Entry<String, String>, ? extends String> keyUpdater = km -> km.getKey() + "_" + iStr;
+				Function<? super Entry<String, String>, ? extends String> valueMapper = vm -> String.valueOf(vm.getValue());
+				
+				tumourBamInfo = tumourBamInfo.entrySet().stream().collect(Collectors.toMap(keyUpdater ,valueMapper));
+				tumourBaiInfo = tumourBaiInfo.entrySet().stream().collect(Collectors.toMap(keyUpdater, valueMapper));
+
 				String tumourBamMetadataURL = (String) ((List<Map<String,Object>>) tumour.get("available_repos")).get(0).keySet().toArray()[0];
 				String tumourGnosID = (String) tumour.get("gnos_id");
 				tumourBamMetadataURL += "cghub/metadata/analysisFull/" + tumourGnosID;
