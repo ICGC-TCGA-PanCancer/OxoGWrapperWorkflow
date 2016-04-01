@@ -554,7 +554,7 @@ public class OxoGWrapperWorkflow extends BaseOxoGWrapperWorkflow {
 		uploadBAMcommand += (" || " + moveToFailed);
 		uploadBAMResults.setCommand(uploadBAMcommand);
 		uploadBAMResults.addParent(generateAnalysisFilesBAMs);
-		uploadBAMResults.addParent(uploadVCFResults);
+		//uploadBAMResults.addParent(uploadVCFResults);
 		return uploadBAMResults;
 	}
 
@@ -846,26 +846,18 @@ public class OxoGWrapperWorkflow extends BaseOxoGWrapperWorkflow {
 		Job statFiles = this.getWorkflow().createBashJob("stat downloaded input files");
 		String moveToFailed = GitUtils.gitMoveCommand("running-jobs","failed-jobs",this.JSONlocation + "/" + this.JSONrepoName + "/" + this.JSONfolderName,this.JSONfileName, this.gitMoveTestMode, this.getWorkflowBaseDir() + "/scripts/");
 		String statFilesCMD = "( ";
-		statFilesCMD += "stat /datastore/vcf/"+Pipeline.sanger.toString()+"/"+this.sangerGnosID+"/"+this.sangerSNVName + " && \\\n";
-		statFilesCMD += "stat /datastore/vcf/"+Pipeline.sanger.toString()+"/"+this.sangerGnosID+"/"+this.sangerSNVIndexFileName + " && \\\n";
-		statFilesCMD += "stat /datastore/vcf/"+Pipeline.sanger.toString()+"/"+this.sangerGnosID+"/"+this.sangerSVName + " && \\\n";
-		statFilesCMD += "stat /datastore/vcf/"+Pipeline.sanger.toString()+"/"+this.sangerGnosID+"/"+this.sangerSVIndexFileName + " && \\\n";
-		statFilesCMD += "stat /datastore/vcf/"+Pipeline.sanger.toString()+"/"+this.sangerGnosID+"/"+this.sangerIndelName + " && \\\n";
-		statFilesCMD += "stat /datastore/vcf/"+Pipeline.sanger.toString()+"/"+this.sangerGnosID+"/"+this.sangerINDELIndexFileName + " && \\\n";
+		
+		for (String s : new ArrayList<String>( Arrays.asList(this.sangerSNVName,this.sangerSNVIndexFileName,this.sangerSVName,this.sangerSVIndexFileName,this.sangerIndelName,this.sangerINDELIndexFileName) ) ) {
+			statFilesCMD+="stat /datastore/vcf/"+Pipeline.sanger.toString()+"/"+this.sangerGnosID+"/"+s+ " && \\\n";
+		}
 
-		statFilesCMD += "stat /datastore/vcf/"+Pipeline.broad.toString()+"/"+this.broadGnosID+"/"+this.broadSNVName + " && \\\n";
-		statFilesCMD += "stat /datastore/vcf/"+Pipeline.broad.toString()+"/"+this.broadGnosID+"/"+this.broadSNVIndexFileName + " && \\\n";
-		statFilesCMD += "stat /datastore/vcf/"+Pipeline.broad.toString()+"/"+this.broadGnosID+"/"+this.broadSVName + " && \\\n";
-		statFilesCMD += "stat /datastore/vcf/"+Pipeline.broad.toString()+"/"+this.broadGnosID+"/"+this.broadSVIndexFileName + " && \\\n";
-		statFilesCMD += "stat /datastore/vcf/"+Pipeline.broad.toString()+"/"+this.broadGnosID+"/"+this.broadIndelName + " && \\\n";
-		statFilesCMD += "stat /datastore/vcf/"+Pipeline.broad.toString()+"/"+this.broadGnosID+"/"+this.broadINDELIndexFileName + " && \\\n";
+		for (String s : new ArrayList<String>( Arrays.asList(this.broadSNVName,this.broadSNVIndexFileName,this.broadSVName,this.broadSVIndexFileName,this.broadIndelName,this.broadINDELIndexFileName) ) ) {
+			statFilesCMD+="stat /datastore/vcf/"+Pipeline.broad.toString()+"/"+this.broadGnosID+"/"+s + " && \\\n";
+		}
 
-		statFilesCMD += "stat /datastore/vcf/"+Pipeline.dkfz_embl.toString()+"/"+this.dkfzemblGnosID+"/"+this.dkfzEmblSNVName + " && \\\n";
-		statFilesCMD += "stat /datastore/vcf/"+Pipeline.dkfz_embl.toString()+"/"+this.dkfzemblGnosID+"/"+this.dkfzEmblSNVIndexFileName + " && \\\n";
-		statFilesCMD += "stat /datastore/vcf/"+Pipeline.dkfz_embl.toString()+"/"+this.dkfzemblGnosID+"/"+this.dkfzEmblSVName + " && \\\n";
-		statFilesCMD += "stat /datastore/vcf/"+Pipeline.dkfz_embl.toString()+"/"+this.dkfzemblGnosID+"/"+this.dkfzEmblSVIndexFileName + " && \\\n";
-		statFilesCMD += "stat /datastore/vcf/"+Pipeline.dkfz_embl.toString()+"/"+this.dkfzemblGnosID+"/"+this.dkfzEmblIndelName + " && \\\n";
-		statFilesCMD += "stat /datastore/vcf/"+Pipeline.dkfz_embl.toString()+"/"+this.dkfzemblGnosID+"/"+this.dkfzEmblINDELIndexFileName + " && \\\n";
+		for (String s : new ArrayList<String>( Arrays.asList(this.dkfzEmblSNVName,this.dkfzEmblSNVIndexFileName,this.dkfzEmblSVName,this.dkfzEmblSVIndexFileName,this.dkfzEmblIndelName,this.dkfzEmblINDELIndexFileName) ) ) {
+			statFilesCMD+="stat /datastore/vcf/"+Pipeline.dkfz_embl.toString()+"/"+this.dkfzemblGnosID+"/"+s + " && \\\n";
+		}
 		
 		statFilesCMD += "stat /datastore/vcf/"+Pipeline.muse.toString()+"/"+this.museGnosID+"/"+this.museSNVName + " && \\\n";
 		statFilesCMD += "stat /datastore/vcf/"+Pipeline.muse.toString()+"/"+this.museGnosID+"/"+this.museSNVIndexFileName + " && \\\n";
