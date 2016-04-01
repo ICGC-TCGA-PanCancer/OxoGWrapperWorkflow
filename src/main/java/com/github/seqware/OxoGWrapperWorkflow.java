@@ -427,7 +427,7 @@ public class OxoGWrapperWorkflow extends BaseOxoGWrapperWorkflow {
 		extractOutputFiles.setCommand("(cd /datastore/oxog_results && sudo chmod a+rw -R /datastore/oxog_results/ && tar -xvkf ./"+this.aliquotID+".gnos_files.tar  ) || "+moveToFailed);
 		extractOutputFiles.addParent(runOxoGWorkflow);
 		String pathToResults = "/datastore/oxog_results/tumour_"+tumourID+"/cga/fh/pcawg_pipeline/jobResults_pipette/jobs/"+this.aliquotID+"/links_for_gnos/annotate_failed_sites_to_vcfs/";
-		String pathToUploadDir = "/datastore/files_for_upload/";
+		String pathToUploadDir = "/datastore/files_for_upload/tumour_"+tumourID+"/";
 		
 		Function<String,String> changeToOxoGSuffix = (s) -> {return pathToUploadDir + s.replace(".vcf.gz", ".oxoG.vcf.gz"); };
 		Function<String,String> changeToOxoGTBISuffix = changeToOxoGSuffix.andThen((s) -> s+=".tbi"); 
@@ -453,8 +453,8 @@ public class OxoGWrapperWorkflow extends BaseOxoGWrapperWorkflow {
 		this.filesForUpload.add("/datastore/oxog_results/" + this.aliquotID + ".gnos_files.tar");
 		
 		Job prepOxoGTarAndMutectCallsforUpload = this.getWorkflow().createBashJob("prepare OxoG tar and mutect calls file for upload");
-		prepOxoGTarAndMutectCallsforUpload.setCommand("( ([ -d /datastore/files_for_upload ] || mkdir -p /datastore/files_for_upload) "
-				+ " && cp /datastore/oxog_results/tumour_"+tumourID+"/"+this.aliquotID+".gnos_files.tar /datastore/files_for_upload/tumour_"+tumourID+"/ \\\n"
+		prepOxoGTarAndMutectCallsforUpload.setCommand("( ([ -d "+pathToUploadDir+" ] || mkdir -p "+pathToUploadDir+") "
+				+ " && cp /datastore/oxog_results/tumour_"+tumourID+"/"+this.aliquotID+".gnos_files.tar "+pathToUploadDir+" \\\n"
 				+ " && cp " + pathToResults + "*.vcf.gz  "+pathToUploadDir+" \\\n"
 				+ " && cp " + pathToResults + "*.vcf.gz.tbi  "+pathToUploadDir+" \\\n"
 				// Also need to upload normalized INDELs - TODO: Move to its own job, or maybe combine with the normalization job?
@@ -465,8 +465,8 @@ public class OxoGWrapperWorkflow extends BaseOxoGWrapperWorkflow {
 				+ " && cp " + this.dkfzEmblNormalizedIndelVCFName+".tbi "+pathToUploadDir+" \\\n"
 				+ " && cp " + this.sangerNormalizedIndelVCFName+".tbi "+pathToUploadDir+" \\\n"
 				// Copy the call_stats 
-				+ " && cp /datastore/oxog_workspace/tumour_"+tumourID+"/mutect/sg/gather/"+this.aliquotID+".call_stats.txt /datastore/files_for_upload/tumour_"+tumourID+"/"+this.aliquotID+".call_stats.txt \\\n"
-				+ " && cd /datastore/files_for_upload/tumour_"+tumourID+"/ && gzip -f "+this.aliquotID+".call_stats.txt && tar -cvf ./"+this.aliquotID+".call_stats.txt.gz.tar ./"+this.aliquotID+".call_stats.txt.gz ) || "+moveToFailed);
+				+ " && cp /datastore/oxog_workspace/tumour_"+tumourID+"/mutect/sg/gather/"+this.aliquotID+".call_stats.txt "+pathToUploadDir+this.aliquotID+".call_stats.txt \\\n"
+				+ " && cd "+pathToUploadDir+" && gzip -f "+this.aliquotID+".call_stats.txt && tar -cvf ./"+this.aliquotID+".call_stats.txt.gz.tar ./"+this.aliquotID+".call_stats.txt.gz ) || "+moveToFailed);
 		this.filesForUpload.add("/datastore/files_for_upload/tumour_"+tumourID+"/"+this.aliquotID+".call_stats.txt.gz.tar");
 		
 		prepOxoGTarAndMutectCallsforUpload.addParent(extractOutputFiles);
@@ -527,11 +527,100 @@ public class OxoGWrapperWorkflow extends BaseOxoGWrapperWorkflow {
 	 * @return
 	 */
 	private Job doUpload(Job parentJob) {
-		// Will need to run gtupload to generate the analysis.xml and manifest files (but not actually upload). 
-		// The tar file contains all results.
-		Job generateAnalysisFilesVCFs = this.getWorkflow().createBashJob("generate_analysis_files_for_VCF_upload");
 		String moveToFailed = GitUtils.gitMoveCommand("uploading-jobs","failed-jobs",this.JSONlocation + "/" + this.JSONrepoName + "/" + this.JSONfolderName,this.JSONfileName, this.gitMoveTestMode, this.getWorkflowBaseDir() + "/scripts/");
+		// Will need to run gtupload to generate the analysis.xml and manifest files (but not actually upload). 
+		Job generateAnalysisFilesVCFs = generateVCFMetadata(parentJob, moveToFailed);
 		
+		Job generateAnalysisFilesBAMs = generateBAMMetadata(parentJob, moveToFailed);
+	
+		String gnosServer = this.gnosMetadataUploadURL.replace("http://", "").replace("https://", "").replace("/", "");
+		//Note: It was decided there should be two uploads: one for minibams and one for VCFs (for people who want VCFs but not minibams).
+		Job uploadVCFResults = this.getWorkflow().createBashJob("upload VCF results");
+		String uploadVCFCommand = "sudo chmod 0600 /datastore/credentials/rsync.key\n"
+								+ "UPLOAD_PATH=$( echo \""+this.uploadURL+"\" | sed 's/\\(.*\\)\\:\\(.*\\)/\\2/g' )\n"
+								+ "VCF_UUID=$(grep server_path /datastore/files_for_upload/manifest.xml  | sed 's/.*server_path=\\\"\\(.*\\)\\\" .*/\\1/g')\n"
+								+ "( rsync -avtuz -e 'ssh -o UserKnownHostsFile=/datastore/credentials/known_hosts -o IdentitiesOnly=yes -o BatchMode=yes -o PasswordAuthentication=no -o PreferredAuthentications=publickey -i "+this.uploadKey+"'"
+										+ " --rsync-path=\"mkdir -p $UPLOAD_PATH/"+gnosServer+"/$VCF_UUID && rsync\" /datastore/files_for_upload/ " + this.uploadURL+ "/"+gnosServer + "/$VCF_UUID ) ";
+		uploadVCFCommand += (" || " + moveToFailed);
+		uploadVCFResults.setCommand(uploadVCFCommand);
+		uploadVCFResults.addParent(generateAnalysisFilesVCFs);
+		
+		Job uploadBAMResults = this.getWorkflow().createBashJob("upload BAM results");
+		String uploadBAMcommand = "sudo chmod 0600 /datastore/credentials/rsync.key\n"
+								+ "UPLOAD_PATH=$( echo \""+this.uploadURL+"\" | sed 's/\\(.*\\)\\:\\(.*\\)/\\2/g' )\n"
+								+ "BAM_UUID=$(grep server_path /datastore/variantbam_results/manifest.xml  | sed 's/.*server_path=\\\"\\(.*\\)\\\" .*/\\1/g')\n"
+								+ "( rsync -avtuz -e 'ssh -o UserKnownHostsFile=/datastore/credentials/known_hosts -o IdentitiesOnly=yes -o BatchMode=yes -o PasswordAuthentication=no -o PreferredAuthentications=publickey -i "+this.uploadKey+"'"
+										+ " --rsync-path=\"mkdir -p $UPLOAD_PATH/"+gnosServer+"/$BAM_UUID && rsync\" /datastore/variantbam_results/ " + this.uploadURL+ "/"+gnosServer + "/$BAM_UUID ) ";
+		uploadBAMcommand += (" || " + moveToFailed);
+		uploadBAMResults.setCommand(uploadBAMcommand);
+		uploadBAMResults.addParent(generateAnalysisFilesBAMs);
+		uploadBAMResults.addParent(uploadVCFResults);
+		return uploadBAMResults;
+	}
+
+	private Job generateBAMMetadata(Job parentJob, String moveToFailed) {
+		Job generateAnalysisFilesBAMs = this.getWorkflow().createBashJob("generate_analysis_files_for_BAM_upload");
+		
+		String bams = "";
+		String bamIndicies = "";
+		String bamMD5Sums = "";
+		String bamIndexMD5Sums = "";
+		String generateAnalysisFilesBAMsCommand = "";
+		generateAnalysisFilesBAMsCommand += "sudo chmod a+rw -R /datastore/variantbam_results/ &&\n";
+		//I don't think distinct() should be necessary.
+		for (String file : this.filesForUpload.stream().filter( p -> p.contains(".bam") || p.contains(".bai") ).distinct().collect(Collectors.toList()) )
+		{
+			file = file.trim();
+			//md5sum test_files/tumour_minibam.bam.bai | cut -d ' ' -f 1 > test_files/tumour_minibam.bai.md5
+			generateAnalysisFilesBAMsCommand += " md5sum "+file+" | cut -d ' ' -f 1 > "+file+".md5 ; \n";
+			
+			if (file.contains(".bai") )
+			{
+				bamIndicies += file + ",";
+				bamIndexMD5Sums += file + ".md5" + ",";
+			}
+			else
+			{
+				bams += file + ",";
+				bamMD5Sums += file + ".md5" + ",";
+			}
+		}
+		
+		String bamDescription="These are minibams created for donor "+this.donorID+" by extracing from WG BAMs reads around variants called by any of the core variant calling workflows."
+							+ " Specifically, the window sizes are SNV+/-"+this.snvPadding+"bp, indel+/-"+this.indelPadding+"bp, SV+/-"+this.svPadding+"bp."
+							+ " The results consist of one or more BAM files plus optional tar.gz files that contain additional file types."
+							+ " This uses the "+this.getName()+" workflow, version "+this.getVersion()+" available at "+this.workflowURL+"."
+							+ " This workflow can be created from source, see "+this.workflowSourceURL+"."
+							+ " For a complete change log see "+this.changelogURL+"."
+							+ OxoGWrapperWorkflow.DESCRIPTION_END;
+		
+		generateAnalysisFilesBAMsCommand += "\n docker run --rm --name=upload_bams -v /datastore/bam-upload-prep/:/vcf/ -v "+this.gnosKey+":/gnos.key -v /datastore/:/datastore/ "
+				+ " pancancer/pancancer_upload_download:1.7 /bin/bash -c \"cat << DESCRIPTIONFILE > /vcf/description.txt\n"
+				+ bamDescription
+				+ "\nDESCRIPTIONFILE\n"
+				+ " perl -I /opt/gt-download-upload-wrapper/gt-download-upload-wrapper-2.0.13/lib/ /opt/vcf-uploader/vcf-uploader-2.0.9/gnos_upload_vcf.pl \\\n"
+					+ " --gto-only --key /gnos.key --upload-url "+this.gnosMetadataUploadURL+" "
+					+ " --metadata-urls "+this.normalMetdataURL+","+this.tumours.stream().map(t -> t.getTumourMetdataURL()).reduce("", (a,b)->a+=b+"," )+" \\\n"
+					+ " --bams "+bams+" \\\n"
+					+ " --bam-bais "+bamIndicies+" \\\n"
+					+ " --bam-md5sum-files "+bamMD5Sums+" \\\n"
+					+ " --bam_bai-md5sum-files "+bamIndexMD5Sums+" \\\n"
+					+ " --workflow-name OxoGWorkflow-variantbam \\\n"
+					+ " --study-refname-override "+this.studyRefNameOverride + " \\\n"
+					+ " --description-file /vcf/description.txt \\\n"
+					+ " --workflow-version " + this.getVersion() + " \\\n"
+					+ " --workflow-src-url https://github.com/ICGC-TCGA-PanCancer/OxoGWrapperWorkflow --workflow-url https://github.com/ICGC-TCGA-PanCancer/OxoGWrapperWorkflow  \"\n";
+		
+		generateAnalysisFilesBAMsCommand += "\n cp /datastore/bam-upload-prep/*/*/manifest.xml /datastore/variantbam_results/manifest.xml "
+											+ " && cp /datastore/bam-upload-prep/*/*/analysis.xml /datastore/variantbam_results/analysis.xml "
+											+ " && cp /datastore/bam-upload-prep/*/*/*.gto /datastore/variantbam_results/";
+		generateAnalysisFilesBAMs.setCommand("( "+generateAnalysisFilesBAMsCommand+" ) || "+moveToFailed);
+		generateAnalysisFilesBAMs.addParent(parentJob);
+		return generateAnalysisFilesBAMs;
+	}
+
+	private Job generateVCFMetadata(Job parentJob, String moveToFailed) {
+		Job generateAnalysisFilesVCFs = this.getWorkflow().createBashJob("generate_analysis_files_for_VCF_upload");
 		//Files need to be copied to the staging directory
 		String vcfs = "";
 		String vcfIndicies = "";
@@ -631,89 +720,7 @@ public class OxoGWrapperWorkflow extends BaseOxoGWrapperWorkflow {
 															+ " && cp /datastore/vcf-upload-prep/*/*/*.gto /datastore/files_for_upload/\n";
 		generateAnalysisFilesVCFs.setCommand("( "+generateAnalysisFilesVCFCommand+ " ) || "+moveToFailed);
 		generateAnalysisFilesVCFs.addParent(parentJob);
-		
-		//get the UUID that was submitted with the metadata
-		Job generateAnalysisFilesBAMs = this.getWorkflow().createBashJob("generate_analysis_files_for_BAM_upload");
-		
-		String bams = "";
-		String bamIndicies = "";
-		String bamMD5Sums = "";
-		String bamIndexMD5Sums = "";
-		String generateAnalysisFilesBAMsCommand = "";
-		generateAnalysisFilesBAMsCommand += "sudo chmod a+rw -R /datastore/variantbam_results/ &&\n";
-		//I don't think distinct() should be necessary.
-		for (String file : this.filesForUpload.stream().filter( p -> p.contains(".bam") || p.contains(".bai") ).distinct().collect(Collectors.toList()) )
-		{
-			file = file.trim();
-			//md5sum test_files/tumour_minibam.bam.bai | cut -d ' ' -f 1 > test_files/tumour_minibam.bai.md5
-			generateAnalysisFilesBAMsCommand += " md5sum "+file+" | cut -d ' ' -f 1 > "+file+".md5 ; \n";
-			
-			if (file.contains(".bai") )
-			{
-				bamIndicies += file + ",";
-				bamIndexMD5Sums += file + ".md5" + ",";
-			}
-			else
-			{
-				bams += file + ",";
-				bamMD5Sums += file + ".md5" + ",";
-			}
-		}
-		
-		String bamDescription="These are minibams created for donor "+this.donorID+" by extracing from WG BAMs reads around variants called by any of the core variant calling workflows."
-							+ " Specifically, the window sizes are SNV+/-"+this.snvPadding+"bp, indel+/-"+this.indelPadding+"bp, SV+/-"+this.svPadding+"bp."
-							+ " The results consist of one or more BAM files plus optional tar.gz files that contain additional file types."
-							+ " This uses the "+this.getName()+" workflow, version "+this.getVersion()+" available at "+this.workflowURL+"."
-							+ " This workflow can be created from source, see "+this.workflowSourceURL+"."
-							+ " For a complete change log see "+this.changelogURL+"."
-							+ OxoGWrapperWorkflow.DESCRIPTION_END;
-		
-		generateAnalysisFilesBAMsCommand += "\n docker run --rm --name=upload_bams -v /datastore/bam-upload-prep/:/vcf/ -v "+this.gnosKey+":/gnos.key -v /datastore/:/datastore/ "
-				+ " pancancer/pancancer_upload_download:1.7 /bin/bash -c \"cat << DESCRIPTIONFILE > /vcf/description.txt\n"
-				+ bamDescription
-				+ "\nDESCRIPTIONFILE\n"
-				+ " perl -I /opt/gt-download-upload-wrapper/gt-download-upload-wrapper-2.0.13/lib/ /opt/vcf-uploader/vcf-uploader-2.0.9/gnos_upload_vcf.pl \\\n"
-					+ " --gto-only --key /gnos.key --upload-url "+this.gnosMetadataUploadURL+" "
-					+ " --metadata-urls "+this.normalMetdataURL+","+this.tumours.stream().map(t -> t.getTumourMetdataURL()).reduce("", (a,b)->a+=b+"," )+" \\\n"
-					+ " --bams "+bams+" \\\n"
-					+ " --bam-bais "+bamIndicies+" \\\n"
-					+ " --bam-md5sum-files "+bamMD5Sums+" \\\n"
-					+ " --bam_bai-md5sum-files "+bamIndexMD5Sums+" \\\n"
-					+ " --workflow-name OxoGWorkflow-variantbam \\\n"
-					+ " --study-refname-override "+this.studyRefNameOverride + " \\\n"
-					+ " --description-file /vcf/description.txt \\\n"
-					+ " --workflow-version " + this.getVersion() + " \\\n"
-					+ " --workflow-src-url https://github.com/ICGC-TCGA-PanCancer/OxoGWrapperWorkflow --workflow-url https://github.com/ICGC-TCGA-PanCancer/OxoGWrapperWorkflow  \"\n";
-		
-		generateAnalysisFilesBAMsCommand += "\n cp /datastore/bam-upload-prep/*/*/manifest.xml /datastore/variantbam_results/manifest.xml "
-											+ " && cp /datastore/bam-upload-prep/*/*/analysis.xml /datastore/variantbam_results/analysis.xml "
-											+ " && cp /datastore/bam-upload-prep/*/*/*.gto /datastore/variantbam_results/";
-		generateAnalysisFilesBAMs.setCommand("( "+generateAnalysisFilesBAMsCommand+" ) || "+moveToFailed);
-		generateAnalysisFilesBAMs.addParent(parentJob);
-	
-		String gnosServer = this.gnosMetadataUploadURL.replace("http://", "").replace("https://", "").replace("/", "");
-		//Note: It was decided there should be two uploads: one for minibams and one for VCFs (for people who want VCFs but not minibams).
-		Job uploadVCFResults = this.getWorkflow().createBashJob("upload VCF results");
-		String uploadVCFCommand = "sudo chmod 0600 /datastore/credentials/rsync.key\n"
-								+ "UPLOAD_PATH=$( echo \""+this.uploadURL+"\" | sed 's/\\(.*\\)\\:\\(.*\\)/\\2/g' )\n"
-								+ "VCF_UUID=$(grep server_path /datastore/files_for_upload/manifest.xml  | sed 's/.*server_path=\\\"\\(.*\\)\\\" .*/\\1/g')\n"
-								+ "( rsync -avtuz -e 'ssh -o UserKnownHostsFile=/datastore/credentials/known_hosts -o IdentitiesOnly=yes -o BatchMode=yes -o PasswordAuthentication=no -o PreferredAuthentications=publickey -i "+this.uploadKey+"'"
-										+ " --rsync-path=\"mkdir -p $UPLOAD_PATH/"+gnosServer+"/$VCF_UUID && rsync\" /datastore/files_for_upload/ " + this.uploadURL+ "/"+gnosServer + "/$VCF_UUID ) ";
-		uploadVCFCommand += (" || " + moveToFailed);
-		uploadVCFResults.setCommand(uploadVCFCommand);
-		uploadVCFResults.addParent(generateAnalysisFilesVCFs);
-		
-		Job uploadBAMResults = this.getWorkflow().createBashJob("upload BAM results");
-		String uploadBAMcommand = "sudo chmod 0600 /datastore/credentials/rsync.key\n"
-								+ "UPLOAD_PATH=$( echo \""+this.uploadURL+"\" | sed 's/\\(.*\\)\\:\\(.*\\)/\\2/g' )\n"
-								+ "BAM_UUID=$(grep server_path /datastore/variantbam_results/manifest.xml  | sed 's/.*server_path=\\\"\\(.*\\)\\\" .*/\\1/g')\n"
-								+ "( rsync -avtuz -e 'ssh -o UserKnownHostsFile=/datastore/credentials/known_hosts -o IdentitiesOnly=yes -o BatchMode=yes -o PasswordAuthentication=no -o PreferredAuthentications=publickey -i "+this.uploadKey+"'"
-										+ " --rsync-path=\"mkdir -p $UPLOAD_PATH/"+gnosServer+"/$BAM_UUID && rsync\" /datastore/variantbam_results/ " + this.uploadURL+ "/"+gnosServer + "/$BAM_UUID ) ";
-		uploadBAMcommand += (" || " + moveToFailed);
-		uploadBAMResults.setCommand(uploadBAMcommand);
-		uploadBAMResults.addParent(generateAnalysisFilesBAMs);
-		uploadBAMResults.addParent(uploadVCFResults);
-		return uploadBAMResults;
+		return generateAnalysisFilesVCFs;
 	}
 	
 
@@ -832,11 +839,6 @@ public class OxoGWrapperWorkflow extends BaseOxoGWrapperWorkflow {
 			finalAnnotatorJobs.add(sangerIndelAnnotatorJob);
 			finalAnnotatorJobs.add(museSNVAnnotatorJob);
 		}
-//		finalAnnotatorJobs.add(sangerSNVFromIndelAnnotatorJob);
-//		finalAnnotatorJobs.add(sangerSNVAnnotatorJob);
-//		finalAnnotatorJobs.add(sangerIndelAnnotatorJob);
-//		finalAnnotatorJobs.add(museSNVAnnotatorJob);
-
 		return finalAnnotatorJobs;
 	}
 
