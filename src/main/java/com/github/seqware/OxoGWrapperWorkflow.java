@@ -412,7 +412,7 @@ public class OxoGWrapperWorkflow extends BaseOxoGWrapperWorkflow {
 					+ " /datafiles/VCF/"+Pipeline.muse+"/" + this.museSNVName + " \\\n"
 					+ " /datafiles/VCF/"+Pipeline.broad+"/" + this.broadSNVName 
 					+ " ${EXTRACTED_SNV_FILES} " ;
-			runOxoGWorkflow.setCommand("(("+extractedSnvCheck+"\nset -x;\ndocker run --rm --name=\"oxog_filter\" "+oxogMounts+" oxog /bin/bash -c \"" + oxogCommand+ "\" ;\nset +x;) || echo \"OxoG Exit Code: $?\"  ) || "+moveToFailed);
+			runOxoGWorkflow.setCommand("(("+extractedSnvCheck+"\nset -x;\ndocker run --rm --name=\"oxog_filter\" "+oxogMounts+" oxog:160329 /bin/bash -c \"" + oxogCommand+ "\" ;\nset +x;) || echo \"OxoG Exit Code: $?\"  ) || "+moveToFailed);
 			
 			
 		}
