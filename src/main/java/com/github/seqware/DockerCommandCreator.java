@@ -58,7 +58,7 @@ public class DockerCommandCreator {
 		//UGLY!! - rethink this whole DockerComandCreator...
 		containerCommandArgs.add(" && samtools index  /outdir/"+outputFileName);
 
-		command = DockerCommandCreator.createDockerRunCommand("oxog", mountedObjects, runOpts,
+		command = DockerCommandCreator.createDockerRunCommand("oxog:160329", mountedObjects, runOpts,
 				"  /cga/fh/pcawg_pipeline/modules/VariantBam/variant", containerCommandArgs);
 
 		return command;
