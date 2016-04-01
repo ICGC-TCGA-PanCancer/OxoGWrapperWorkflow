@@ -371,7 +371,7 @@ public class OxoGWrapperWorkflow extends BaseOxoGWrapperWorkflow {
 	 * @param parent
 	 * @return
 	 */
-	private Job doOxoG(Job parent) {
+	private Job doOxoG(String pathToTumour, String tumourID, Job ...parents) {
 		Job runOxoGWorkflow = this.getWorkflow().createBashJob("run OxoG Filter");
 		String moveToFailed = GitUtils.gitMoveCommand("running-jobs","failed-jobs",this.JSONlocation + "/" + this.JSONrepoName + "/" + this.JSONfolderName,this.JSONfileName, this.gitMoveTestMode, this.getWorkflowBaseDir() + "/scripts/");
 		Function<String,String> getFileName = (s) -> {  return s.substring(s.lastIndexOf("/")); };
@@ -394,35 +394,21 @@ public class OxoGWrapperWorkflow extends BaseOxoGWrapperWorkflow {
 									+ "fi\n ";
 		if (!skipOxoG)
 		{
-			Function<TumourInfo,String> mapper = new Function<TumourInfo, String>() {
-				@Override
-				public String apply(TumourInfo t) {
-					return " /datafiles/BAM/tumour/" + t.getTumourBamGnosID() + "/" + t.getTumourBAMFileName() + " \\\n";
-				}
-			}; 
-			
-			BinaryOperator<String> accumulator = new BinaryOperator<String>() {
-				@Override
-				public String apply(String t, String u) {
-					return t += u;
-				}
-			};
-			
 			String oxogMounts = " -v /refdata/:/cga/fh/pcawg_pipeline/refdata/ \\\n"
-					+ " -v /datastore/oxog_workspace/:/cga/fh/pcawg_pipeline/jobResults_pipette/jobs/"+this.aliquotID+"/:rw \\\n" 
+					+ " -v /datastore/oxog_workspace/tumour_"+tumourID+"/:/cga/fh/pcawg_pipeline/jobResults_pipette/jobs/"+this.aliquotID+"/:rw \\\n" 
 					+ " -v /datastore/bam/:/datafiles/BAM/ \\\n"
 					+ " -v /datastore/vcf/"+Pipeline.broad+"/"+this.broadGnosID+"/"+"/:/datafiles/VCF/"+Pipeline.broad+"/ \\\n"
 					+ " -v /datastore/vcf/"+Pipeline.sanger+"/"+this.sangerGnosID+"/"+"/:/datafiles/VCF/"+Pipeline.sanger+"/ \\\n"
 					+ " -v /datastore/vcf/"+Pipeline.dkfz_embl+"/"+this.dkfzemblGnosID+"/"+"/:/datafiles/VCF/"+Pipeline.dkfz_embl+"/ \\\n"
 					+ " -v /datastore/vcf/"+Pipeline.muse+"/"+this.museGnosID+"/"+"/:/datafiles/VCF/"+Pipeline.muse+"/ \\\n"
 					+ " ${EXTRACTED_SNV_MOUNT} \\\n"
-					+ " -v /datastore/oxog_results/:/cga/fh/pcawg_pipeline/jobResults_pipette/results:rw \\\n";
+					+ " -v /datastore/oxog_results/tumour_"+tumourID+"/:/cga/fh/pcawg_pipeline/jobResults_pipette/results:rw \\\n";
 			
 			String oxogCommand = "/cga/fh/pcawg_pipeline/pipelines/run_one_pipeline.bash pcawg /cga/fh/pcawg_pipeline/pipelines/oxog_pipeline.py \\\n"
 					+ this.aliquotID + " \\\n"
 					//genereate a string of the tumours' gnos IDs and file names.
 					//Can the OxoG filter handle more than 1 tumour at a time?
-					+ this.tumours.stream().map(mapper).reduce(accumulator)
+					+ " /datafiles/BAM/tumour/"+pathToTumour+" \\\n" 
 					+ " /datafiles/BAM/normal/" +this.normalBamGnosID + "/" +  this.normalBAMFileName + " \\\n" 
 					+ " " + this.oxoQScore + " \\\n"
 					+ " /datafiles/VCF/"+Pipeline.sanger+"/" + this.sangerSNVName + " \\\n"
@@ -434,11 +420,14 @@ public class OxoGWrapperWorkflow extends BaseOxoGWrapperWorkflow {
 			
 			
 		}
-		runOxoGWorkflow.addParent(parent);
+		for (Job parent : parents)
+		{
+			runOxoGWorkflow.addParent(parent);
+		}
 		Job extractOutputFiles = this.getWorkflow().createBashJob("extract oxog output files from tar");
 		extractOutputFiles.setCommand("(cd /datastore/oxog_results && sudo chmod a+rw -R /datastore/oxog_results/ && tar -xvkf ./"+this.aliquotID+".gnos_files.tar  ) || "+moveToFailed);
 		extractOutputFiles.addParent(runOxoGWorkflow);
-		String pathToResults = "/datastore/oxog_results/cga/fh/pcawg_pipeline/jobResults_pipette/jobs/"+this.aliquotID+"/links_for_gnos/annotate_failed_sites_to_vcfs/";
+		String pathToResults = "/datastore/oxog_results/tumour_"+tumourID+"/cga/fh/pcawg_pipeline/jobResults_pipette/jobs/"+this.aliquotID+"/links_for_gnos/annotate_failed_sites_to_vcfs/";
 		String pathToUploadDir = "/datastore/files_for_upload/";
 		
 		Function<String,String> changeToOxoGSuffix = (s) -> {return pathToUploadDir + s.replace(".vcf.gz", ".oxoG.vcf.gz"); };
@@ -466,7 +455,7 @@ public class OxoGWrapperWorkflow extends BaseOxoGWrapperWorkflow {
 		
 		Job prepOxoGTarAndMutectCallsforUpload = this.getWorkflow().createBashJob("prepare OxoG tar and mutect calls file for upload");
 		prepOxoGTarAndMutectCallsforUpload.setCommand("( ([ -d /datastore/files_for_upload ] || mkdir -p /datastore/files_for_upload) "
-				+ " && cp /datastore/oxog_results/"+this.aliquotID+".gnos_files.tar /datastore/files_for_upload/ \\\n"
+				+ " && cp /datastore/oxog_results/tumour_"+tumourID+"/"+this.aliquotID+".gnos_files.tar /datastore/files_for_upload/tumour_"+tumourID+"/ \\\n"
 				+ " && cp " + pathToResults + "*.vcf.gz  "+pathToUploadDir+" \\\n"
 				+ " && cp " + pathToResults + "*.vcf.gz.tbi  "+pathToUploadDir+" \\\n"
 				// Also need to upload normalized INDELs - TODO: Move to its own job, or maybe combine with the normalization job?
@@ -477,9 +466,9 @@ public class OxoGWrapperWorkflow extends BaseOxoGWrapperWorkflow {
 				+ " && cp " + this.dkfzEmblNormalizedIndelVCFName+".tbi "+pathToUploadDir+" \\\n"
 				+ " && cp " + this.sangerNormalizedIndelVCFName+".tbi "+pathToUploadDir+" \\\n"
 				// Copy the call_stats 
-				+ " && cp /datastore/oxog_workspace/mutect/sg/gather/"+this.aliquotID+".call_stats.txt /datastore/files_for_upload/"+this.aliquotID+".call_stats.txt \\\n"
-				+ " && cd /datastore/files_for_upload/ && gzip -f "+this.aliquotID+".call_stats.txt && tar -cvf ./"+this.aliquotID+".call_stats.txt.gz.tar ./"+this.aliquotID+".call_stats.txt.gz ) || "+moveToFailed);
-		this.filesForUpload.add("/datastore/files_for_upload/"+this.aliquotID+".call_stats.txt.gz.tar");
+				+ " && cp /datastore/oxog_workspace/tumour_"+tumourID+"/mutect/sg/gather/"+this.aliquotID+".call_stats.txt /datastore/files_for_upload/tumour_"+tumourID+"/"+this.aliquotID+".call_stats.txt \\\n"
+				+ " && cd /datastore/files_for_upload/tumour_"+tumourID+"/ && gzip -f "+this.aliquotID+".call_stats.txt && tar -cvf ./"+this.aliquotID+".call_stats.txt.gz.tar ./"+this.aliquotID+".call_stats.txt.gz ) || "+moveToFailed);
+		this.filesForUpload.add("/datastore/files_for_upload/tumour_"+tumourID+"/"+this.aliquotID+".call_stats.txt.gz.tar");
 		
 		prepOxoGTarAndMutectCallsforUpload.addParent(extractOutputFiles);
 		return prepOxoGTarAndMutectCallsforUpload;
@@ -1035,18 +1024,28 @@ public class OxoGWrapperWorkflow extends BaseOxoGWrapperWorkflow {
 			
 			Job combineVCFsByType = this.combineVCFsByType( sangerPreprocessVCF, dkfzEmblPreprocessVCF, broadPreprocessVCF);
 			
-			Job oxoG = this.doOxoG(combineVCFsByType);
-			// variantbam jobs will run parallel to each other. variant seems to only use a *single* core, but runs long ( 60 - 120 min on OpenStack);
+			List<Job> oxogJobs = new ArrayList<Job>(this.tumours.size());
+			for (TumourInfo tInf : this.tumours)
+			{
+				Job oxoG = this.doOxoG(tInf.getTumourBamGnosID()+"/"+tInf.getTumourBAMFileName(),tInf.getTumourBamGnosID(), combineVCFsByType);
+				oxogJobs.add(oxoG);
+			}
 			Job normalVariantBam = this.doVariantBam(combineVCFsByType,BAMType.normal,"/datastore/bam/normal/"+this.normalBamGnosID+"/"+this.normalBAMFileName,this.normalBamGnosID, this.normalMinibamPath);
-			
+
 			List<Job> parentJobsToAnnotationJobs = new ArrayList<Job>(this.tumours.size());
+			//create a list of tumour variant-bam jobs.
 			for (int i = 0; i < this.tumours.size() ; i ++)
 			{
 				Job tumourVariantBam = this.doVariantBam(combineVCFsByType,BAMType.tumour,"/datastore/bam/tumour/"+this.tumours.get(i).getTumourBamGnosID()+"/"+this.tumours.get(i).getTumourBAMFileName(), this.tumours.get(i).getTumourBamGnosID(), this.tumours.get(i).getTumourMinibamPath());
 				parentJobsToAnnotationJobs.add(tumourVariantBam);
 			}
+			
+			//set up all parents of annotation: all OxoG jobs and all Variant Bam jobs. 
 			parentJobsToAnnotationJobs.add (normalVariantBam);
-			parentJobsToAnnotationJobs.add (oxoG);
+			for (Job j : oxogJobs)
+			{
+				parentJobsToAnnotationJobs.add(j);
+			}
 			List<Job> annotationJobs = this.doAnnotations( parentJobsToAnnotationJobs.toArray(new Job[parentJobsToAnnotationJobs.size()]));
 			
 			//Now do the Upload
@@ -1069,6 +1068,4 @@ public class OxoGWrapperWorkflow extends BaseOxoGWrapperWorkflow {
 			throw new RuntimeException ("Exception caught: "+e.getMessage(), e);
 		}
 	}
-
-	
 }
