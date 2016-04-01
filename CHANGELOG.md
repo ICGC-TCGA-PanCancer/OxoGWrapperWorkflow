@@ -1,5 +1,8 @@
 # CHANGELOG
 
+## 1.1.5
+ - Now use OxoG container "oxog:160329" which contains a new version of variantbam. This new version of variantbam fixes an issue where it was generating stats and encountered the value "-1" in the NM tag and failed.
+
 ## 1.1.4
  - Hotfix: Fixed a bug where the Sanger SNV index file was being referenced instead of the SV file. This was causing problems for Workers that used the S3 download method as two index files would get downloaded with the same name, and then the job that stats all files to ensure that they all exist would fail.
  
