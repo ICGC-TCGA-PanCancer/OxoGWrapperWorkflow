@@ -840,6 +840,51 @@ public class OxoGWrapperWorkflow extends BaseOxoGWrapperWorkflow {
 
 		return finalAnnotatorJobs;
 	}
+
+	private Job statInputFiles(Job parent) {
+		Job statFiles = this.getWorkflow().createBashJob("stat downloaded input files");
+		String moveToFailed = GitUtils.gitMoveCommand("running-jobs","failed-jobs",this.JSONlocation + "/" + this.JSONrepoName + "/" + this.JSONfolderName,this.JSONfileName, this.gitMoveTestMode, this.getWorkflowBaseDir() + "/scripts/");
+		String statFilesCMD = "( ";
+		statFilesCMD += "stat /datastore/vcf/"+Pipeline.sanger.toString()+"/"+this.sangerGnosID+"/"+this.sangerSNVName + " && \\\n";
+		statFilesCMD += "stat /datastore/vcf/"+Pipeline.sanger.toString()+"/"+this.sangerGnosID+"/"+this.sangerSNVIndexFileName + " && \\\n";
+		statFilesCMD += "stat /datastore/vcf/"+Pipeline.sanger.toString()+"/"+this.sangerGnosID+"/"+this.sangerSVName + " && \\\n";
+		statFilesCMD += "stat /datastore/vcf/"+Pipeline.sanger.toString()+"/"+this.sangerGnosID+"/"+this.sangerSVIndexFileName + " && \\\n";
+		statFilesCMD += "stat /datastore/vcf/"+Pipeline.sanger.toString()+"/"+this.sangerGnosID+"/"+this.sangerIndelName + " && \\\n";
+		statFilesCMD += "stat /datastore/vcf/"+Pipeline.sanger.toString()+"/"+this.sangerGnosID+"/"+this.sangerINDELIndexFileName + " && \\\n";
+
+		statFilesCMD += "stat /datastore/vcf/"+Pipeline.broad.toString()+"/"+this.broadGnosID+"/"+this.broadSNVName + " && \\\n";
+		statFilesCMD += "stat /datastore/vcf/"+Pipeline.broad.toString()+"/"+this.broadGnosID+"/"+this.broadSNVIndexFileName + " && \\\n";
+		statFilesCMD += "stat /datastore/vcf/"+Pipeline.broad.toString()+"/"+this.broadGnosID+"/"+this.broadSVName + " && \\\n";
+		statFilesCMD += "stat /datastore/vcf/"+Pipeline.broad.toString()+"/"+this.broadGnosID+"/"+this.broadSVIndexFileName + " && \\\n";
+		statFilesCMD += "stat /datastore/vcf/"+Pipeline.broad.toString()+"/"+this.broadGnosID+"/"+this.broadIndelName + " && \\\n";
+		statFilesCMD += "stat /datastore/vcf/"+Pipeline.broad.toString()+"/"+this.broadGnosID+"/"+this.broadINDELIndexFileName + " && \\\n";
+
+		statFilesCMD += "stat /datastore/vcf/"+Pipeline.dkfz_embl.toString()+"/"+this.dkfzemblGnosID+"/"+this.dkfzEmblSNVName + " && \\\n";
+		statFilesCMD += "stat /datastore/vcf/"+Pipeline.dkfz_embl.toString()+"/"+this.dkfzemblGnosID+"/"+this.dkfzEmblSNVIndexFileName + " && \\\n";
+		statFilesCMD += "stat /datastore/vcf/"+Pipeline.dkfz_embl.toString()+"/"+this.dkfzemblGnosID+"/"+this.dkfzEmblSVName + " && \\\n";
+		statFilesCMD += "stat /datastore/vcf/"+Pipeline.dkfz_embl.toString()+"/"+this.dkfzemblGnosID+"/"+this.dkfzEmblSVIndexFileName + " && \\\n";
+		statFilesCMD += "stat /datastore/vcf/"+Pipeline.dkfz_embl.toString()+"/"+this.dkfzemblGnosID+"/"+this.dkfzEmblIndelName + " && \\\n";
+		statFilesCMD += "stat /datastore/vcf/"+Pipeline.dkfz_embl.toString()+"/"+this.dkfzemblGnosID+"/"+this.dkfzEmblINDELIndexFileName + " && \\\n";
+		
+		statFilesCMD += "stat /datastore/vcf/"+Pipeline.muse.toString()+"/"+this.museGnosID+"/"+this.museSNVName + " && \\\n";
+		statFilesCMD += "stat /datastore/vcf/"+Pipeline.muse.toString()+"/"+this.museGnosID+"/"+this.museSNVIndexFileName + " && \\\n";
+
+		//stat all tumour BAMS
+		for (int i = 0 ; i < this.tumours.size() ; i++)
+		{
+			statFilesCMD += "stat /datastore/bam/"+BAMType.tumour.toString()+"/"+this.tumours.get(i).getTumourBamGnosID()+"/"+this.tumours.get(i).getTumourBAMFileName() + " && \\\n";
+			statFilesCMD += "stat /datastore/bam/"+BAMType.tumour.toString()+"/"+this.tumours.get(i).getTumourBamGnosID()+"/"+this.tumours.get(i).getTumourBamIndexFileName() + " && \\\n";
+		}
+
+		statFilesCMD += "stat /datastore/bam/"+BAMType.normal.toString()+"/"+this.normalBamGnosID+"/"+this.normalBAMFileName + " && \\\n";
+		statFilesCMD += "stat /datastore/bam/"+BAMType.normal.toString()+"/"+this.normalBamGnosID+"/"+this.normalBamIndexFileName + " \\\n";
+		statFilesCMD += " ) || "+ moveToFailed;
+		
+		statFiles.setCommand(statFilesCMD);
+		
+		statFiles.addParent(parent);
+		return statFiles;
+	}
 	
 	/**
 	 * Build the workflow!!
@@ -955,47 +1000,7 @@ public class OxoGWrapperWorkflow extends BaseOxoGWrapperWorkflow {
 				move2running = GitUtils.gitMove("downloading-jobs", "running-jobs", this.getWorkflow(), this.JSONlocation, this.JSONrepoName, this.JSONfolderName, this.GITname, this.GITemail, this.gitMoveTestMode, this.JSONfileName , pathToScripts,move2download);
 			}
 
-			Job statFiles = this.getWorkflow().createBashJob("stat downloaded input files");
-			String moveToFailed = GitUtils.gitMoveCommand("running-jobs","failed-jobs",this.JSONlocation + "/" + this.JSONrepoName + "/" + this.JSONfolderName,this.JSONfileName, this.gitMoveTestMode, this.getWorkflowBaseDir() + "/scripts/");
-			String statFilesCMD = "( ";
-			statFilesCMD += "stat /datastore/vcf/"+Pipeline.sanger.toString()+"/"+this.sangerGnosID+"/"+this.sangerSNVName + " && \\\n";
-			statFilesCMD += "stat /datastore/vcf/"+Pipeline.sanger.toString()+"/"+this.sangerGnosID+"/"+this.sangerSNVIndexFileName + " && \\\n";
-			statFilesCMD += "stat /datastore/vcf/"+Pipeline.sanger.toString()+"/"+this.sangerGnosID+"/"+this.sangerSVName + " && \\\n";
-			statFilesCMD += "stat /datastore/vcf/"+Pipeline.sanger.toString()+"/"+this.sangerGnosID+"/"+this.sangerSVIndexFileName + " && \\\n";
-			statFilesCMD += "stat /datastore/vcf/"+Pipeline.sanger.toString()+"/"+this.sangerGnosID+"/"+this.sangerIndelName + " && \\\n";
-			statFilesCMD += "stat /datastore/vcf/"+Pipeline.sanger.toString()+"/"+this.sangerGnosID+"/"+this.sangerINDELIndexFileName + " && \\\n";
-
-			statFilesCMD += "stat /datastore/vcf/"+Pipeline.broad.toString()+"/"+this.broadGnosID+"/"+this.broadSNVName + " && \\\n";
-			statFilesCMD += "stat /datastore/vcf/"+Pipeline.broad.toString()+"/"+this.broadGnosID+"/"+this.broadSNVIndexFileName + " && \\\n";
-			statFilesCMD += "stat /datastore/vcf/"+Pipeline.broad.toString()+"/"+this.broadGnosID+"/"+this.broadSVName + " && \\\n";
-			statFilesCMD += "stat /datastore/vcf/"+Pipeline.broad.toString()+"/"+this.broadGnosID+"/"+this.broadSVIndexFileName + " && \\\n";
-			statFilesCMD += "stat /datastore/vcf/"+Pipeline.broad.toString()+"/"+this.broadGnosID+"/"+this.broadIndelName + " && \\\n";
-			statFilesCMD += "stat /datastore/vcf/"+Pipeline.broad.toString()+"/"+this.broadGnosID+"/"+this.broadINDELIndexFileName + " && \\\n";
-
-			statFilesCMD += "stat /datastore/vcf/"+Pipeline.dkfz_embl.toString()+"/"+this.dkfzemblGnosID+"/"+this.dkfzEmblSNVName + " && \\\n";
-			statFilesCMD += "stat /datastore/vcf/"+Pipeline.dkfz_embl.toString()+"/"+this.dkfzemblGnosID+"/"+this.dkfzEmblSNVIndexFileName + " && \\\n";
-			statFilesCMD += "stat /datastore/vcf/"+Pipeline.dkfz_embl.toString()+"/"+this.dkfzemblGnosID+"/"+this.dkfzEmblSVName + " && \\\n";
-			statFilesCMD += "stat /datastore/vcf/"+Pipeline.dkfz_embl.toString()+"/"+this.dkfzemblGnosID+"/"+this.dkfzEmblSVIndexFileName + " && \\\n";
-			statFilesCMD += "stat /datastore/vcf/"+Pipeline.dkfz_embl.toString()+"/"+this.dkfzemblGnosID+"/"+this.dkfzEmblIndelName + " && \\\n";
-			statFilesCMD += "stat /datastore/vcf/"+Pipeline.dkfz_embl.toString()+"/"+this.dkfzemblGnosID+"/"+this.dkfzEmblINDELIndexFileName + " && \\\n";
-			
-			statFilesCMD += "stat /datastore/vcf/"+Pipeline.muse.toString()+"/"+this.museGnosID+"/"+this.museSNVName + " && \\\n";
-			statFilesCMD += "stat /datastore/vcf/"+Pipeline.muse.toString()+"/"+this.museGnosID+"/"+this.museSNVIndexFileName + " && \\\n";
-
-			//stat all tumour BAMS
-			for (int i = 0 ; i < this.tumours.size() ; i++)
-			{
-				statFilesCMD += "stat /datastore/bam/"+BAMType.tumour.toString()+"/"+this.tumours.get(i).getTumourBamGnosID()+"/"+this.tumours.get(i).getTumourBAMFileName() + " && \\\n";
-				statFilesCMD += "stat /datastore/bam/"+BAMType.tumour.toString()+"/"+this.tumours.get(i).getTumourBamGnosID()+"/"+this.tumours.get(i).getTumourBamIndexFileName() + " && \\\n";
-			}
-
-			statFilesCMD += "stat /datastore/bam/"+BAMType.normal.toString()+"/"+this.normalBamGnosID+"/"+this.normalBAMFileName + " && \\\n";
-			statFilesCMD += "stat /datastore/bam/"+BAMType.normal.toString()+"/"+this.normalBamGnosID+"/"+this.normalBamIndexFileName + " \\\n";
-			statFilesCMD += " ) || "+ moveToFailed;
-			
-			statFiles.setCommand(statFilesCMD);
-			
-			statFiles.addParent(move2running);
+			Job statFiles = statInputFiles(move2running);
 			
 			Job sangerPassFilter = this.passFilterWorkflow(Pipeline.sanger, statFiles);
 			Job broadPassFilter = this.passFilterWorkflow(Pipeline.broad, statFiles);
@@ -1030,19 +1035,37 @@ public class OxoGWrapperWorkflow extends BaseOxoGWrapperWorkflow {
 				Job oxoG = this.doOxoG(tInf.getTumourBamGnosID()+"/"+tInf.getTumourBAMFileName(),tInf.getTumourBamGnosID(), combineVCFsByType);
 				oxogJobs.add(oxoG);
 			}
+			
 			Job normalVariantBam = this.doVariantBam(combineVCFsByType,BAMType.normal,"/datastore/bam/normal/"+this.normalBamGnosID+"/"+this.normalBAMFileName,this.normalBamGnosID, this.normalMinibamPath);
-
 			List<Job> parentJobsToAnnotationJobs = new ArrayList<Job>(this.tumours.size());
+
 			//create a list of tumour variant-bam jobs.
+			List<Job> variantBamJobs = new ArrayList<Job>(this.tumours.size()+1);
 			for (int i = 0; i < this.tumours.size() ; i ++)
 			{
 				Job tumourVariantBam = this.doVariantBam(combineVCFsByType,BAMType.tumour,"/datastore/bam/tumour/"+this.tumours.get(i).getTumourBamGnosID()+"/"+this.tumours.get(i).getTumourBAMFileName(), this.tumours.get(i).getTumourBamGnosID(), this.tumours.get(i).getTumourMinibamPath());
-				parentJobsToAnnotationJobs.add(tumourVariantBam);
+				variantBamJobs.add(tumourVariantBam);
 			}
-			
-			//set up all parents of annotation: all OxoG jobs and all Variant Bam jobs. 
-			parentJobsToAnnotationJobs.add (normalVariantBam);
+			variantBamJobs.add(normalVariantBam);
+
+			//Now that we've built our list of variantbam and oxog jobs, we can set up the proper parent-child relationships between them.
+			//The idea is to run 1 OxoG at the same time as 2 variantbam jobs.
+			for (int i=2; i < Math.max(variantBamJobs.size(), variantBamJobs.size()); i+=2)
+			{
+				variantBamJobs.get(i).addParent(variantBamJobs.get(i-2));
+				variantBamJobs.get(i+1).addParent(variantBamJobs.get(i-2));
+			}
+			for (int i=1; i < Math.max(oxogJobs.size(), oxogJobs.size()); i+=2)
+			{
+				oxogJobs.get(i).addParent(oxogJobs.get(i-1));
+			}
+
+			//set up parent jobs to annotation jobs
 			for (Job j : oxogJobs)
+			{
+				parentJobsToAnnotationJobs.add(j);
+			}
+			for (Job j : variantBamJobs)
 			{
 				parentJobsToAnnotationJobs.add(j);
 			}
