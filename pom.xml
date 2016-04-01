@@ -9,7 +9,7 @@
 
     <groupId>com.github.seqware</groupId>
     <artifactId>OxoGWrapper</artifactId>
-    <version>1.1.4-beta</version>
+    <version>1.1.5</version>
     <packaging>jar</packaging>
 
     <name>OxoGWrapper</name>
