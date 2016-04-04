@@ -1,5 +1,16 @@
 package com.github.seqware;
 
+import java.io.BufferedReader;
+import java.io.IOException;
+import java.io.InputStream;
+import java.io.InputStreamReader;
+import java.io.Reader;
+import java.io.StringReader;
+import java.io.StringWriter;
+import java.net.URI;
+import java.net.URISyntaxException;
+import java.nio.file.Files;
+import java.nio.file.Paths;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashMap;
@@ -13,6 +24,7 @@ import com.github.seqware.downloaders.DownloaderBuilder;
 import com.github.seqware.downloaders.GNOSDownloader;
 import com.github.seqware.downloaders.ICGCStorageDownloader;
 import com.github.seqware.downloaders.S3Downloader;
+import com.hubspot.jinjava.Jinjava;
 
 import net.sourceforge.seqware.pipeline.workflowV2.model.Job;
 
@@ -182,14 +194,56 @@ public class OxoGWrapperWorkflow extends BaseOxoGWrapperWorkflow {
 		String moveToFailed = GitUtils.gitMoveCommand("running-jobs","failed-jobs",this.JSONlocation + "/" + this.JSONrepoName + "/" + this.JSONfolderName,this.JSONfileName, this.gitMoveTestMode, this.getWorkflowBaseDir() + "/scripts/");
 		//If we were processing MUSE files we would also need to filter for tier* but we're NOT processing MUSE files so 
 		//we don't need to worry about that for now.
-		passFilter.setCommand("sudo chmod a+rw -R /datastore/vcf/ \n( for f in $(ls /datastore/vcf/"+workflowName+"/*/*.vcf.gz | grep -v pass | tr '\\n' ' ' ) ; do \n"
-							+ "    echo \"processing $f\" \n"
-							+ "    bgzip -d -c $f | grep -Po \"^#.*$|([^\t]*\t){6}(PASS\t|\\.\t).*\" > ${f/.vcf.gz/}.pass-filtered.vcf \n"
-							+ "    bgzip -f ${f/.vcf.gz/}.pass-filtered.vcf \n"
-							+ "    #bgzip -d -c $f | grep -Pv \"^#.*$|([^\t]*\t){6}(PASS\t|\\.\t).*\" > ${f/.vcf.gz/}.non-pass-filtered.vcf \n"
-							+ "    #bgzip -f ${f/.vcf.gz/}.non-pass-filtered.vcf \n"
-							+ "done) || "+moveToFailed);
+//		passFilter.setCommand("sudo chmod a+rw -R /datastore/vcf/ \n( for f in $(ls /datastore/vcf/"+workflowName+"/*/*.vcf.gz | grep -v pass | tr '\\n' ' ' ) ; do \n"
+//							+ "    echo \"processing $f\" \n"
+//							+ "    bgzip -d -c $f | grep -Po \"^#.*$|([^\t]*\t){6}(PASS\t|\\.\t).*\" > ${f/.vcf.gz/}.pass-filtered.vcf \n"
+//							+ "    bgzip -f ${f/.vcf.gz/}.pass-filtered.vcf \n"
+//							+ "    #bgzip -d -c $f | grep -Pv \"^#.*$|([^\t]*\t){6}(PASS\t|\\.\t).*\" > ${f/.vcf.gz/}.non-pass-filtered.vcf \n"
+//							+ "    #bgzip -f ${f/.vcf.gz/}.non-pass-filtered.vcf \n"
+//							+ "done) || "+moveToFailed);
 		
+		Jinjava jinjava = new Jinjava();
+		Map<String,Object> context = new HashMap<String,Object>(2);
+		
+//		InputStream in = this.getClass().getResourceAsStream("passFilter.template");
+		
+		try {
+			String template = new String (Files.readAllBytes(Paths.get(this.getClass().getResource("passFilter.template").toURI())));
+			context.put("workflowName", workflowName.toString());
+			context.put("moveToFailed", moveToFailed);
+			String renderedTemplate = jinjava.render(template, context);
+			passFilter.setCommand(renderedTemplate);
+		} catch (IOException | URISyntaxException e1) {
+			e1.printStackTrace();
+		}
+		
+//		BufferedReader bReader = new BufferedReader(new InputStreamReader(in)) ;
+//		
+//		StringBuffer sb = new StringBuffer();
+//		try {
+//			while(bReader.ready())
+//			{
+//				sb.append(bReader.readLine());
+//			}
+//		} catch (IOException e) {
+//			// TODO Auto-generated catch block
+//			e.printStackTrace();
+//		}
+//		finally {
+//			try {
+//				bReader.close();
+//			} catch (IOException e) {
+//				// TODO Auto-generated catch block
+//				e.printStackTrace();
+//			}
+//		}
+		
+//		String template = sb.toString();
+//		context.put("workflowName", workflowName.toString());
+//		context.put("moveToFailed", moveToFailed);
+//		String renderedTemplate = jinjava.render(template, context);
+		
+//
 		for (Job parent : parents)
 		{
 			passFilter.addParent(parent);
