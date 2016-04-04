@@ -3,6 +3,7 @@ package com.github.seqware;
 import java.io.File;
 import java.io.IOException;
 import java.util.HashMap;
+import java.util.TreeMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
@@ -189,7 +190,7 @@ public abstract class JSONUtils {
 	@SuppressWarnings("unchecked")
 	public static Map<String, Object> processJSONFile(String filePath) {
 
-		Map<String, Object> results = new HashMap<String, Object>(8);
+		Map<String, Object> results = new TreeMap<String, Object>();
 
 		try {
 			// Now using JsonPath
