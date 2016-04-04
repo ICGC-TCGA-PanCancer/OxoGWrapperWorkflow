@@ -415,7 +415,7 @@ public class OxoGWrapperWorkflow extends BaseOxoGWrapperWorkflow {
 					+ " /datafiles/VCF/"+Pipeline.muse+"/" + this.museSNVName + " \\\n"
 					+ " /datafiles/VCF/"+Pipeline.broad+"/" + this.broadSNVName 
 					+ " ${EXTRACTED_SNV_FILES} " ;
-			runOxoGWorkflow.setCommand("(("+extractedSnvCheck+"\nset -x;\ndocker run --rm --name=\"oxog_filter\" "+oxogMounts+" oxog:160329 /bin/bash -c \"" + oxogCommand+ "\" ;\nset +x;) || echo \"OxoG Exit Code: $?\"  ) || "+moveToFailed);
+			runOxoGWorkflow.setCommand("(("+extractedSnvCheck+"\nset -x;\ndocker run --rm --name=\"oxog_filter_with_tumour_"+tumourID+"\" "+oxogMounts+" oxog:160329 /bin/bash -c \"" + oxogCommand+ "\" ;\nset +x;) || echo \"OxoG Exit Code: $?\"  ) || "+moveToFailed);
 			
 			
 		}
@@ -480,7 +480,7 @@ public class OxoGWrapperWorkflow extends BaseOxoGWrapperWorkflow {
 	 * @param bamPath - The path to the input BAM file.
 	 * @return
 	 */
-	private Job doVariantBam(Job parent, BAMType bamType, String bamPath, String tumourBAMFileName, String tumourMinibamPath) {
+	private Job doVariantBam(Job parent, BAMType bamType, String bamPath, String tumourBAMFileName, String tumourMinibamPath,String tumourID) {
 		Job runOxoGWorkflow = this.getWorkflow().createBashJob("run "+bamType+" variantbam");
 
 		String minibamName = "";
@@ -501,7 +501,7 @@ public class OxoGWrapperWorkflow extends BaseOxoGWrapperWorkflow {
 		
 		if (!this.skipVariantBam)
 		{
-			String command = DockerCommandCreator.createVariantBamCommand(bamType, minibamName+".bam", bamPath, this.snvVCF, this.svVCF, this.indelVCF, this.svPadding, this.snvPadding, this.indelPadding);
+			String command = DockerCommandCreator.createVariantBamCommand(bamType, minibamName+".bam", bamPath, this.snvVCF, this.svVCF, this.indelVCF, this.svPadding, this.snvPadding, this.indelPadding,tumourID);
 			
 			// There will be two jobs trying to run variantbam at the same time and I think sometimes, they both check for the existence of /datastore/variantbam_results AT THE EXACT SAME TIME 
 			// so they both try to create it, then one fails and has to retry. But this messes up the process of moving job files to failed-jobs because variantbak will succeed on retry BUT the 
@@ -1029,14 +1029,15 @@ public class OxoGWrapperWorkflow extends BaseOxoGWrapperWorkflow {
 				oxogJobs.add(oxoG);
 			}
 			
-			Job normalVariantBam = this.doVariantBam(combineVCFsByType,BAMType.normal,"/datastore/bam/normal/"+this.normalBamGnosID+"/"+this.normalBAMFileName,this.normalBamGnosID, this.normalMinibamPath);
+			Job normalVariantBam = this.doVariantBam(combineVCFsByType,BAMType.normal,"/datastore/bam/normal/"+this.normalBamGnosID+"/"+this.normalBAMFileName,this.normalBamGnosID, this.normalMinibamPath,this.normalBamGnosID);
 			List<Job> parentJobsToAnnotationJobs = new ArrayList<Job>(this.tumours.size());
 
 			//create a list of tumour variant-bam jobs.
 			List<Job> variantBamJobs = new ArrayList<Job>(this.tumours.size()+1);
 			for (int i = 0; i < this.tumours.size() ; i ++)
 			{
-				Job tumourVariantBam = this.doVariantBam(combineVCFsByType,BAMType.tumour,"/datastore/bam/tumour/"+this.tumours.get(i).getTumourBamGnosID()+"/"+this.tumours.get(i).getTumourBAMFileName(), this.tumours.get(i).getTumourBamGnosID(), this.tumours.get(i).getTumourMinibamPath());
+				TumourInfo tInfo = this.tumours.get(i);
+				Job tumourVariantBam = this.doVariantBam(combineVCFsByType,BAMType.tumour,"/datastore/bam/tumour/"+tInfo.getTumourBamGnosID()+"/"+tInfo.getTumourBAMFileName(), tInfo.getTumourBamGnosID(), tInfo.getTumourMinibamPath(),tInfo.getTumourBamGnosID());
 				variantBamJobs.add(tumourVariantBam);
 			}
 			variantBamJobs.add(normalVariantBam);

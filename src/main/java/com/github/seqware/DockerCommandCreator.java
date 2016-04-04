@@ -33,7 +33,7 @@ public class DockerCommandCreator {
 		return sb.toString();
 	}
 
-	static String createVariantBamCommand(BAMType bamType, String outputFileName, String bamPath, String snvVCF, String svVCF, String indelVCF, int svPadding, int snvPadding, int indelPadding) {
+	static String createVariantBamCommand(BAMType bamType, String outputFileName, String bamPath, String snvVCF, String svVCF, String indelVCF, int svPadding, int snvPadding, int indelPadding, String tumourID) {
 		String command = "";
 
 		Map<String, String> mountedObjects = new HashMap<String, String>(6);
@@ -45,7 +45,7 @@ public class DockerCommandCreator {
 		mountedObjects.put(bamPath, "/input.bam");
 		List<String> runOpts = new ArrayList<String>(2);
 		runOpts.add("--rm");
-		runOpts.add("--name=\"oxog_variantbam_" + bamType + "\"");
+		runOpts.add("--name=\"oxog_variantbam_" + bamType + (bamType == BAMType.tumour ? "_with_tumour_"+tumourID:"") + "\"");
 		List<String> containerCommandArgs = new ArrayList<String>(12);
 		containerCommandArgs.add("-o /outdir/"+outputFileName);
 		containerCommandArgs.add("-i /input.bam");
