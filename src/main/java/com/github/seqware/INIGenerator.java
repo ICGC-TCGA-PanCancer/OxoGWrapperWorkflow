@@ -47,7 +47,7 @@ public class INIGenerator {
 			else {
 				// System.out.println(prefix + " " + m.get(k));
 				// Some things *don't* need to be printed
-				if (!(k.equals(JSONUtils.TAG))) {
+				if (!(k.equals(JSONUtils.TAG)) && !(k.equals(JSONUtils.NUMBER))) {
 					sb.append(prefix.equals("") ? "" : prefix + "_").append(k).append(" = ").append(m.get(k)).append("\n");
 				}
 			}  
