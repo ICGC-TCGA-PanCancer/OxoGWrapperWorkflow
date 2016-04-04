@@ -1,13 +1,6 @@
 package com.github.seqware;
 
-import java.io.BufferedReader;
 import java.io.IOException;
-import java.io.InputStream;
-import java.io.InputStreamReader;
-import java.io.Reader;
-import java.io.StringReader;
-import java.io.StringWriter;
-import java.net.URI;
 import java.net.URISyntaxException;
 import java.nio.file.Files;
 import java.nio.file.Paths;
@@ -202,54 +195,34 @@ public class OxoGWrapperWorkflow extends BaseOxoGWrapperWorkflow {
 //							+ "    #bgzip -f ${f/.vcf.gz/}.non-pass-filtered.vcf \n"
 //							+ "done) || "+moveToFailed);
 		
-		Jinjava jinjava = new Jinjava();
+		
 		Map<String,Object> context = new HashMap<String,Object>(2);
+		context.put("workflowName", workflowName.toString());
+		context.put("moveToFailed", moveToFailed);
+		String template = null, renderedTemplate;
 		
-//		InputStream in = this.getClass().getResourceAsStream("passFilter.template");
+		renderedTemplate = getRenderedTemplate(context, template,"passFilter.template");
 		
-		try {
-			String template = new String (Files.readAllBytes(Paths.get(this.getClass().getResource("passFilter.template").toURI())));
-			context.put("workflowName", workflowName.toString());
-			context.put("moveToFailed", moveToFailed);
-			String renderedTemplate = jinjava.render(template, context);
-			passFilter.setCommand(renderedTemplate);
-		} catch (IOException | URISyntaxException e1) {
-			e1.printStackTrace();
-		}
+		passFilter.setCommand(renderedTemplate);
 		
-//		BufferedReader bReader = new BufferedReader(new InputStreamReader(in)) ;
-//		
-//		StringBuffer sb = new StringBuffer();
-//		try {
-//			while(bReader.ready())
-//			{
-//				sb.append(bReader.readLine());
-//			}
-//		} catch (IOException e) {
-//			// TODO Auto-generated catch block
-//			e.printStackTrace();
-//		}
-//		finally {
-//			try {
-//				bReader.close();
-//			} catch (IOException e) {
-//				// TODO Auto-generated catch block
-//				e.printStackTrace();
-//			}
-//		}
-		
-//		String template = sb.toString();
-//		context.put("workflowName", workflowName.toString());
-//		context.put("moveToFailed", moveToFailed);
-//		String renderedTemplate = jinjava.render(template, context);
-		
-//
 		for (Job parent : parents)
 		{
 			passFilter.addParent(parent);
 		}
 		
 		return passFilter;
+	}
+
+	private String getRenderedTemplate(Map<String, Object> context, String template,String templateName ) {
+		String renderedTemplate;
+		try {
+			template = new String (Files.readAllBytes(Paths.get(this.getClass().getResource(templateName).toURI())));
+		} catch (IOException | URISyntaxException e1) {
+			e1.printStackTrace();
+		}
+		Jinjava jinjava = new Jinjava();
+		renderedTemplate = jinjava.render(template, context);
+		return renderedTemplate;
 	}
 	
 	/*
