@@ -1089,7 +1089,10 @@ public class OxoGWrapperWorkflow extends BaseOxoGWrapperWorkflow {
 			for (int i=2; i < Math.max(variantBamJobs.size(), variantBamJobs.size()); i+=2)
 			{
 				variantBamJobs.get(i).addParent(variantBamJobs.get(i-2));
-				variantBamJobs.get(i+1).addParent(variantBamJobs.get(i-2));
+				if (i+1 < variantBamJobs.size())
+				{
+					variantBamJobs.get(i+1).addParent(variantBamJobs.get(i-2));
+				}
 			}
 			for (int i=1; i < Math.max(oxogJobs.size(), oxogJobs.size()); i+=2)
 			{
