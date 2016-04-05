@@ -558,13 +558,6 @@ public class OxoGWrapperWorkflow extends BaseOxoGWrapperWorkflow {
 			}
 		}
 		String descriptionEnd = TemplateUtils.getRenderedTemplate("analysisDescriptionSuffix.template");
-//		String bamDescription="These are minibams created for donor "+this.donorID+" by extracing from WG BAMs reads around variants called by any of the core variant calling workflows."
-//							+ " Specifically, the window sizes are SNV+/-"+this.snvPadding+"bp, indel+/-"+this.indelPadding+"bp, SV+/-"+this.svPadding+"bp."
-//							+ " The results consist of one or more BAM files plus optional tar.gz files that contain additional file types."
-//							+ " This uses the "+this.getName()+" workflow, version "+this.getVersion()+" available at "+this.workflowURL+"."
-//							+ " This workflow can be created from source, see "+this.workflowSourceURL+"."
-//							+ " For a complete change log see "+this.changelogURL+"."
-//							+ descriptionEnd;
 		Map<String,Object> context = new HashMap<String,Object>();
 		context.put("donorID", this.donorID);
 		context.put("specimenID", this.specimenID);
@@ -639,24 +632,14 @@ public class OxoGWrapperWorkflow extends BaseOxoGWrapperWorkflow {
 				vcfMD5Sums += file + ".md5,";	 
 			}
 		}
-
 		// trim trailing commas so that you don't get ",," in the "--vcfs ..." arg to gt-download-upload-wrapper
 		// since that will result in empty files in the analysis and things will break.
 		vcfs = vcfs.substring(0,vcfs.length()-1);
 		vcfMD5Sums = vcfMD5Sums.substring(0,vcfMD5Sums.length()-1);
 		vcfIndicies = vcfIndicies.substring(0,vcfIndicies.length()-1);
 		vcfIndexMD5Sums = vcfIndexMD5Sums.substring(0,vcfIndexMD5Sums.length()-1);
+		
 		String descriptionEnd = TemplateUtils.getRenderedTemplate("analysisDescriptionSuffix.template");
-//		Map<String,Object> context = new HashMap<String,Object>();
-//		context.put("OxoQScore", this.oxoQScore);
-//		context.put("specimenID", this.specimenID);
-//		context.put("donorID", this.donorID);
-//		context.put("workflowName", this.getName());
-//		context.put("workflowVersion", this.getVersion());
-//		context.put("workflowURL", this.workflowURL);
-//		context.put("workflowSrcURL", this.workflowSourceURL);
-//		context.put("changeLogURL", this.changelogURL);
-//		context.put("descriptionSuffix", descriptionEnd);
 		String vcfDescription = TemplateUtils.getRenderedTemplate(Arrays.stream(new String[][]{
 				{ "OxoQScore",this.oxoQScore },					{ "donorID",this.donorID },					{ "specimenID",this.specimenID },
 				{ "workflowName",this.getName() },				{ "workflowVersion",this.getVersion() },	{ "workflowURL",this.workflowURL },
