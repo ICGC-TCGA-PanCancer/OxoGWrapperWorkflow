@@ -25,12 +25,6 @@ public class OxoGWrapperWorkflow extends BaseOxoGWrapperWorkflow {
 		gtdownload, icgcStorageClient, s3
 	}
 	
-//	private static final String DESCRIPTION_END = " Note the 'ANALYSIS_TYPE' is 'REFERENCE_ASSEMBLY' but a better term to describe this analysis is 'SEQUENCE_VARIATION' as defined by the EGA's SRA 1.5 schema."
-//			+ " Please note the reference used for alignment was hs37d, see ftp://ftp.1000genomes.ebi.ac.uk/vol1/ftp/technical/reference/phase2_reference_assembly_sequence/README_human_reference_20110707 for more information."
-//			+ " Briefly this is the integrated reference sequence from the GRCh37 primary assembly (chromosomal plus unlocalized and unplaced contigs),"
-//			+ " the rCRS mitochondrial sequence (AC:NC_012920), Human herpesvirus 4 type 1 (AC:NC_007605) and the concatenated decoy sequences (hs37d5cs.fa.gz)."
-//			+ " Variant calls may not be present for all contigs in this reference.";
-
 	/**
 	 * Copy the credentials files from ~/.gnos to /datastore/credentials
 	 * @param parentJob
@@ -227,34 +221,11 @@ public class OxoGWrapperWorkflow extends BaseOxoGWrapperWorkflow {
 		String fixedIndel = vcfName.replace("indel.", "indel.fixed.").replace(".gz", ""); //...because the fixed indel will not be a gz file - at least not immediately.
 		Job bcfToolsNormJob = this.getWorkflow().createBashJob("normalize "+workflowName+" Indels");
 		String sedTab = "\\\"$(echo -e '\\t')\\\"";
-		String runBCFToolsNormCommand = "sudo chmod a+rw -R /datastore/vcf/ && ( docker run --rm --name normalize_indel_"+workflowName+" "
-					+ " -v "+outDir+"/"+vcfName+":/datastore/datafile.vcf.gz "
-					+ " -v "+outDir+"/"+":/outdir/:rw "
-					+ " -v /refdata/:/ref/"
-					+ " compbio/ngseasy-base:a1.0-002 /bin/bash -c \""
-						+ " bgzip -d -c /datastore/datafile.vcf.gz \\\n"
-						//The goal is a sed call that looks like this, where the "t" is a tab...
-						//sed -e 's/t$/t./g' -e 's/tt/t.t/g'  -e 's/\([^t]\)tt\([^t]\)/\1t.t\2/g' -e 's/tt/t.t/g' -e -e 's/^Mt/MTt/g' -e 's/\\(##.*\\);$/\\1/g'
-						//First, replace a tab at the end of a line with a tab and a dot because the dot was miossing.
-						//Second, replace any two tabs next to each other with tab-dot-tab because the dot was missing in between them.
-						//Third, replace any two tabs that are still beside each other and are book-ended by non-tabs with
-						//the original leading/trailing characters and two tabs with a dot in between. 
-						//Fourth, replace any remaining sequential tabs with tab-dot-tab.
-						//Fifth, replace any leading M with MT
-						//Sixth, get rid of trailing semi-colons in header lines.
-						+ " | sed -e s/"+sedTab+"$/"+sedTab+"./g"
-							  + " -e s/"+sedTab+sedTab+"/"+sedTab+"."+sedTab+"/g"
-							  + " -e s/\\([^"+sedTab+"]\\)"+sedTab+sedTab+"\\([^"+sedTab+"]\\)/\\1"+sedTab+"."+sedTab+"\\2/g"
-							  + " -e s/"+sedTab+sedTab+"/"+sedTab+"."+sedTab+"/g"
-							  + " -e 's/^M\\([[:blank:]]\\)/MT\\1/g'"
-							  + " -e 's/\\(##.*\\);$/\\1/g' \\\n"
-						+ " > /outdir/"+fixedIndel+" && \\\n"
-						+ " bcftools norm -c w -m -any -Oz -f /ref/"+this.refFile+"  /outdir/"+fixedIndel+" "  
-						+ " > /outdir/"+normalizedINDELName
-						+ " && bgzip -f /outdir/"+fixedIndel
-						+ " && tabix -f -p vcf /outdir/"+fixedIndel+".gz "
-						+ " && tabix -f -p vcf /outdir/"+normalizedINDELName + "\" ) ";
-		
+		String runBCFToolsNormCommand = TemplateUtils.getRenderedTemplate(Arrays.stream(new String[][]{
+			{ "sedTab", sedTab }, { "outDir", outDir }, { "vcfName", vcfName }, { "workflowName", workflowName.toString() } ,
+			{ "refFile", this.refFile }, { "fixedIndel", fixedIndel }, { "normalizedINDELName", normalizedINDELName } 
+		}).collect(Collectors.toMap(kv -> kv[0], kv -> kv[1])), "bcfTools.template");
+
 		String moveToFailed = GitUtils.gitMoveCommand("running-jobs","failed-jobs",this.JSONlocation + "/" + this.JSONrepoName + "/" + this.JSONfolderName,this.JSONfileName, this.gitMoveTestMode, this.getWorkflowBaseDir() + "/scripts/");				 
 		runBCFToolsNormCommand += (" || " + moveToFailed );
 		
@@ -1056,9 +1027,14 @@ public class OxoGWrapperWorkflow extends BaseOxoGWrapperWorkflow {
 			Job combineVCFsByType = this.combineVCFsByType( sangerPreprocessVCF, dkfzEmblPreprocessVCF, broadPreprocessVCF);
 			
 			List<Job> oxogJobs = new ArrayList<Job>(this.tumours.size());
-			for (TumourInfo tInf : this.tumours)
+			for (int i = 0 ; i < this.tumours.size(); i++)
 			{
+				TumourInfo tInf = this.tumours.get(i);
 				Job oxoG = this.doOxoG(tInf.getTumourBamGnosID()+"/"+tInf.getTumourBAMFileName(),tInf.getTumourBamGnosID(), combineVCFsByType);
+				if (i>0)
+				{
+					oxoG.addParent(oxogJobs.get(i-1));
+				}
 				oxogJobs.add(oxoG);
 			}
 			
@@ -1085,10 +1061,10 @@ public class OxoGWrapperWorkflow extends BaseOxoGWrapperWorkflow {
 					variantBamJobs.get(i+1).addParent(variantBamJobs.get(i-2));
 				}
 			}
-			for (int i=1; i < Math.max(oxogJobs.size(), oxogJobs.size()); i+=2)
-			{
-				oxogJobs.get(i).addParent(oxogJobs.get(i-1));
-			}
+//			for (int i=1; i < Math.max(oxogJobs.size(), oxogJobs.size()); i+=2)
+//			{
+//				oxogJobs.get(i).addParent(oxogJobs.get(i-1));
+//			}
 
 			//set up parent jobs to annotation jobs
 			for (Job j : oxogJobs)
