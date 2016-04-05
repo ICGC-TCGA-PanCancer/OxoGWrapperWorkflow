@@ -9,7 +9,7 @@
 
     <groupId>com.github.seqware</groupId>
     <artifactId>OxoGWrapper</artifactId>
-    <version>1.1.5</version>
+    <version>2.0.0-beta</version>
     <packaging>jar</packaging>
 
     <name>OxoGWrapper</name>
@@ -95,11 +95,9 @@
     </repositories>
 
     <build>
-
         <filters>
             <filter>workflow.properties</filter>
         </filters>
-
         <plugins>
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
@@ -110,8 +108,6 @@
                     <target>1.8</target>
                 </configuration>
             </plugin>
-      
-
             <plugin>
                 <groupId>org.codehaus.mojo</groupId>
                 <artifactId>properties-maven-plugin</artifactId>
@@ -131,7 +127,6 @@
                     </execution>
                 </executions>
             </plugin>
-
             <plugin>
                 <artifactId>maven-resources-plugin</artifactId>
                 <version>2.5</version>
@@ -181,20 +176,18 @@
                                 <resource>
                                     <directory>${project.build.directory}/classes</directory>
                                     <includes>
-                                        <include> **/*</include>
+                                        <include>**/*</include>
                                     </includes>
                                 </resource>
                             </resources>
                         </configuration>
                     </execution>
-
                 </executions>
             </plugin>
-
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-dependency-plugin</artifactId>
-                <version>2.4</version>
+                <version>2.10</version>
                 <executions>
                     <execution>
                         <id>copy</id>
@@ -212,22 +205,36 @@
                                     <overWrite>true</overWrite>
                                     <outputDirectory>${workflow-dir}/lib</outputDirectory>
                                 </artifactItem>
-                            </artifactItems>
+							</artifactItems>
                         </configuration>
                     </execution>
                     <execution>
-                        <id>unpack-dependencies</id>
+                        <id>unpack</id>
                         <phase>package</phase>
                         <goals>
                             <goal>unpack-dependencies</goal>
                         </goals>
                         <configuration>
+                        	<!-- This configuration will unpack the seqware* dependencies into bin -->
                             <outputDirectory>${workflow-dir}/bin</outputDirectory>
                             <overWriteReleases>false</overWriteReleases>
                             <overWriteSnapshots>true</overWriteSnapshots>
-                            
                             <excludeScope>provided</excludeScope>
-                            
+                            <excludeArtifactIds>jinjava,json-path</excludeArtifactIds>
+                            <excludeTransitive>true</excludeTransitive>
+                        </configuration>
+                    </execution>
+                     <execution>
+                        <id>unpack-java-dependencies</id>
+                        <phase>process-sources</phase>
+                        <goals>
+                            <goal>unpack-dependencies</goal>
+                        </goals>
+                        <configuration>
+                        	<!-- This configuration will unpack ALL OTHER dependencies into classes/ -->
+                            <outputDirectory>${workflow-dir}/classes</outputDirectory>
+                            <excludeArtifactIds>seqware-bin-linux-x86-64-jre-8.0.45,seqware-bin-linux-x86-64-cat-5.67,seqware-bin-linux-x86-64-echo-5.67,seqware-bin-linux-x86-64-perl-5.14.1,seqware-distribution</excludeArtifactIds>
+                            <excludeTransitive>false</excludeTransitive>
                         </configuration>
                     </execution>
                 </executions>
