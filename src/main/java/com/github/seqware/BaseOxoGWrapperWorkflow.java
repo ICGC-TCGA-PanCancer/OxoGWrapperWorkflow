@@ -198,6 +198,9 @@ public abstract class BaseOxoGWrapperWorkflow extends AbstractWorkflowDataModel 
 	 * Initial setup.
 	 */
 	protected void init() {
+		//Was having class-loader issues with Jinja, probably coming from however it is that seqware builds these bundles, this seems to have resolved it.
+		Thread.currentThread().setContextClassLoader(this.getClass().getClassLoader());
+
 		try {
 			if (hasPropertyAndNotNull("downloadMethod")) {
 				this.downloadMethod = getProperty("downloadMethod");
