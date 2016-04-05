@@ -1,8 +1,10 @@
 package com.github.seqware;
 
 import java.io.IOException;
+import java.net.URI;
 import java.net.URISyntaxException;
 import java.nio.file.Files;
+import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -216,7 +218,9 @@ public class OxoGWrapperWorkflow extends BaseOxoGWrapperWorkflow {
 	private String getRenderedTemplate(Map<String, Object> context, String template,String templateName ) {
 		String renderedTemplate;
 		try {
-			template = new String (Files.readAllBytes(Paths.get(this.getClass().getResource(templateName).toURI())));
+			URI uri = this.getClass().getClassLoader().getResource(templateName).toURI();
+			Path p = Paths.get(uri);
+			template = new String (Files.readAllBytes(p));
 		} catch (IOException | URISyntaxException e1) {
 			e1.printStackTrace();
 		}
@@ -938,7 +942,8 @@ public class OxoGWrapperWorkflow extends BaseOxoGWrapperWorkflow {
 				List<String> dkfzEmblList = Arrays.asList(this.dkfzemblSNVVCFObjectID, this.dkfzemblSNVIndexObjectID, this.dkfzemblSVVCFObjectID, this.dkfzemblSVIndexObjectID,this.dkfzemblIndelVCFObjectID, this.dkfzemblIndelIndexObjectID);
 				List<String> museList = Arrays.asList(this.museSNVVCFObjectID, this.museSNVIndexObjectID);
 				List<String> normalList = Arrays.asList( this.bamNormalIndexObjectID,this.bamNormalObjectID);
-				List<String> tumourList = Arrays.asList( this.bamTumourIndexObjectID,this.bamTumourObjectID);
+				//List<String> tumourList = Arrays.asList( this.bamTumourIndexObjectID,this.bamTumourObjectID);
+				//List<List<String>> tumourList = new ArrayList<List<String>>();
 				
 				Map<String,List<String>> workflowObjectIDs = new HashMap<String,List<String>>(6);
 				workflowObjectIDs.put(Pipeline.broad.toString(), broadList);
@@ -946,7 +951,16 @@ public class OxoGWrapperWorkflow extends BaseOxoGWrapperWorkflow {
 				workflowObjectIDs.put(Pipeline.dkfz_embl.toString(), dkfzEmblList);
 				workflowObjectIDs.put(Pipeline.muse.toString(), museList);
 				workflowObjectIDs.put(BAMType.normal.toString(), normalList);
-				workflowObjectIDs.put(BAMType.tumour.toString(), tumourList);
+				//workflowObjectIDs.put(BAMType.tumour.toString(), tumourList);
+				for (int i = 0; i < this.tumours.size() ; i ++)
+				{
+					TumourInfo tInfo = this.tumours.get(i);
+					List<String> tumourIDs = new ArrayList<String>();
+					tumourIDs.add(tInfo.getBamTumourIndexObjectID());
+					tumourIDs.add(tInfo.getBamTumourObjectID());
+					workflowObjectIDs.put(BAMType.tumour+"_"+tInfo.getTumourBamGnosID(), tumourIDs);
+					//tumourList.add(tumourIDs);
+				}
 				
 				Map<String,String> workflowURLs = new HashMap<String,String>(6);
 				workflowURLs.put(Pipeline.broad.toString(), this.broadGNOSRepoURL);
@@ -991,17 +1005,18 @@ public class OxoGWrapperWorkflow extends BaseOxoGWrapperWorkflow {
 				
 				//create a list of jobs to download all tumours.
 				List<Job> getTumourJobs = new ArrayList<Job>(this.tumours.size());
+				System.out.println("Tumours : "+this.tumours);
 				for (int i = 0 ; i < this.tumours.size(); i++)
 				{	
 					Job downloadTumourBam;
 					//download the tumours sequentially.
 					if (i==0)
 					{
-						downloadTumourBam = this.getBAM(downloadNormalBam, downloadMethod, BAMType.tumour,chooseObjects.apply( BAMType.tumour.toString() ) );
+						downloadTumourBam = this.getBAM(downloadNormalBam, downloadMethod, BAMType.tumour,chooseObjects.apply( BAMType.tumour.toString()+"_"+this.tumours.get(i).getTumourBamGnosID() ) );
 					}
 					else
 					{
-						downloadTumourBam = this.getBAM(getTumourJobs.get(i-1), downloadMethod, BAMType.tumour,chooseObjects.apply( BAMType.tumour.toString() ) );
+						downloadTumourBam = this.getBAM(getTumourJobs.get(i-1), downloadMethod, BAMType.tumour,chooseObjects.apply( BAMType.tumour.toString()+"_"+this.tumours.get(i).getTumourBamGnosID() ) );
 					}
 					getTumourJobs.add(downloadTumourBam);
 				}
