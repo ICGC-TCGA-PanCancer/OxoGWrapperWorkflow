@@ -1,11 +1,5 @@
 package com.github.seqware;
 
-import java.io.IOException;
-import java.net.URI;
-import java.net.URISyntaxException;
-import java.nio.file.Files;
-import java.nio.file.Path;
-import java.nio.file.Paths;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashMap;
@@ -19,7 +13,6 @@ import com.github.seqware.downloaders.DownloaderBuilder;
 import com.github.seqware.downloaders.GNOSDownloader;
 import com.github.seqware.downloaders.ICGCStorageDownloader;
 import com.github.seqware.downloaders.S3Downloader;
-import com.hubspot.jinjava.Jinjava;
 
 import net.sourceforge.seqware.pipeline.workflowV2.model.Job;
 
@@ -32,11 +25,11 @@ public class OxoGWrapperWorkflow extends BaseOxoGWrapperWorkflow {
 		gtdownload, icgcStorageClient, s3
 	}
 	
-	private static final String DESCRIPTION_END = " Note the 'ANALYSIS_TYPE' is 'REFERENCE_ASSEMBLY' but a better term to describe this analysis is 'SEQUENCE_VARIATION' as defined by the EGA's SRA 1.5 schema."
-			+ " Please note the reference used for alignment was hs37d, see ftp://ftp.1000genomes.ebi.ac.uk/vol1/ftp/technical/reference/phase2_reference_assembly_sequence/README_human_reference_20110707 for more information."
-			+ " Briefly this is the integrated reference sequence from the GRCh37 primary assembly (chromosomal plus unlocalized and unplaced contigs),"
-			+ " the rCRS mitochondrial sequence (AC:NC_012920), Human herpesvirus 4 type 1 (AC:NC_007605) and the concatenated decoy sequences (hs37d5cs.fa.gz)."
-			+ " Variant calls may not be present for all contigs in this reference.";
+//	private static final String DESCRIPTION_END = " Note the 'ANALYSIS_TYPE' is 'REFERENCE_ASSEMBLY' but a better term to describe this analysis is 'SEQUENCE_VARIATION' as defined by the EGA's SRA 1.5 schema."
+//			+ " Please note the reference used for alignment was hs37d, see ftp://ftp.1000genomes.ebi.ac.uk/vol1/ftp/technical/reference/phase2_reference_assembly_sequence/README_human_reference_20110707 for more information."
+//			+ " Briefly this is the integrated reference sequence from the GRCh37 primary assembly (chromosomal plus unlocalized and unplaced contigs),"
+//			+ " the rCRS mitochondrial sequence (AC:NC_012920), Human herpesvirus 4 type 1 (AC:NC_007605) and the concatenated decoy sequences (hs37d5cs.fa.gz)."
+//			+ " Variant calls may not be present for all contigs in this reference.";
 
 	/**
 	 * Copy the credentials files from ~/.gnos to /datastore/credentials
@@ -189,21 +182,12 @@ public class OxoGWrapperWorkflow extends BaseOxoGWrapperWorkflow {
 		String moveToFailed = GitUtils.gitMoveCommand("running-jobs","failed-jobs",this.JSONlocation + "/" + this.JSONrepoName + "/" + this.JSONfolderName,this.JSONfileName, this.gitMoveTestMode, this.getWorkflowBaseDir() + "/scripts/");
 		//If we were processing MUSE files we would also need to filter for tier* but we're NOT processing MUSE files so 
 		//we don't need to worry about that for now.
-//		passFilter.setCommand("sudo chmod a+rw -R /datastore/vcf/ \n( for f in $(ls /datastore/vcf/"+workflowName+"/*/*.vcf.gz | grep -v pass | tr '\\n' ' ' ) ; do \n"
-//							+ "    echo \"processing $f\" \n"
-//							+ "    bgzip -d -c $f | grep -Po \"^#.*$|([^\t]*\t){6}(PASS\t|\\.\t).*\" > ${f/.vcf.gz/}.pass-filtered.vcf \n"
-//							+ "    bgzip -f ${f/.vcf.gz/}.pass-filtered.vcf \n"
-//							+ "    #bgzip -d -c $f | grep -Pv \"^#.*$|([^\t]*\t){6}(PASS\t|\\.\t).*\" > ${f/.vcf.gz/}.non-pass-filtered.vcf \n"
-//							+ "    #bgzip -f ${f/.vcf.gz/}.non-pass-filtered.vcf \n"
-//							+ "done) || "+moveToFailed);
-		
-		
 		Map<String,Object> context = new HashMap<String,Object>(2);
 		context.put("workflowName", workflowName.toString());
 		context.put("moveToFailed", moveToFailed);
-		String template = null, renderedTemplate;
+		String renderedTemplate;
 		
-		renderedTemplate = getRenderedTemplate(context, template,"passFilter.template");
+		renderedTemplate = TemplateUtils.getRenderedTemplate(context, "passFilter.template");
 		
 		passFilter.setCommand(renderedTemplate);
 		
@@ -215,20 +199,6 @@ public class OxoGWrapperWorkflow extends BaseOxoGWrapperWorkflow {
 		return passFilter;
 	}
 
-	private String getRenderedTemplate(Map<String, Object> context, String template,String templateName ) {
-		String renderedTemplate;
-		try {
-			URI uri = this.getClass().getClassLoader().getResource(templateName).toURI();
-			Path p = Paths.get(uri);
-			template = new String (Files.readAllBytes(p));
-		} catch (IOException | URISyntaxException e1) {
-			e1.printStackTrace();
-		}
-		Jinjava jinjava = new Jinjava();
-		renderedTemplate = jinjava.render(template, context);
-		return renderedTemplate;
-	}
-	
 	/*
 	 * Yes, install tabix as a part of the workflow. It's not in the seqware_whitestar or seqware_whitestar_pancancer container, so
 	 * install it here.
@@ -616,15 +586,28 @@ public class OxoGWrapperWorkflow extends BaseOxoGWrapperWorkflow {
 				bamMD5Sums += file + ".md5" + ",";
 			}
 		}
-		
-		String bamDescription="These are minibams created for donor "+this.donorID+" by extracing from WG BAMs reads around variants called by any of the core variant calling workflows."
-							+ " Specifically, the window sizes are SNV+/-"+this.snvPadding+"bp, indel+/-"+this.indelPadding+"bp, SV+/-"+this.svPadding+"bp."
-							+ " The results consist of one or more BAM files plus optional tar.gz files that contain additional file types."
-							+ " This uses the "+this.getName()+" workflow, version "+this.getVersion()+" available at "+this.workflowURL+"."
-							+ " This workflow can be created from source, see "+this.workflowSourceURL+"."
-							+ " For a complete change log see "+this.changelogURL+"."
-							+ OxoGWrapperWorkflow.DESCRIPTION_END;
-		
+		String descriptionEnd = TemplateUtils.getRenderedTemplate("analysisDescriptionSuffix.template");
+//		String bamDescription="These are minibams created for donor "+this.donorID+" by extracing from WG BAMs reads around variants called by any of the core variant calling workflows."
+//							+ " Specifically, the window sizes are SNV+/-"+this.snvPadding+"bp, indel+/-"+this.indelPadding+"bp, SV+/-"+this.svPadding+"bp."
+//							+ " The results consist of one or more BAM files plus optional tar.gz files that contain additional file types."
+//							+ " This uses the "+this.getName()+" workflow, version "+this.getVersion()+" available at "+this.workflowURL+"."
+//							+ " This workflow can be created from source, see "+this.workflowSourceURL+"."
+//							+ " For a complete change log see "+this.changelogURL+"."
+//							+ descriptionEnd;
+		Map<String,Object> context = new HashMap<String,Object>();
+		context.put("donorID", this.donorID);
+		context.put("specimenID", this.specimenID);
+		context.put("snvPadding", this.snvPadding);
+		context.put("indelPadding", this.indelPadding);
+		context.put("svPadding", this.svPadding);
+		context.put("svPadding", this.svPadding);
+		context.put("workflowName", this.getName());
+		context.put("workflowVersion", this.getVersion());
+		context.put("workflowURL", this.workflowURL);
+		context.put("workflowSrcURL", this.workflowSourceURL);
+		context.put("changeLogURL", this.changelogURL);
+		context.put("descriptionSuffix", descriptionEnd);
+		String bamDescription = TemplateUtils.getRenderedTemplate(context, "analysisBAMDescription.template");
 		generateAnalysisFilesBAMsCommand += "\n docker run --rm --name=upload_bams -v /datastore/bam-upload-prep/:/vcf/ -v "+this.gnosKey+":/gnos.key -v /datastore/:/datastore/ "
 				+ " pancancer/pancancer_upload_download:1.7 /bin/bash -c \"cat << DESCRIPTIONFILE > /vcf/description.txt\n"
 				+ bamDescription
@@ -692,14 +675,22 @@ public class OxoGWrapperWorkflow extends BaseOxoGWrapperWorkflow {
 		vcfMD5Sums = vcfMD5Sums.substring(0,vcfMD5Sums.length()-1);
 		vcfIndicies = vcfIndicies.substring(0,vcfIndicies.length()-1);
 		vcfIndexMD5Sums = vcfIndexMD5Sums.substring(0,vcfIndexMD5Sums.length()-1);
-		
-		String vcfDescription="These are the OxoG-filtered (with an OxoQ Score of "+this.oxoQScore+") and Annotated VCFs for specimen "+this.specimenID+" from donor "+this.donorID+","
-				+ " based on the VCFs produced from the core variant calling workflows."
-				+ " The results consist of one or more VCF files plus optional tar.gz files that contain additional file types."
-				+ " This uses the "+this.getName()+" workflow, version "+this.getVersion()+" available at "+this.workflowURL+"."
-				+ " This workflow can be created from source, see "+this.workflowSourceURL+"."
-				+ " For a complete change log see "+this.changelogURL+"."
-				+ OxoGWrapperWorkflow.DESCRIPTION_END;
+		String descriptionEnd = TemplateUtils.getRenderedTemplate("analysisDescriptionSuffix.template");
+//		Map<String,Object> context = new HashMap<String,Object>();
+//		context.put("OxoQScore", this.oxoQScore);
+//		context.put("specimenID", this.specimenID);
+//		context.put("donorID", this.donorID);
+//		context.put("workflowName", this.getName());
+//		context.put("workflowVersion", this.getVersion());
+//		context.put("workflowURL", this.workflowURL);
+//		context.put("workflowSrcURL", this.workflowSourceURL);
+//		context.put("changeLogURL", this.changelogURL);
+//		context.put("descriptionSuffix", descriptionEnd);
+		String vcfDescription = TemplateUtils.getRenderedTemplate(Arrays.stream(new String[][]{
+				{ "OxoQScore",this.oxoQScore },					{ "donorID",this.donorID },					{ "specimenID",this.specimenID },
+				{ "workflowName",this.getName() },				{ "workflowVersion",this.getVersion() },	{ "workflowURL",this.workflowURL },
+				{ "workflowSrcURL",this.workflowSourceURL },	{ "changeLogURL",this.changelogURL },		{ "descriptionSuffix",descriptionEnd },
+			}).collect(Collectors.toMap(kv -> kv[0], kv -> kv[1])), "analysisVCFDescription.template");
 		
 		//This ugliness is here because of the OxoG results on SNVs from INDELs. We won't know until the workflow actually runs if there are any SNVs from INDELs.
 		//So we need to build up the list of files to upload using a bash script that will be evaluated at runtime rather
