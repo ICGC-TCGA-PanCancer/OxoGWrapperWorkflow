@@ -366,52 +366,7 @@ public class OxoGWrapperWorkflow extends BaseOxoGWrapperWorkflow {
 					{ "sangerSNVName", this.sangerSNVName}, { "broadSNVName", this.broadSNVName }, { "dkfzEmblSNVName", this.dkfzEmblSNVName }, { "museSNVName", this.museSNVName }			
 				} ).collect(collectToMap), "runOxoGFilter.template");
 			runOxoGWorkflow.setCommand(runOxoGCommand);
-		
-	//		String extractedSnvCheck = "EXTRACTED_SNV_MOUNT=\"\"\n"
-	//									+ "EXTRACTED_SNV_FILES=\"\"\n"
-	//									+ "if (( $(zcat "+this.sangerExtractedSNVVCFName+" | grep \"^[^#]\" | wc -l) > 0 )) ; then \n"
-	//									+ "    echo \""+this.sangerExtractedSNVVCFName+" has SNVs.\"\n"
-	//									+ "    EXTRACTED_SNV_MOUNT=\"${EXTRACTED_SNV_MOUNT} -v "+this.sangerExtractedSNVVCFName+":/datafiles/VCF/"+Pipeline.sanger+"/"+getFileName.apply(this.sangerExtractedSNVVCFName)+" \"\n"
-	//									+ "    EXTRACTED_SNV_FILES=\"${EXTRACTED_SNV_FILES} /datafiles/VCF/"+Pipeline.sanger+"/"+getFileName.apply(this.sangerExtractedSNVVCFName)+" \"\n"
-	//									+ "fi\n  "
-	//									+ "if (( $(zcat "+this.broadExtractedSNVVCFName+" | grep \"^[^#]\" | wc -l) > 0 )) ; then \n"
-	//									+ "    echo \""+this.broadExtractedSNVVCFName+" has SNVs.\"\n"
-	//									+ "    EXTRACTED_SNV_MOUNT=\"${EXTRACTED_SNV_MOUNT} -v "+this.broadExtractedSNVVCFName+":/datafiles/VCF/"+Pipeline.broad+"/"+getFileName.apply(this.broadExtractedSNVVCFName)+" \"\n"
-	//									+ "    EXTRACTED_SNV_FILES=\"${EXTRACTED_SNV_FILES} /datafiles/VCF/"+Pipeline.broad+"/"+getFileName.apply(this.broadExtractedSNVVCFName)+" \"\n"
-	//									+ "fi\n "
-	//									+ "if (( $(zcat "+this.dkfzEmblExtractedSNVVCFName+" | grep \"^[^#]\" | wc -l) > 0 )) ; then \n"
-	//									+ "    echo \""+this.dkfzEmblExtractedSNVVCFName+" has SNVs.\"\n"
-	//									+ "    EXTRACTED_SNV_MOUNT=\"${EXTRACTED_SNV_MOUNT} -v "+this.dkfzEmblExtractedSNVVCFName+":/datafiles/VCF/"+Pipeline.dkfz_embl+"/"+getFileName.apply(this.dkfzEmblExtractedSNVVCFName)+" \"\n"
-	//									+ "    EXTRACTED_SNV_FILES=\"${EXTRACTED_SNV_FILES} /datafiles/VCF/"+Pipeline.dkfz_embl+"/"+getFileName.apply(this.dkfzEmblExtractedSNVVCFName)+" \"\n"
-	//									+ "fi\n ";
-	//		if (!skipOxoG)
-	//		{
-	//			String oxogMounts = " -v /refdata/:/cga/fh/pcawg_pipeline/refdata/ \\\n"
-	//					+ " -v /datastore/oxog_workspace/tumour_"+tumourID+"/:/cga/fh/pcawg_pipeline/jobResults_pipette/jobs/"+this.aliquotID+"/:rw \\\n" 
-	//					+ " -v /datastore/bam/:/datafiles/BAM/ \\\n"
-	//					+ " -v /datastore/vcf/"+Pipeline.broad+"/"+this.broadGnosID+"/"+"/:/datafiles/VCF/"+Pipeline.broad+"/ \\\n"
-	//					+ " -v /datastore/vcf/"+Pipeline.sanger+"/"+this.sangerGnosID+"/"+"/:/datafiles/VCF/"+Pipeline.sanger+"/ \\\n"
-	//					+ " -v /datastore/vcf/"+Pipeline.dkfz_embl+"/"+this.dkfzemblGnosID+"/"+"/:/datafiles/VCF/"+Pipeline.dkfz_embl+"/ \\\n"
-	//					+ " -v /datastore/vcf/"+Pipeline.muse+"/"+this.museGnosID+"/"+"/:/datafiles/VCF/"+Pipeline.muse+"/ \\\n"
-	//					+ " ${EXTRACTED_SNV_MOUNT} \\\n"
-	//					+ " -v /datastore/oxog_results/tumour_"+tumourID+"/:/cga/fh/pcawg_pipeline/jobResults_pipette/results:rw \\\n";
-	//			
-	//			String oxogCommand = "/cga/fh/pcawg_pipeline/pipelines/run_one_pipeline.bash pcawg /cga/fh/pcawg_pipeline/pipelines/oxog_pipeline.py \\\n"
-	//					+ this.aliquotID + " \\\n"
-	//					//genereate a string of the tumours' gnos IDs and file names.
-	//					//Can the OxoG filter handle more than 1 tumour at a time?
-	//					+ " /datafiles/BAM/tumour/"+pathToTumour+" \\\n" 
-	//					+ " /datafiles/BAM/normal/" +this.normalBamGnosID + "/" +  this.normalBAMFileName + " \\\n" 
-	//					+ " " + this.oxoQScore + " \\\n"
-	//					+ " /datafiles/VCF/"+Pipeline.sanger+"/" + this.sangerSNVName + " \\\n"
-	//					+ " /datafiles/VCF/"+Pipeline.dkfz_embl+"/" + this.dkfzEmblSNVName  + " \\\n"
-	//					+ " /datafiles/VCF/"+Pipeline.muse+"/" + this.museSNVName + " \\\n"
-	//					+ " /datafiles/VCF/"+Pipeline.broad+"/" + this.broadSNVName 
-	//					+ " ${EXTRACTED_SNV_FILES} " ;
-	//			runOxoGWorkflow.setCommand("(("+extractedSnvCheck+"\nset -x;\ndocker run --rm --name=\"oxog_filter_with_tumour_"+tumourID+"\" "+oxogMounts+" oxog:160329 /bin/bash -c \"" + oxogCommand+ "\" ;\nset +x;) || echo \"OxoG Exit Code: $?\"  ) || "+moveToFailed);
-	//			
-	//			
-	//		}
+
 			for (Job parent : parents)
 			{
 				runOxoGWorkflow.addParent(parent);
@@ -611,26 +566,7 @@ public class OxoGWrapperWorkflow extends BaseOxoGWrapperWorkflow {
 				{ "vcfs", bams }, { "bamIndicies", bamIndicies}, { "bamMD5Sums", bamMD5Sums }, { "bamIndexMD5Sums", bamIndexMD5Sums}, 
 				{ "studyRefNameOverride", this.studyRefNameOverride }, { "workflowVersion", this.getVersion() } 
 			}).collect(collectToMap),"generateBAMAnalysisMetadata.template");
-//		generateAnalysisFilesBAMsCommand += "\n docker run --rm --name=upload_bams -v /datastore/bam-upload-prep/:/vcf/ -v "+this.gnosKey+":/gnos.key -v /datastore/:/datastore/ "
-//				+ " pancancer/pancancer_upload_download:1.7 /bin/bash -c \"cat << DESCRIPTIONFILE > /vcf/description.txt\n"
-//				+ bamDescription
-//				+ "\nDESCRIPTIONFILE\n"
-//				+ " perl -I /opt/gt-download-upload-wrapper/gt-download-upload-wrapper-2.0.13/lib/ /opt/vcf-uploader/vcf-uploader-2.0.9/gnos_upload_vcf.pl \\\n"
-//					+ " --gto-only --key /gnos.key --upload-url "+this.gnosMetadataUploadURL+" "
-//					+ " --metadata-urls "+this.normalMetdataURL+","+this.tumours.stream().map(t -> t.getTumourMetdataURL()).reduce("", (a,b)->a+=b+"," )+" \\\n"
-//					+ " --bams "+bams+" \\\n"
-//					+ " --bam-bais "+bamIndicies+" \\\n"
-//					+ " --bam-md5sum-files "+bamMD5Sums+" \\\n"
-//					+ " --bam_bai-md5sum-files "+bamIndexMD5Sums+" \\\n"
-//					+ " --workflow-name OxoGWorkflow-variantbam \\\n"
-//					+ " --study-refname-override "+this.studyRefNameOverride + " \\\n"
-//					+ " --description-file /vcf/description.txt \\\n"
-//					+ " --workflow-version " + this.getVersion() + " \\\n"
-//					+ " --workflow-src-url https://github.com/ICGC-TCGA-PanCancer/OxoGWrapperWorkflow --workflow-url https://github.com/ICGC-TCGA-PanCancer/OxoGWrapperWorkflow  \"\n";
-//		
-//		generateAnalysisFilesBAMsCommand += "\n cp /datastore/bam-upload-prep/*/*/manifest.xml /datastore/variantbam_results/manifest.xml "
-//											+ " && cp /datastore/bam-upload-prep/*/*/analysis.xml /datastore/variantbam_results/analysis.xml "
-//											+ " && cp /datastore/bam-upload-prep/*/*/*.gto /datastore/variantbam_results/";
+
 		generateAnalysisFilesBAMs.setCommand("( "+generateAnalysisFilesBAMsCommand+" ) || "+moveToFailed);
 		generateAnalysisFilesBAMs.addParent(parentJob);
 		return generateAnalysisFilesBAMs;
