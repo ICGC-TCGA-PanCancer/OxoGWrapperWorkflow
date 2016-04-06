@@ -942,12 +942,16 @@ public class OxoGWrapperWorkflow extends BaseOxoGWrapperWorkflow {
 			for (int i = 0 ; i < this.tumours.size(); i++)
 			{
 				TumourInfo tInf = this.tumours.get(i);
-				Job oxoG = this.doOxoG(tInf.getTumourBamGnosID()+"/"+tInf.getTumourBAMFileName(),tInf.getTumourBamGnosID(), combineVCFsByType);
+				Job oxoG; 
 				if (i>0)
 				{
 					//OxoG jobs can put a heavy CPU load on the system (in bursts) so probably better to run them in sequence.
-					//If there is > 1 OxoG job (i.e. a multi-tumour donor), each OxoG job should have the prior OxoG job as its parent. 
-					oxoG.addParent(oxogJobs.get(i-1));
+					//If there is > 1 OxoG job (i.e. a multi-tumour donor), each OxoG job should have the prior OxoG job as its parent.
+					oxoG = this.doOxoG(tInf.getTumourBamGnosID()+"/"+tInf.getTumourBAMFileName(),tInf.getTumourBamGnosID(), combineVCFsByType, oxogJobs.get(i-1));
+				}
+				else
+				{
+					oxoG = this.doOxoG(tInf.getTumourBamGnosID()+"/"+tInf.getTumourBAMFileName(),tInf.getTumourBamGnosID(), combineVCFsByType);
 				}
 				oxogJobs.add(oxoG);
 			}
@@ -975,10 +979,6 @@ public class OxoGWrapperWorkflow extends BaseOxoGWrapperWorkflow {
 					variantBamJobs.get(i+1).addParent(variantBamJobs.get(i-2));
 				}
 			}
-//			for (int i=1; i < Math.max(oxogJobs.size(), oxogJobs.size()); i+=2)
-//			{
-//				oxogJobs.get(i).addParent(oxogJobs.get(i-1));
-//			}
 
 			//set up parent jobs to annotation jobs
 			for (Job j : oxogJobs)
