@@ -354,18 +354,18 @@ public class OxoGWrapperWorkflow extends BaseOxoGWrapperWorkflow {
 		{
 			Job runOxoGWorkflow = this.getWorkflow().createBashJob("run OxoG Filter");
 			String runOxoGCommand = TemplateUtils.getRenderedTemplate(Arrays.stream(new String[][] {
-					{ "sangerExtractedSNVPath", this.sangerExtractedSNVVCFName }, { "sangerWorkflow", Pipeline.sanger.toString() },
+					{ "sangerExtractedSNVVCFPath", this.sangerExtractedSNVVCFName }, { "sangerWorkflow", Pipeline.sanger.toString() },
 					{ "sangerExtractedSNVVCF", getFileName.apply(this.sangerExtractedSNVVCFName) },
-					{ "broadExtractedSNVPath", this.broadExtractedSNVVCFName }, { "broadWorkflow", Pipeline.broad.toString() },
+					{ "broadExtractedSNVVCFPath", this.broadExtractedSNVVCFName }, { "broadWorkflow", Pipeline.broad.toString() },
 					{ "broadExtractedSNVVCF", getFileName.apply(this.broadExtractedSNVVCFName) },
-					{ "dkfzEmblExtractedSNVPath", this.dkfzEmblExtractedSNVVCFName }, { "dkfzEmblWorkflow", Pipeline.dkfz_embl.toString() },
+					{ "dkfzEmblExtractedSNVVCFPath", this.dkfzEmblExtractedSNVVCFName }, { "dkfzEmblWorkflow", Pipeline.dkfz_embl.toString() },
 					{ "dkfzEmblExtractedSNVVCF", getFileName.apply(this.dkfzEmblExtractedSNVVCFName) },
 					{ "tumourID", tumourID }, { "aliquotID", this.aliquotID }, { "oxoQScore", this.oxoQScore },
 					{ "pathToTumour", pathToTumour }, { "normalBamGnosID", this.normalBamGnosID }, { "normalBAMFileName", this.normalBAMFileName } ,
 					{ "broadGnosID", this.broadGnosID }, { "sangerGnosID", this.sangerGnosID }, { "dkfzemblGnosID", this.dkfzemblGnosID }, { "museGnosID", this.museGnosID },
 					{ "sangerSNVName", this.sangerSNVName}, { "broadSNVName", this.broadSNVName }, { "dkfzEmblSNVName", this.dkfzEmblSNVName }, { "museSNVName", this.museSNVName }			
 				} ).collect(collectToMap), "runOxoGFilter.template");
-			runOxoGWorkflow.setCommand(runOxoGCommand);
+			runOxoGWorkflow.setCommand("( "+runOxoGCommand+" ) || "+ moveToFailed);
 
 			for (Job parent : parents)
 			{

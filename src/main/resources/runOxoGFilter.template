@@ -20,7 +20,7 @@
 		set -x
 		docker run --rm --name="oxog_filter_with_tumour_{{ tumourID }}" \
 				-v /refdata/:/cga/fh/pcawg_pipeline/refdata/ \
-				-v /datastore/oxog_workspace/tumour_{{ tumourID }}/:/cga/fh/pcawg_pipeline/jobResults_pipette/jobs/{{ aliquotID }}/:rw \ 
+				-v /datastore/oxog_workspace/tumour_{{ tumourID }}/:/cga/fh/pcawg_pipeline/jobResults_pipette/jobs/{{ aliquotID }}/:rw \
 				-v /datastore/bam/:/datafiles/BAM/ \
 				-v /datastore/vcf/{{ broadWorkflow }}/{{ broadGnosID }}/:/datafiles/VCF/{{ broadWorkflow }}/ \
 				-v /datastore/vcf/{{ sangerWorkflow }}/{{ sangerGnosID}}/:/datafiles/VCF/{{ sangerWorkflow }}/ \
@@ -31,9 +31,9 @@
 			oxog:160329 /bin/bash -c "
 				/cga/fh/pcawg_pipeline/pipelines/run_one_pipeline.bash pcawg /cga/fh/pcawg_pipeline/pipelines/oxog_pipeline.py \
 						{{ aliquotID }} \
-						/datafiles/BAM/tumour/{{ pathToTumour }} \ 
-						/datafiles/BAM/normal/{{ normalBamGnosID }}/{{ normalBAMFileName }} \ 
-						{{ oxoQScore }}
+						/datafiles/BAM/tumour/{{ pathToTumour }} \
+						/datafiles/BAM/normal/{{ normalBamGnosID }}/{{ normalBAMFileName }} \
+ 						{{ oxoQScore }} \
 						/datafiles/VCF/{{ sangerWorkflow }}/{{ sangerSNVName }} \
 						/datafiles/VCF/{{ dkfzEmblWorkflow }}/{{ dkfzEmblSNVName }} \
 						/datafiles/VCF/{{ museWorkflow }}/{{ museSNVName }} \
