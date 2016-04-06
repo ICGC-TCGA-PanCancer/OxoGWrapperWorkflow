@@ -575,26 +575,33 @@ public class OxoGWrapperWorkflow extends BaseOxoGWrapperWorkflow {
 		context.put("changeLogURL", this.changelogURL);
 		context.put("descriptionSuffix", descriptionEnd);
 		String bamDescription = TemplateUtils.getRenderedTemplate(context, "analysisBAMDescription.template");
-		generateAnalysisFilesBAMsCommand += "\n docker run --rm --name=upload_bams -v /datastore/bam-upload-prep/:/vcf/ -v "+this.gnosKey+":/gnos.key -v /datastore/:/datastore/ "
-				+ " pancancer/pancancer_upload_download:1.7 /bin/bash -c \"cat << DESCRIPTIONFILE > /vcf/description.txt\n"
-				+ bamDescription
-				+ "\nDESCRIPTIONFILE\n"
-				+ " perl -I /opt/gt-download-upload-wrapper/gt-download-upload-wrapper-2.0.13/lib/ /opt/vcf-uploader/vcf-uploader-2.0.9/gnos_upload_vcf.pl \\\n"
-					+ " --gto-only --key /gnos.key --upload-url "+this.gnosMetadataUploadURL+" "
-					+ " --metadata-urls "+this.normalMetdataURL+","+this.tumours.stream().map(t -> t.getTumourMetdataURL()).reduce("", (a,b)->a+=b+"," )+" \\\n"
-					+ " --bams "+bams+" \\\n"
-					+ " --bam-bais "+bamIndicies+" \\\n"
-					+ " --bam-md5sum-files "+bamMD5Sums+" \\\n"
-					+ " --bam_bai-md5sum-files "+bamIndexMD5Sums+" \\\n"
-					+ " --workflow-name OxoGWorkflow-variantbam \\\n"
-					+ " --study-refname-override "+this.studyRefNameOverride + " \\\n"
-					+ " --description-file /vcf/description.txt \\\n"
-					+ " --workflow-version " + this.getVersion() + " \\\n"
-					+ " --workflow-src-url https://github.com/ICGC-TCGA-PanCancer/OxoGWrapperWorkflow --workflow-url https://github.com/ICGC-TCGA-PanCancer/OxoGWrapperWorkflow  \"\n";
 		
-		generateAnalysisFilesBAMsCommand += "\n cp /datastore/bam-upload-prep/*/*/manifest.xml /datastore/variantbam_results/manifest.xml "
-											+ " && cp /datastore/bam-upload-prep/*/*/analysis.xml /datastore/variantbam_results/analysis.xml "
-											+ " && cp /datastore/bam-upload-prep/*/*/*.gto /datastore/variantbam_results/";
+		generateAnalysisFilesBAMsCommand += TemplateUtils.getRenderedTemplate(Arrays.stream(new String[][] {
+				{ "gnosKey", this.gnosKey }, { "gnosMetadataUploadURL", this.gnosMetadataUploadURL }, { "bamDescription", bamDescription },
+				{ "normalMetadataURL", this.normalMetdataURL } , { "tumourMetadataURLs", this.tumours.stream().map(t -> t.getTumourMetdataURL()).reduce("", (a,b)->a+=b+"," ) },
+				{ "vcfs", bams }, { "bamIndicies", bamIndicies}, { "bamMD5Sums", bamMD5Sums }, { "bamIndexMD5Sums", bamIndexMD5Sums}, 
+				{ "studyRefNameOverride", this.studyRefNameOverride }, { "workflowVersion", this.getVersion() } 
+			}).collect(collectToMap),"generateBAMAnalysisMetadata.template");
+//		generateAnalysisFilesBAMsCommand += "\n docker run --rm --name=upload_bams -v /datastore/bam-upload-prep/:/vcf/ -v "+this.gnosKey+":/gnos.key -v /datastore/:/datastore/ "
+//				+ " pancancer/pancancer_upload_download:1.7 /bin/bash -c \"cat << DESCRIPTIONFILE > /vcf/description.txt\n"
+//				+ bamDescription
+//				+ "\nDESCRIPTIONFILE\n"
+//				+ " perl -I /opt/gt-download-upload-wrapper/gt-download-upload-wrapper-2.0.13/lib/ /opt/vcf-uploader/vcf-uploader-2.0.9/gnos_upload_vcf.pl \\\n"
+//					+ " --gto-only --key /gnos.key --upload-url "+this.gnosMetadataUploadURL+" "
+//					+ " --metadata-urls "+this.normalMetdataURL+","+this.tumours.stream().map(t -> t.getTumourMetdataURL()).reduce("", (a,b)->a+=b+"," )+" \\\n"
+//					+ " --bams "+bams+" \\\n"
+//					+ " --bam-bais "+bamIndicies+" \\\n"
+//					+ " --bam-md5sum-files "+bamMD5Sums+" \\\n"
+//					+ " --bam_bai-md5sum-files "+bamIndexMD5Sums+" \\\n"
+//					+ " --workflow-name OxoGWorkflow-variantbam \\\n"
+//					+ " --study-refname-override "+this.studyRefNameOverride + " \\\n"
+//					+ " --description-file /vcf/description.txt \\\n"
+//					+ " --workflow-version " + this.getVersion() + " \\\n"
+//					+ " --workflow-src-url https://github.com/ICGC-TCGA-PanCancer/OxoGWrapperWorkflow --workflow-url https://github.com/ICGC-TCGA-PanCancer/OxoGWrapperWorkflow  \"\n";
+//		
+//		generateAnalysisFilesBAMsCommand += "\n cp /datastore/bam-upload-prep/*/*/manifest.xml /datastore/variantbam_results/manifest.xml "
+//											+ " && cp /datastore/bam-upload-prep/*/*/analysis.xml /datastore/variantbam_results/analysis.xml "
+//											+ " && cp /datastore/bam-upload-prep/*/*/*.gto /datastore/variantbam_results/";
 		generateAnalysisFilesBAMs.setCommand("( "+generateAnalysisFilesBAMsCommand+" ) || "+moveToFailed);
 		generateAnalysisFilesBAMs.addParent(parentJob);
 		return generateAnalysisFilesBAMs;

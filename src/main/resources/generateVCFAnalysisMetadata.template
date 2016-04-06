@@ -36,7 +36,7 @@ cat << DESCRIPTIONFILE > /vcf/description.txt
 DESCRIPTIONFILE
 perl -I /opt/gt-download-upload-wrapper/gt-download-upload-wrapper-2.0.13/lib/ /opt/vcf-uploader/vcf-uploader-2.0.9/gnos_upload_vcf.pl \
 	--gto-only --key /gnos.key --upload-url {{ gnosMetadataUploadURL }} \
-	--metadata-urls {{ normalMetdataURL }},{{ tumourMetadataURLs }}" \
+	--metadata-urls {{ normalMetdataURL }},{{ tumourMetadataURLs }} \
 	--vcfs {{ vcfs }}$SNV_FROM_INDEL_OXOG \
 	--tarballs {{ tars }}$SNV_FROM_INDEL_TARBALL \
 	--tarball-md5sum-files {{ tarMD5Sums }}$SNV_FROM_INDEL_TARBALL_MD5 \
