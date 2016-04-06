@@ -10,15 +10,12 @@ import java.util.function.Predicate;
 import java.util.stream.Collector;
 import java.util.stream.Collectors;
 
-import com.github.seqware.OxoGWrapperWorkflow.BAMType;
 import com.github.seqware.downloaders.DownloaderBuilder;
 import com.github.seqware.downloaders.GNOSDownloader;
 import com.github.seqware.downloaders.ICGCStorageDownloader;
 import com.github.seqware.downloaders.S3Downloader;
 
 import net.sourceforge.seqware.pipeline.workflowV2.model.Job;
-
-
 
 public class OxoGWrapperWorkflow extends BaseOxoGWrapperWorkflow {
 
@@ -355,12 +352,9 @@ public class OxoGWrapperWorkflow extends BaseOxoGWrapperWorkflow {
 		{
 			Job runOxoGWorkflow = this.getWorkflow().createBashJob("run OxoG Filter");
 			String runOxoGCommand = TemplateUtils.getRenderedTemplate(Arrays.stream(new String[][] {
-					{ "sangerExtractedSNVVCFPath", this.sangerExtractedSNVVCFName }, { "sangerWorkflow", Pipeline.sanger.toString() },
-					{ "sangerExtractedSNVVCF", getFileName.apply(this.sangerExtractedSNVVCFName) },
-					{ "broadExtractedSNVVCFPath", this.broadExtractedSNVVCFName }, { "broadWorkflow", Pipeline.broad.toString() },
-					{ "broadExtractedSNVVCF", getFileName.apply(this.broadExtractedSNVVCFName) },
-					{ "dkfzEmblExtractedSNVVCFPath", this.dkfzEmblExtractedSNVVCFName }, { "dkfzEmblWorkflow", Pipeline.dkfz_embl.toString() },
-					{ "dkfzEmblExtractedSNVVCF", getFileName.apply(this.dkfzEmblExtractedSNVVCFName) },
+					{ "sangerExtractedSNVVCFPath", this.sangerExtractedSNVVCFName }, { "sangerWorkflow", Pipeline.sanger.toString() }, { "sangerExtractedSNVVCF", getFileName.apply(this.sangerExtractedSNVVCFName) },
+					{ "broadExtractedSNVVCFPath", this.broadExtractedSNVVCFName }, { "broadWorkflow", Pipeline.broad.toString() }, { "broadExtractedSNVVCF", getFileName.apply(this.broadExtractedSNVVCFName) },
+					{ "dkfzEmblExtractedSNVVCFPath", this.dkfzEmblExtractedSNVVCFName }, { "dkfzEmblWorkflow", Pipeline.dkfz_embl.toString() }, { "dkfzEmblExtractedSNVVCF", getFileName.apply(this.dkfzEmblExtractedSNVVCFName) },
 					{ "tumourID", tumourID }, { "aliquotID", this.aliquotID }, { "oxoQScore", this.oxoQScore }, { "museWorkflow", Pipeline.muse.toString() },
 					{ "pathToTumour", pathToTumour }, { "normalBamGnosID", this.normalBamGnosID }, { "normalBAMFileName", this.normalBAMFileName } ,
 					{ "broadGnosID", this.broadGnosID }, { "sangerGnosID", this.sangerGnosID }, { "dkfzemblGnosID", this.dkfzemblGnosID }, { "museGnosID", this.museGnosID },

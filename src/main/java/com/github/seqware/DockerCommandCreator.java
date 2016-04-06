@@ -8,6 +8,7 @@ import java.util.Map;
 import com.github.seqware.OxoGWrapperWorkflow.BAMType;
 
 //TODO: Eventually, this class should be removed as it's not really used, except by the variantbam jobs.
+@Deprecated
 public class DockerCommandCreator {
 
 	static String createDockerRunCommand(String imageName, Map<String, String> mountedObjects, List<String> runOpts,
