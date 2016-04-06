@@ -7,6 +7,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.function.Function;
 import java.util.function.Predicate;
+import java.util.stream.Collector;
 import java.util.stream.Collectors;
 
 import com.github.seqware.downloaders.DownloaderBuilder;
@@ -19,6 +20,8 @@ import net.sourceforge.seqware.pipeline.workflowV2.model.Job;
 
 
 public class OxoGWrapperWorkflow extends BaseOxoGWrapperWorkflow {
+
+	private Collector<String[], ?, Map<String, Object>> collectToMap = Collectors.toMap(kv -> kv[0], kv -> kv[1]);;
 
 	public enum DownloadMethod
 	{
@@ -224,7 +227,7 @@ public class OxoGWrapperWorkflow extends BaseOxoGWrapperWorkflow {
 		String runBCFToolsNormCommand = TemplateUtils.getRenderedTemplate(Arrays.stream(new String[][]{
 			{ "sedTab", sedTab }, { "outDir", outDir }, { "vcfName", vcfName }, { "workflowName", workflowName.toString() } ,
 			{ "refFile", this.refFile }, { "fixedIndel", fixedIndel }, { "normalizedINDELName", normalizedINDELName } 
-		}).collect(Collectors.toMap(kv -> kv[0], kv -> kv[1])), "bcfTools.template");
+		}).collect(this.collectToMap), "bcfTools.template");
 
 		String moveToFailed = GitUtils.gitMoveCommand("running-jobs","failed-jobs",this.JSONlocation + "/" + this.JSONrepoName + "/" + this.JSONfolderName,this.JSONfileName, this.gitMoveTestMode, this.getWorkflowBaseDir() + "/scripts/");				 
 		runBCFToolsNormCommand += (" || " + moveToFailed );
@@ -644,62 +647,14 @@ public class OxoGWrapperWorkflow extends BaseOxoGWrapperWorkflow {
 				{ "OxoQScore",this.oxoQScore },					{ "donorID",this.donorID },					{ "specimenID",this.specimenID },
 				{ "workflowName",this.getName() },				{ "workflowVersion",this.getVersion() },	{ "workflowURL",this.workflowURL },
 				{ "workflowSrcURL",this.workflowSourceURL },	{ "changeLogURL",this.changelogURL },		{ "descriptionSuffix",descriptionEnd },
-			}).collect(Collectors.toMap(kv -> kv[0], kv -> kv[1])), "analysisVCFDescription.template");
+			}).collect(collectToMap), "analysisVCFDescription.template");
 
 		generateAnalysisFilesVCFCommand = TemplateUtils.getRenderedTemplate(Arrays.stream(new String[][] {
-				{ "gnosKey", this.gnosKey }, { "gnosMetadataUploadURL", this.gnosMetadataUploadURL },
+				{ "gnosKey", this.gnosKey }, { "gnosMetadataUploadURL", this.gnosMetadataUploadURL }, { "vcfDescription", vcfDescription },
 				{ "normalMetadataURL", this.normalMetdataURL } , { "tumourMetadataURLs", this.tumours.stream().map(t -> t.getTumourMetdataURL()).reduce("", (a,b)->a+=b+"," ) },
 				{ "vcfs", vcfs }, { "tars", tars }, { "tarMD5Sums", tarMD5Sums }, { "vcfIndicies", vcfIndicies}, { "vcfMD5Sums", vcfMD5Sums },
 				{ "vcfIndexMD5Sums", vcfIndexMD5Sums}, { "studyRefNameOverride", this.studyRefNameOverride }, { "workflowVersion", this.getVersion() } 
-			}).collect(Collectors.toMap(kv -> kv[0], kv -> kv[1])),"generateVCFAnalysisMetadata.template");
-//		//This ugliness is here because of the OxoG results on SNVs from INDELs. We won't know until the workflow actually runs if there are any SNVs from INDELs.
-//		//So we need to build up the list of files to upload using a bash script that will be evaluated at runtime rather
-//		//than Java code that gets evaluated when the workflow is built.
-//		generateAnalysisFilesVCFCommand += "\n\nSNV_FROM_INDEL_OXOG=\'\'\n"
-//										+ "SNV_FROM_INDEL_OXOG_INDEX=\'\'\n"
-//										+ "SNV_FROM_INDEL_OXOG_MD5=\'\'\n"
-//										+ "SNV_FROM_INDEL_OXOG_INDEX_MD5=\'\'\n"
-//										+ "for f in $(ls /datastore/files_for_upload/ | grep -e from_INDELs -e extracted | grep -e gz | grep -v md5) ; do \n"
-//										+ "    echo \"processing $f\"\n"
-//										+ "    f=/datastore/files_for_upload/$f \n"
-//										+ "    md5sum $f | cut -d ' ' -f 1 > $f.md5 \n"
-//										+ "    if [[ \"$f\" =~ tbi|idx ]] ; then \n"
-//										+ "        SNV_FROM_INDEL_OXOG_INDEX=$SNV_FROM_INDEL_OXOG_INDEX,$f\n"
-//										+ "        SNV_FROM_INDEL_OXOG_INDEX_MD5=$SNV_FROM_INDEL_OXOG_INDEX_MD5,$f.md5\n"
-//										+ "    else \n"
-//										+ "        SNV_FROM_INDEL_OXOG=$SNV_FROM_INDEL_OXOG,$f\n"
-//										+ "        SNV_FROM_INDEL_OXOG_MD5=$SNV_FROM_INDEL_OXOG_MD5,$f.md5\n"
-//										+ "    fi\n"
-//										+ "done\n\n"
-//										+ "echo \"SNV_FROM_INDEL_OXOG_INDEX = $SNV_FROM_INDEL_OXOG_INDEX\" \n"
-//										+ "echo \"SNV_FROM_INDEL_OXOG_INDEX_MD5 = $SNV_FROM_INDEL_OXOG_INDEX_MD5\" \n"
-//										+ "echo \"SNV_FROM_INDEL_OXOG = $SNV_FROM_INDEL_OXOG\" \n"
-//										+ "echo \"SNV_FROM_INDEL_OXOG_MD5 = $SNV_FROM_INDEL_OXOG_MD5\" \n\n";
-//		generateAnalysisFilesVCFCommand += "\nset -x\n\n docker run --rm --name=upload_vcfs_and_tarballs -v /datastore/vcf-upload-prep/:/vcf/ -v "+this.gnosKey+":/gnos.key -v /datastore/:/datastore/ "
-//				+ " pancancer/pancancer_upload_download:1.7 /bin/bash -c \" cat << DESCRIPTIONFILE > /vcf/description.txt\n"
-//				+ vcfDescription
-//				+ "\nDESCRIPTIONFILE\n"
-//				+ " perl -I /opt/gt-download-upload-wrapper/gt-download-upload-wrapper-2.0.13/lib/ /opt/vcf-uploader/vcf-uploader-2.0.9/gnos_upload_vcf.pl \\\n"
-//					+ " --gto-only --key /gnos.key --upload-url "+this.gnosMetadataUploadURL+" "
-//					+ " --metadata-urls "+this.normalMetdataURL+","+this.tumours.stream().map(t -> t.getTumourMetdataURL()).reduce("", (a,b)->a+=b+"," )+" \\\n"
-//					+ " --vcfs "+vcfs+"$SNV_FROM_INDEL_OXOG \\\n"
-//					+ " --tarballs "+tars+"$SNV_FROM_INDEL_TARBALL \\\n"
-//					+ " --tarball-md5sum-files "+tarMD5Sums+"$SNV_FROM_INDEL_TARBALL_MD5 \\\n"
-//					+ " --vcf-idxs "+vcfIndicies+"$SNV_FROM_INDEL_OXOG_INDEX \\\n"
-//					+ " --vcf-md5sum-files "+vcfMD5Sums+"$SNV_FROM_INDEL_OXOG_MD5 \\\n"
-//					+ " --vcf-idx-md5sum-files "+vcfIndexMD5Sums+"$SNV_FROM_INDEL_OXOG_INDEX_MD5 \\\n"
-//					+ " --workflow-name OxoGWorkflow-OxoGFiltering \\\n"
-//					+ " --study-refname-override "+this.studyRefNameOverride + " \\\n"
-//					+ " --description-file /vcf/description.txt \\\n"
-//					+ " --workflow-version " + this.getVersion() + " \\\n"
-//					+ " --workflow-src-url https://github.com/ICGC-TCGA-PanCancer/OxoGWrapperWorkflow --workflow-url https://github.com/ICGC-TCGA-PanCancer/OxoGWrapperWorkflow  \"\nset +x\n";
-//		
-//		
-//		
-//		//copy the analaysis.xml, manifest.xml *.gto files to /datastore/files_for_upload
-//		generateAnalysisFilesVCFCommand += "cp /datastore/vcf-upload-prep/*/*/manifest.xml /datastore/files_for_upload/manifest.xml "
-//															+ " && cp /datastore/vcf-upload-prep/*/*/analysis.xml /datastore/files_for_upload/analysis.xml "
-//															+ " && cp /datastore/vcf-upload-prep/*/*/*.gto /datastore/files_for_upload/\n";
+			}).collect(collectToMap),"generateVCFAnalysisMetadata.template");
 		generateAnalysisFilesVCFs.setCommand("( "+generateAnalysisFilesVCFCommand+ " ) || "+moveToFailed);
 		generateAnalysisFilesVCFs.addParent(parentJob);
 		return generateAnalysisFilesVCFs;
