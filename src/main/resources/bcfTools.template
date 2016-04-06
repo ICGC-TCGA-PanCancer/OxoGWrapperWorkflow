@@ -9,21 +9,21 @@
 #Sixth, get rid of trailing semi-colons in header lines.
 
 sudo chmod a+rw -R /datastore/vcf/ && (
-	docker run --rm --name normalize_indel_{{ workflowName }}
-		-v {{ outDir }}/{{ vcfName }}:/datastore/datafile.vcf.gz
-		-v {{ outDir }}:/outdir/:rw
-		-v /refdata/:/ref/
+	docker run --rm --name normalize_indel_{{ workflowName }} \
+		-v {{ outDir }}/{{ vcfName }}:/datastore/datafile.vcf.gz \
+		-v {{ outDir }}/:/outdir/:rw \
+		-v /refdata/:/ref/ \
 			compbio/ngseasy-base:a1.0-002 /bin/bash -c "
-				gzip -d -c /datastore/datafile.vcf.gz 
+				gzip -d -c /datastore/datafile.vcf.gz \
 					| sed -e s/{{ sedTab }}$/{{ sedTab }}./g \
 							-e s/{{ sedTab }}{{ sedTab }}/{{ sedTab }}.{{ sedTab }}/g \
 							-e s/\\([^{{ sedTab }}]\\){{ sedTab }}{{ sedTab }}\\([^{{ sedTab }}]\\)/\\1{{ sedTab }}.{{ sedTab }}\\2/g \
 							-e s/{{ sedTab }}{{ sedTab }}/{{ sedTab }}.{{ sedTab }}/g \
 							-e 's/^M\\([[:blank:]]\\)/MT\\1/g' \
-							-e 's/\\(##.*\\);$/\\1/g' 
+							-e 's/\\(##.*\\);$/\\1/g' \
 				> /outdir/{{ fixedIndel }} &&
 				bcftools norm -c w -m -any -Oz -f /ref/{{ refFile }}  /outdir/{{ fixedIndel }}  > /outdir/{{ normalizedINDELName }} \
 				&& bgzip -f /outdir/{{ fixedIndel }} \
 				&& tabix -f -p vcf /outdir/{{ fixedIndel }}.gz \
 				&& tabix -f -p vcf /outdir/{{ normalizedINDELName }} "
-) ;
+)
