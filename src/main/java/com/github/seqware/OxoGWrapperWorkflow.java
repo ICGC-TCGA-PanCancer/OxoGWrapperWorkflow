@@ -346,61 +346,88 @@ public class OxoGWrapperWorkflow extends BaseOxoGWrapperWorkflow {
 	 * @return
 	 */
 	private Job doOxoG(String pathToTumour, String tumourID, Job ...parents) {
-		Job runOxoGWorkflow = this.getWorkflow().createBashJob("run OxoG Filter");
+		
 		String moveToFailed = GitUtils.gitMoveCommand("running-jobs","failed-jobs",this.JSONlocation + "/" + this.JSONrepoName + "/" + this.JSONfolderName,this.JSONfileName, this.gitMoveTestMode, this.getWorkflowBaseDir() + "/scripts/");
 		Function<String,String> getFileName = (s) -> {  return s.substring(s.lastIndexOf("/")); };
-		String extractedSnvCheck = "EXTRACTED_SNV_MOUNT=\"\"\n"
-									+ "EXTRACTED_SNV_FILES=\"\"\n"
-									+ "if (( $(zcat "+this.sangerExtractedSNVVCFName+" | grep \"^[^#]\" | wc -l) > 0 )) ; then \n"
-									+ "    echo \""+this.sangerExtractedSNVVCFName+" has SNVs.\"\n"
-									+ "    EXTRACTED_SNV_MOUNT=\"${EXTRACTED_SNV_MOUNT} -v "+this.sangerExtractedSNVVCFName+":/datafiles/VCF/"+Pipeline.sanger+"/"+getFileName.apply(this.sangerExtractedSNVVCFName)+" \"\n"
-									+ "    EXTRACTED_SNV_FILES=\"${EXTRACTED_SNV_FILES} /datafiles/VCF/"+Pipeline.sanger+"/"+getFileName.apply(this.sangerExtractedSNVVCFName)+" \"\n"
-									+ "fi\n  "
-									+ "if (( $(zcat "+this.broadExtractedSNVVCFName+" | grep \"^[^#]\" | wc -l) > 0 )) ; then \n"
-									+ "    echo \""+this.broadExtractedSNVVCFName+" has SNVs.\"\n"
-									+ "    EXTRACTED_SNV_MOUNT=\"${EXTRACTED_SNV_MOUNT} -v "+this.broadExtractedSNVVCFName+":/datafiles/VCF/"+Pipeline.broad+"/"+getFileName.apply(this.broadExtractedSNVVCFName)+" \"\n"
-									+ "    EXTRACTED_SNV_FILES=\"${EXTRACTED_SNV_FILES} /datafiles/VCF/"+Pipeline.broad+"/"+getFileName.apply(this.broadExtractedSNVVCFName)+" \"\n"
-									+ "fi\n "
-									+ "if (( $(zcat "+this.dkfzEmblExtractedSNVVCFName+" | grep \"^[^#]\" | wc -l) > 0 )) ; then \n"
-									+ "    echo \""+this.dkfzEmblExtractedSNVVCFName+" has SNVs.\"\n"
-									+ "    EXTRACTED_SNV_MOUNT=\"${EXTRACTED_SNV_MOUNT} -v "+this.dkfzEmblExtractedSNVVCFName+":/datafiles/VCF/"+Pipeline.dkfz_embl+"/"+getFileName.apply(this.dkfzEmblExtractedSNVVCFName)+" \"\n"
-									+ "    EXTRACTED_SNV_FILES=\"${EXTRACTED_SNV_FILES} /datafiles/VCF/"+Pipeline.dkfz_embl+"/"+getFileName.apply(this.dkfzEmblExtractedSNVVCFName)+" \"\n"
-									+ "fi\n ";
+		Job extractOutputFiles = this.getWorkflow().createBashJob("extract oxog output files from tar");
 		if (!skipOxoG)
 		{
-			String oxogMounts = " -v /refdata/:/cga/fh/pcawg_pipeline/refdata/ \\\n"
-					+ " -v /datastore/oxog_workspace/tumour_"+tumourID+"/:/cga/fh/pcawg_pipeline/jobResults_pipette/jobs/"+this.aliquotID+"/:rw \\\n" 
-					+ " -v /datastore/bam/:/datafiles/BAM/ \\\n"
-					+ " -v /datastore/vcf/"+Pipeline.broad+"/"+this.broadGnosID+"/"+"/:/datafiles/VCF/"+Pipeline.broad+"/ \\\n"
-					+ " -v /datastore/vcf/"+Pipeline.sanger+"/"+this.sangerGnosID+"/"+"/:/datafiles/VCF/"+Pipeline.sanger+"/ \\\n"
-					+ " -v /datastore/vcf/"+Pipeline.dkfz_embl+"/"+this.dkfzemblGnosID+"/"+"/:/datafiles/VCF/"+Pipeline.dkfz_embl+"/ \\\n"
-					+ " -v /datastore/vcf/"+Pipeline.muse+"/"+this.museGnosID+"/"+"/:/datafiles/VCF/"+Pipeline.muse+"/ \\\n"
-					+ " ${EXTRACTED_SNV_MOUNT} \\\n"
-					+ " -v /datastore/oxog_results/tumour_"+tumourID+"/:/cga/fh/pcawg_pipeline/jobResults_pipette/results:rw \\\n";
-			
-			String oxogCommand = "/cga/fh/pcawg_pipeline/pipelines/run_one_pipeline.bash pcawg /cga/fh/pcawg_pipeline/pipelines/oxog_pipeline.py \\\n"
-					+ this.aliquotID + " \\\n"
-					//genereate a string of the tumours' gnos IDs and file names.
-					//Can the OxoG filter handle more than 1 tumour at a time?
-					+ " /datafiles/BAM/tumour/"+pathToTumour+" \\\n" 
-					+ " /datafiles/BAM/normal/" +this.normalBamGnosID + "/" +  this.normalBAMFileName + " \\\n" 
-					+ " " + this.oxoQScore + " \\\n"
-					+ " /datafiles/VCF/"+Pipeline.sanger+"/" + this.sangerSNVName + " \\\n"
-					+ " /datafiles/VCF/"+Pipeline.dkfz_embl+"/" + this.dkfzEmblSNVName  + " \\\n"
-					+ " /datafiles/VCF/"+Pipeline.muse+"/" + this.museSNVName + " \\\n"
-					+ " /datafiles/VCF/"+Pipeline.broad+"/" + this.broadSNVName 
-					+ " ${EXTRACTED_SNV_FILES} " ;
-			runOxoGWorkflow.setCommand("(("+extractedSnvCheck+"\nset -x;\ndocker run --rm --name=\"oxog_filter_with_tumour_"+tumourID+"\" "+oxogMounts+" oxog:160329 /bin/bash -c \"" + oxogCommand+ "\" ;\nset +x;) || echo \"OxoG Exit Code: $?\"  ) || "+moveToFailed);
-			
-			
+			Job runOxoGWorkflow = this.getWorkflow().createBashJob("run OxoG Filter");
+			String runOxoGCommand = TemplateUtils.getRenderedTemplate(Arrays.stream(new String[][] {
+					{ "sangerExtractedSNVPath", this.sangerExtractedSNVVCFName }, { "sangerWorkflow", Pipeline.sanger.toString() },
+					{ "sangerExtractedSNVVCF", getFileName.apply(this.sangerExtractedSNVVCFName) },
+					{ "broadExtractedSNVPath", this.broadExtractedSNVVCFName }, { "broadWorkflow", Pipeline.broad.toString() },
+					{ "broadExtractedSNVVCF", getFileName.apply(this.broadExtractedSNVVCFName) },
+					{ "dkfzEmblExtractedSNVPath", this.dkfzEmblExtractedSNVVCFName }, { "dkfzEmblWorkflow", Pipeline.dkfz_embl.toString() },
+					{ "dkfzEmblExtractedSNVVCF", getFileName.apply(this.dkfzEmblExtractedSNVVCFName) },
+					{ "tumourID", tumourID }, { "aliquotID", this.aliquotID }, { "oxoQScore", this.oxoQScore },
+					{ "pathToTumour", pathToTumour }, { "normalBamGnosID", this.normalBamGnosID }, { "normalBAMFileName", this.normalBAMFileName } ,
+					{ "broadGnosID", this.broadGnosID }, { "sangerGnosID", this.sangerGnosID }, { "dkfzemblGnosID", this.dkfzemblGnosID }, { "museGnosID", this.museGnosID },
+					{ "sangerSNVName", this.sangerSNVName}, { "broadSNVName", this.broadSNVName }, { "dkfzEmblSNVName", this.dkfzEmblSNVName }, { "museSNVName", this.museSNVName }			
+				} ).collect(collectToMap), "runOxoGFilter.template");
+			runOxoGWorkflow.setCommand(runOxoGCommand);
+		
+	//		String extractedSnvCheck = "EXTRACTED_SNV_MOUNT=\"\"\n"
+	//									+ "EXTRACTED_SNV_FILES=\"\"\n"
+	//									+ "if (( $(zcat "+this.sangerExtractedSNVVCFName+" | grep \"^[^#]\" | wc -l) > 0 )) ; then \n"
+	//									+ "    echo \""+this.sangerExtractedSNVVCFName+" has SNVs.\"\n"
+	//									+ "    EXTRACTED_SNV_MOUNT=\"${EXTRACTED_SNV_MOUNT} -v "+this.sangerExtractedSNVVCFName+":/datafiles/VCF/"+Pipeline.sanger+"/"+getFileName.apply(this.sangerExtractedSNVVCFName)+" \"\n"
+	//									+ "    EXTRACTED_SNV_FILES=\"${EXTRACTED_SNV_FILES} /datafiles/VCF/"+Pipeline.sanger+"/"+getFileName.apply(this.sangerExtractedSNVVCFName)+" \"\n"
+	//									+ "fi\n  "
+	//									+ "if (( $(zcat "+this.broadExtractedSNVVCFName+" | grep \"^[^#]\" | wc -l) > 0 )) ; then \n"
+	//									+ "    echo \""+this.broadExtractedSNVVCFName+" has SNVs.\"\n"
+	//									+ "    EXTRACTED_SNV_MOUNT=\"${EXTRACTED_SNV_MOUNT} -v "+this.broadExtractedSNVVCFName+":/datafiles/VCF/"+Pipeline.broad+"/"+getFileName.apply(this.broadExtractedSNVVCFName)+" \"\n"
+	//									+ "    EXTRACTED_SNV_FILES=\"${EXTRACTED_SNV_FILES} /datafiles/VCF/"+Pipeline.broad+"/"+getFileName.apply(this.broadExtractedSNVVCFName)+" \"\n"
+	//									+ "fi\n "
+	//									+ "if (( $(zcat "+this.dkfzEmblExtractedSNVVCFName+" | grep \"^[^#]\" | wc -l) > 0 )) ; then \n"
+	//									+ "    echo \""+this.dkfzEmblExtractedSNVVCFName+" has SNVs.\"\n"
+	//									+ "    EXTRACTED_SNV_MOUNT=\"${EXTRACTED_SNV_MOUNT} -v "+this.dkfzEmblExtractedSNVVCFName+":/datafiles/VCF/"+Pipeline.dkfz_embl+"/"+getFileName.apply(this.dkfzEmblExtractedSNVVCFName)+" \"\n"
+	//									+ "    EXTRACTED_SNV_FILES=\"${EXTRACTED_SNV_FILES} /datafiles/VCF/"+Pipeline.dkfz_embl+"/"+getFileName.apply(this.dkfzEmblExtractedSNVVCFName)+" \"\n"
+	//									+ "fi\n ";
+	//		if (!skipOxoG)
+	//		{
+	//			String oxogMounts = " -v /refdata/:/cga/fh/pcawg_pipeline/refdata/ \\\n"
+	//					+ " -v /datastore/oxog_workspace/tumour_"+tumourID+"/:/cga/fh/pcawg_pipeline/jobResults_pipette/jobs/"+this.aliquotID+"/:rw \\\n" 
+	//					+ " -v /datastore/bam/:/datafiles/BAM/ \\\n"
+	//					+ " -v /datastore/vcf/"+Pipeline.broad+"/"+this.broadGnosID+"/"+"/:/datafiles/VCF/"+Pipeline.broad+"/ \\\n"
+	//					+ " -v /datastore/vcf/"+Pipeline.sanger+"/"+this.sangerGnosID+"/"+"/:/datafiles/VCF/"+Pipeline.sanger+"/ \\\n"
+	//					+ " -v /datastore/vcf/"+Pipeline.dkfz_embl+"/"+this.dkfzemblGnosID+"/"+"/:/datafiles/VCF/"+Pipeline.dkfz_embl+"/ \\\n"
+	//					+ " -v /datastore/vcf/"+Pipeline.muse+"/"+this.museGnosID+"/"+"/:/datafiles/VCF/"+Pipeline.muse+"/ \\\n"
+	//					+ " ${EXTRACTED_SNV_MOUNT} \\\n"
+	//					+ " -v /datastore/oxog_results/tumour_"+tumourID+"/:/cga/fh/pcawg_pipeline/jobResults_pipette/results:rw \\\n";
+	//			
+	//			String oxogCommand = "/cga/fh/pcawg_pipeline/pipelines/run_one_pipeline.bash pcawg /cga/fh/pcawg_pipeline/pipelines/oxog_pipeline.py \\\n"
+	//					+ this.aliquotID + " \\\n"
+	//					//genereate a string of the tumours' gnos IDs and file names.
+	//					//Can the OxoG filter handle more than 1 tumour at a time?
+	//					+ " /datafiles/BAM/tumour/"+pathToTumour+" \\\n" 
+	//					+ " /datafiles/BAM/normal/" +this.normalBamGnosID + "/" +  this.normalBAMFileName + " \\\n" 
+	//					+ " " + this.oxoQScore + " \\\n"
+	//					+ " /datafiles/VCF/"+Pipeline.sanger+"/" + this.sangerSNVName + " \\\n"
+	//					+ " /datafiles/VCF/"+Pipeline.dkfz_embl+"/" + this.dkfzEmblSNVName  + " \\\n"
+	//					+ " /datafiles/VCF/"+Pipeline.muse+"/" + this.museSNVName + " \\\n"
+	//					+ " /datafiles/VCF/"+Pipeline.broad+"/" + this.broadSNVName 
+	//					+ " ${EXTRACTED_SNV_FILES} " ;
+	//			runOxoGWorkflow.setCommand("(("+extractedSnvCheck+"\nset -x;\ndocker run --rm --name=\"oxog_filter_with_tumour_"+tumourID+"\" "+oxogMounts+" oxog:160329 /bin/bash -c \"" + oxogCommand+ "\" ;\nset +x;) || echo \"OxoG Exit Code: $?\"  ) || "+moveToFailed);
+	//			
+	//			
+	//		}
+			for (Job parent : parents)
+			{
+				runOxoGWorkflow.addParent(parent);
+			}
+			extractOutputFiles.addParent(runOxoGWorkflow);
 		}
-		for (Job parent : parents)
+		else
 		{
-			runOxoGWorkflow.addParent(parent);
+			//Assume that OxoG already ran so we can skip ahead to extracting output files!
+			for (Job parent : parents)
+			{
+				extractOutputFiles.addParent(parent);
+			}
 		}
-		Job extractOutputFiles = this.getWorkflow().createBashJob("extract oxog output files from tar");
 		extractOutputFiles.setCommand("(cd /datastore/oxog_results/tumour_"+tumourID+"/ && sudo chmod a+rw -R /datastore/oxog_results/ && tar -xvkf ./"+this.aliquotID+".gnos_files.tar  ) || "+moveToFailed);
-		extractOutputFiles.addParent(runOxoGWorkflow);
+
 		String pathToResults = "/datastore/oxog_results/tumour_"+tumourID+"/cga/fh/pcawg_pipeline/jobResults_pipette/jobs/"+this.aliquotID+"/links_for_gnos/annotate_failed_sites_to_vcfs/";
 		String pathToUploadDir = "/datastore/files_for_upload/tumour_"+tumourID+"/";
 		
@@ -426,7 +453,7 @@ public class OxoGWrapperWorkflow extends BaseOxoGWrapperWorkflow {
 		this.filesForUpload.add(changeToOxoGTBISuffix.apply(getFileName.apply(this.dkfzEmblExtractedSNVVCFName)));
 		
 		this.filesForUpload.add("/datastore/oxog_results/" + this.aliquotID + ".gnos_files.tar");
-		
+			
 		Job prepOxoGTarAndMutectCallsforUpload = this.getWorkflow().createBashJob("prepare OxoG tar and mutect calls file for upload");
 		prepOxoGTarAndMutectCallsforUpload.setCommand("( ([ -d "+pathToUploadDir+" ] || mkdir -p "+pathToUploadDir+") "
 				+ " && cp /datastore/oxog_results/tumour_"+tumourID+"/"+this.aliquotID+".gnos_files.tar "+pathToUploadDir+" \\\n"
@@ -445,7 +472,9 @@ public class OxoGWrapperWorkflow extends BaseOxoGWrapperWorkflow {
 		this.filesForUpload.add("/datastore/files_for_upload/tumour_"+tumourID+"/"+this.aliquotID+".call_stats.txt.gz.tar");
 		
 		prepOxoGTarAndMutectCallsforUpload.addParent(extractOutputFiles);
+		
 		return prepOxoGTarAndMutectCallsforUpload;
+		
 	}
 
 	/**
