@@ -540,20 +540,12 @@ public class OxoGWrapperWorkflow extends BaseOxoGWrapperWorkflow {
 			}
 		}
 		String descriptionEnd = TemplateUtils.getRenderedTemplate("analysisDescriptionSuffix.template");
-		Map<String,Object> context = new HashMap<String,Object>();
-		context.put("donorID", this.donorID);
-		context.put("specimenID", this.specimenID);
-		context.put("snvPadding", this.snvPadding);
-		context.put("indelPadding", this.indelPadding);
-		context.put("svPadding", this.svPadding);
-		context.put("svPadding", this.svPadding);
-		context.put("workflowName", this.getName());
-		context.put("workflowVersion", this.getVersion());
-		context.put("workflowURL", this.workflowURL);
-		context.put("workflowSrcURL", this.workflowSourceURL);
-		context.put("changeLogURL", this.changelogURL);
-		context.put("descriptionSuffix", descriptionEnd);
-		String bamDescription = TemplateUtils.getRenderedTemplate(context, "analysisBAMDescription.template");
+		String bamDescription = TemplateUtils.getRenderedTemplate(Arrays.stream(new String [][] {
+				{"donorID", this.donorID}, {"specimenID", this.specimenID}, {"snvPadding", String.valueOf(this.snvPadding)},
+				{"indelPadding", String.valueOf(this.indelPadding)}, {"svPadding", String.valueOf(this.svPadding)},
+				{"workflowName", this.getName()}, {"workflowVersion", this.getVersion()}, {"workflowURL", this.workflowURL},
+				{"workflowSrcURL", this.workflowSourceURL}, {"changeLogURL", this.changelogURL}, {"descriptionSuffix", descriptionEnd}
+			}).collect(this.collectToMap), "analysisBAMDescription.template");
 		
 		generateAnalysisFilesBAMsCommand += TemplateUtils.getRenderedTemplate(Arrays.stream(new String[][] {
 				{ "gnosKey", this.gnosKey }, { "gnosMetadataUploadURL", this.gnosMetadataUploadURL }, { "bamDescription", bamDescription },
