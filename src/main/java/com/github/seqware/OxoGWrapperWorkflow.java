@@ -645,7 +645,7 @@ public class OxoGWrapperWorkflow extends BaseOxoGWrapperWorkflow {
 	 */
 	private Job runAnnotator(String inputType, Pipeline workflowName, String vcfPath, String tumourBamPath, String normalBamPath, String tumourGnosID, Job ...parents)
 	{
-		String outDir = "/datastore/files_for_upload/";
+		String outDir = "/datastore/files_for_upload/tumour_"+tumourGnosID+"/";
 		String containerName = "pcawg-annotator_"+workflowName+"_"+inputType;
 		String commandName ="run annotator for "+workflowName+" "+inputType;
 		String annotatedFileName = this.aliquotID+"_annotated_"+workflowName+"_"+inputType+"_tumour_"+tumourGnosID+".vcf";
@@ -674,7 +674,7 @@ public class OxoGWrapperWorkflow extends BaseOxoGWrapperWorkflow {
 					+ "        -v "+normalBamPath+":/normal_minibam.bam \\\n"
 					+ "        ljdursi/pcawg-annotate \\\n"
 					+ "        "+inputType+" /input.vcf /normal_minibam.bam /tumour_minibam.bam ) > "+outDir+"/"+annotatedFileName+" \n"
-					+ "    bgzip -f -c "+outDir+annotatedFileName+" > "+outDir+"/"+annotatedFileName+".gz \n"
+					+ "    bgzip -f -c "+outDir+"/"+annotatedFileName+" > "+outDir+"/"+annotatedFileName+".gz \n"
 					+ "    tabix -p vcf "+outDir+"/"+annotatedFileName+".gz \n "
 					+ "fi\n"
 					+ ") " ;
