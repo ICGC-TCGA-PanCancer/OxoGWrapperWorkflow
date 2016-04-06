@@ -7,6 +7,7 @@ import java.util.Map;
 
 import com.github.seqware.OxoGWrapperWorkflow.BAMType;
 
+//TODO: Eventually, this class should be removed as it's not really used, except by the variantbam jobs.
 public class DockerCommandCreator {
 
 	static String createDockerRunCommand(String imageName, Map<String, String> mountedObjects, List<String> runOpts,
@@ -61,26 +62,6 @@ public class DockerCommandCreator {
 		command = DockerCommandCreator.createDockerRunCommand("oxog:160329", mountedObjects, runOpts,
 				"  /cga/fh/pcawg_pipeline/modules/VariantBam/variant", containerCommandArgs);
 
-		return command;
-	}
-	
-	static String createGetVCFCommand(String workflowName, String storageSource, String outDir, String downloadObjects)
-	{
-		String command = "";
-		Map<String,String> mountedObjects = new HashMap<String,String>(3);
-		mountedObjects.put(outDir+"/logs/", "/icgc/icgc-storage-client/logs/");
-		mountedObjects.put("/datastore/credentials/collab.token", "/icgc/icgc-storage-client/conf/application.properties");
-		mountedObjects.put(outDir+"/", "/downloads/");
-		
-		List<String> runOpts = new ArrayList<String>(2);
-		runOpts.add("--rm");
-		runOpts.add("--name get_vcf_"+workflowName);
-		runOpts.add("-e STORAGE_PROFILE="+storageSource);
-		
-		List<String> containerArgs = new ArrayList<String>();
-		containerArgs.add(downloadObjects);
-
-		command = DockerCommandCreator.createDockerRunCommand("icgc-storage-client", mountedObjects, runOpts, "",containerArgs);
 		return command;
 	}
 	
