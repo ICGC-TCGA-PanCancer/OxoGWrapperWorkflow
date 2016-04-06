@@ -360,7 +360,7 @@ public class OxoGWrapperWorkflow extends BaseOxoGWrapperWorkflow {
 					{ "broadExtractedSNVVCF", getFileName.apply(this.broadExtractedSNVVCFName) },
 					{ "dkfzEmblExtractedSNVVCFPath", this.dkfzEmblExtractedSNVVCFName }, { "dkfzEmblWorkflow", Pipeline.dkfz_embl.toString() },
 					{ "dkfzEmblExtractedSNVVCF", getFileName.apply(this.dkfzEmblExtractedSNVVCFName) },
-					{ "tumourID", tumourID }, { "aliquotID", this.aliquotID }, { "oxoQScore", this.oxoQScore },
+					{ "tumourID", tumourID }, { "aliquotID", this.aliquotID }, { "oxoQScore", this.oxoQScore }, { "museWorkflow", Pipeline.muse.toString() },
 					{ "pathToTumour", pathToTumour }, { "normalBamGnosID", this.normalBamGnosID }, { "normalBAMFileName", this.normalBAMFileName } ,
 					{ "broadGnosID", this.broadGnosID }, { "sangerGnosID", this.sangerGnosID }, { "dkfzemblGnosID", this.dkfzemblGnosID }, { "museGnosID", this.museGnosID },
 					{ "sangerSNVName", this.sangerSNVName}, { "broadSNVName", this.broadSNVName }, { "dkfzEmblSNVName", this.dkfzEmblSNVName }, { "museSNVName", this.museSNVName }			
@@ -462,12 +462,7 @@ public class OxoGWrapperWorkflow extends BaseOxoGWrapperWorkflow {
 		{
 			String command = DockerCommandCreator.createVariantBamCommand(bamType, minibamName+".bam", bamPath, this.snvVCF, this.svVCF, this.indelVCF, this.svPadding, this.snvPadding, this.indelPadding,tumourID);
 			
-			// There will be two jobs trying to run variantbam at the same time and I think sometimes, they both check for the existence of /datastore/variantbam_results AT THE EXACT SAME TIME 
-			// so they both try to create it, then one fails and has to retry. But this messes up the process of moving job files to failed-jobs because variantbak will succeed on retry BUT the 
-			// job file will still be in the failed-jobs directory because there's no easy way to move it out.
-			// Ugly workaround: if the bam type is NORMAL, sleep for a few seconds. That should let the tumour variantbam job get far enough ahead to create the directory properly.
-			String sleep = bamType == BAMType.normal ? " sleep 10 && " : "" ;
-			command = sleep + "(( [ -d /datastore/variantbam_results/ ] || mkdir /datastore/variantbam_results ) && sudo chmod a+rw -R /datastore/variantbam_results/ && " + command + " ) ";
+			command = "(( [ -d /datastore/variantbam_results/ ] || mkdir -p /datastore/variantbam_results ) && sudo chmod a+rw -R /datastore/variantbam_results/ && " + command + " ) ";
 			
 			String moveToFailed = GitUtils.gitMoveCommand("running-jobs","failed-jobs",this.JSONlocation + "/" + this.JSONrepoName + "/" + this.JSONfolderName,this.JSONfileName, this.gitMoveTestMode, this.getWorkflowBaseDir() + "/scripts/");
 			command += (" || " + moveToFailed);
