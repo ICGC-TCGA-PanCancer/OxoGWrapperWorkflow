@@ -24,3 +24,6 @@ target/*
 /*.INI
 /*.json
 Workflow_Bundle*.zip
+.pmd
+.*.md.html
+*.swp
