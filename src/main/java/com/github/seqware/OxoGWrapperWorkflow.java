@@ -454,6 +454,15 @@ public class OxoGWrapperWorkflow extends BaseOxoGWrapperWorkflow {
 		{
 			minibamName = tumourBAMFileName.replace(".bam", "_minibam");
 			tumourMinibamPath = "/datastore/variantbam_results/"+minibamName+".bam";
+			
+			for (int i = 0; i < this.tumours.size(); i++ )
+			{
+				if (this.tumours.get(i).getTumourBamGnosID().equals(tumourID))
+				{
+					this.tumours.get(i).setTumourMinibamPath(tumourMinibamPath);
+				}
+			}
+			
 			this.filesForUpload.add(tumourMinibamPath);
 			this.filesForUpload.add(tumourMinibamPath+".bai");
 		}
@@ -936,6 +945,8 @@ public class OxoGWrapperWorkflow extends BaseOxoGWrapperWorkflow {
 				Job oxoG = this.doOxoG(tInf.getTumourBamGnosID()+"/"+tInf.getTumourBAMFileName(),tInf.getTumourBamGnosID(), combineVCFsByType);
 				if (i>0)
 				{
+					//OxoG jobs can put a heavy CPU load on the system (in bursts) so probably better to run them in sequence.
+					//If there is > 1 OxoG job (i.e. a multi-tumour donor), each OxoG job should have the prior OxoG job as its parent. 
 					oxoG.addParent(oxogJobs.get(i-1));
 				}
 				oxogJobs.add(oxoG);
