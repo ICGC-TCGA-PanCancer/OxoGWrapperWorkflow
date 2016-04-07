@@ -11,8 +11,6 @@ import net.sourceforge.seqware.pipeline.workflowV2.AbstractWorkflowDataModel;
 
 public abstract class BaseOxoGWrapperWorkflow extends AbstractWorkflowDataModel {
 	
-	
-	
 	//ugh... so many fields. There's probably a better way to do this, just no time right now.
 	protected String oxoQScore = "";
 	protected String donorID;
@@ -139,8 +137,7 @@ public abstract class BaseOxoGWrapperWorkflow extends AbstractWorkflowDataModel 
 	
 	protected final String workflowURL = "https://github.com/ICGC-TCGA-PanCancer/OxoGWrapperWorkflow/";
 	
-	//Could be "icgc_storage_client" or "gtdownload". Maybe add options for aws s3 cli later?
-	protected String downloadMethod = "icgc_storage_client";
+	protected String downloadMethod = "icgcStorageClient";
 	
 	protected String sangerGNOSRepoURL;
 	protected String broadGNOSRepoURL;
