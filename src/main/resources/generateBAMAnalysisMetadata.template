@@ -1,5 +1,3 @@
-# tumourMetadataURLs should be populated as:
-# this.tumours.stream().map(t -> t.getTumourMetdataURL()).reduce("", (a,b)->a+=b+"," )
 
 docker run --rm --name=upload_bams -v /datastore/bam-upload-prep/:/vcf/ -v {{ gnosKey }}:/gnos.key -v /datastore/:/datastore/ \
 	pancancer/pancancer_upload_download:1.7 /bin/bash -c "

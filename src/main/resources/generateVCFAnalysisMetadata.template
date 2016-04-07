@@ -1,7 +1,5 @@
 
-#This ugliness is here because of the OxoG results on SNVs from INDELs. We won't know until the workflow actually runs if there are any SNVs from INDELs.
-#So we need to build up the list of files to upload using a bash script that will be evaluated at runtime rather
-#than Java code that gets evaluated when the workflow is built.
+
 SNV_FROM_INDEL_OXOG=''
 SNV_FROM_INDEL_OXOG_INDEX=''
 SNV_FROM_INDEL_OXOG_MD5=''
