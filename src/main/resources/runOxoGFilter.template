@@ -1,3 +1,4 @@
+
 (
 	(
 		EXTRACTED_SNV_MOUNT=""
@@ -42,3 +43,20 @@
 		set +x
 	) || echo "OxoG Exit Code: $?" 
 )
+
+(cd /datastore/oxog_results/tumour_{{ tumourID }}/ && sudo chmod a+rw -R /datastore/oxog_results/ && tar -xvkf ./{{ aliquotID }}.gnos_files.tar  )
+
+( ([ -d {{ pathToUploadDir }} ] || mkdir -p {{ pathToUploadDir }})
+	&& cp /datastore/oxog_results/tumour_{{ tumourID }}/{{ aliquotID }}.gnos_files.tar {{ pathToUploadDir }} \
+	&& cp {{ pathToResults }}/*.vcf.gz  {{ pathToUploadDir }} \
+	&& cp {{ pathToResults }}/*.vcf.gz.tbi   {{ pathToUploadDir }} \
+	&& cp {{ broadNormalizedIndelVCFName }}  {{ pathToUploadDir }} \
+	&& cp {{ dkfzEmblNormalizedIndelVCFName }}  {{ pathToUploadDir }} \
+	&& cp {{ sangerNormalizedIndelVCFName }}  {{ pathToUploadDir }} \
+	&& cp {{ broadNormalizedIndelVCFName }}.tbi  {{ pathToUploadDir }} \
+	&& cp {{ dkfzEmblNormalizedIndelVCFName }}.tbi  {{ pathToUploadDir }} \
+	&& cp {{ sangerNormalizedIndelVCFName }}.tbi  {{ pathToUploadDir }} \
+	&& cp /datastore/oxog_workspace/tumour_{{ tumourID }}/mutect/sg/gather/{{ aliquotID }}.call_stats.txt  {{ pathToUploadDir }}/{{ aliquotID }}.call_stats.txt \
+	&& cd {{ pathToUploadDir }} \
+	&& gzip -f {{ aliquotID }}.call_stats.txt \
+	&& tar -cvf ./{{ aliquotID }}.call_stats.txt.gz.tar ./{{ aliquotID }}.call_stats.txt.gz )  

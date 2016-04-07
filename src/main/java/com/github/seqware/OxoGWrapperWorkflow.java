@@ -347,11 +347,15 @@ public class OxoGWrapperWorkflow extends BaseOxoGWrapperWorkflow {
 	private Job doOxoG(String pathToTumour, String tumourID, Job ...parents) {
 		
 		String moveToFailed = GitUtils.gitMoveCommand("running-jobs","failed-jobs",this.JSONlocation + "/" + this.JSONrepoName + "/" + this.JSONfolderName,this.JSONfileName, this.gitMoveTestMode, this.getWorkflowBaseDir() + "/scripts/");
+		Job runOxoGWorkflow = this.getWorkflow().createBashJob("run OxoG Filter for tumour "+tumourID); 
 		Function<String,String> getFileName = (s) -> {  return s.substring(s.lastIndexOf("/")); };
-		Job extractOutputFiles = this.getWorkflow().createBashJob("extract oxog output files from tar");
+		String pathToResults = "/datastore/oxog_results/tumour_"+tumourID+"/cga/fh/pcawg_pipeline/jobResults_pipette/jobs/"+this.aliquotID+"/links_for_gnos/annotate_failed_sites_to_vcfs/";
+		String pathToUploadDir = "/datastore/files_for_upload/tumour_"+tumourID+"/";
+		//		Job extractOutputFiles = this.getWorkflow().createBashJob("extract oxog output files from tar");
 		if (!skipOxoG)
 		{
-			Job runOxoGWorkflow = this.getWorkflow().createBashJob("run OxoG Filter");
+
+			runOxoGWorkflow = this.getWorkflow().createBashJob("run OxoG Filter for tumour "+tumourID);
 			String runOxoGCommand = TemplateUtils.getRenderedTemplate(Arrays.stream(new String[][] {
 					{ "sangerExtractedSNVVCFPath", this.sangerExtractedSNVVCFName }, { "sangerWorkflow", Pipeline.sanger.toString() }, { "sangerExtractedSNVVCF", getFileName.apply(this.sangerExtractedSNVVCFName) },
 					{ "broadExtractedSNVVCFPath", this.broadExtractedSNVVCFName }, { "broadWorkflow", Pipeline.broad.toString() }, { "broadExtractedSNVVCF", getFileName.apply(this.broadExtractedSNVVCFName) },
@@ -359,7 +363,10 @@ public class OxoGWrapperWorkflow extends BaseOxoGWrapperWorkflow {
 					{ "tumourID", tumourID }, { "aliquotID", this.aliquotID }, { "oxoQScore", this.oxoQScore }, { "museWorkflow", Pipeline.muse.toString() },
 					{ "pathToTumour", pathToTumour }, { "normalBamGnosID", this.normalBamGnosID }, { "normalBAMFileName", this.normalBAMFileName } ,
 					{ "broadGnosID", this.broadGnosID }, { "sangerGnosID", this.sangerGnosID }, { "dkfzemblGnosID", this.dkfzemblGnosID }, { "museGnosID", this.museGnosID },
-					{ "sangerSNVName", this.sangerSNVName}, { "broadSNVName", this.broadSNVName }, { "dkfzEmblSNVName", this.dkfzEmblSNVName }, { "museSNVName", this.museSNVName }			
+					{ "sangerSNVName", this.sangerSNVName}, { "broadSNVName", this.broadSNVName }, { "dkfzEmblSNVName", this.dkfzEmblSNVName }, { "museSNVName", this.museSNVName },
+					{ "pathToResults", pathToResults}, { "pathToUploadDir", pathToUploadDir },
+					{ "broadNormalizedIndelVCFName",this.broadNormalizedIndelVCFName }, { "sangerNormalizedIndelVCFName",this.sangerNormalizedIndelVCFName },
+					{ "dkfzEmblNormalizedIndelVCFName",this.dkfzEmblNormalizedIndelVCFName }
 				} ).collect(this.collectToMap), "runOxoGFilter.template");
 			runOxoGWorkflow.setCommand("( "+runOxoGCommand+" ) || "+ moveToFailed);
 
@@ -367,20 +374,18 @@ public class OxoGWrapperWorkflow extends BaseOxoGWrapperWorkflow {
 			{
 				runOxoGWorkflow.addParent(parent);
 			}
-			extractOutputFiles.addParent(runOxoGWorkflow);
+//			extractOutputFiles.addParent(runOxoGWorkflow);
 		}
-		else
-		{
-			//Assume that OxoG already ran so we can skip ahead to extracting output files!
-			for (Job parent : parents)
-			{
-				extractOutputFiles.addParent(parent);
-			}
-		}
-		extractOutputFiles.setCommand("(cd /datastore/oxog_results/tumour_"+tumourID+"/ && sudo chmod a+rw -R /datastore/oxog_results/ && tar -xvkf ./"+this.aliquotID+".gnos_files.tar  ) || "+moveToFailed);
+//		else
+//		{
+//			//Assume that OxoG already ran so we can skip ahead to extracting output files!
+//			for (Job parent : parents)
+//			{
+//				extractOutputFiles.addParent(parent);
+//			}
+//		}
+//		extractOutputFiles.setCommand("(cd /datastore/oxog_results/tumour_"+tumourID+"/ && sudo chmod a+rw -R /datastore/oxog_results/ && tar -xvkf ./"+this.aliquotID+".gnos_files.tar  ) || "+moveToFailed);
 
-		String pathToResults = "/datastore/oxog_results/tumour_"+tumourID+"/cga/fh/pcawg_pipeline/jobResults_pipette/jobs/"+this.aliquotID+"/links_for_gnos/annotate_failed_sites_to_vcfs/";
-		String pathToUploadDir = "/datastore/files_for_upload/tumour_"+tumourID+"/";
 		
 		Function<String,String> changeToOxoGSuffix = (s) -> {return pathToUploadDir + s.replace(".vcf.gz", ".oxoG.vcf.gz"); };
 		Function<String,String> changeToOxoGTBISuffix = changeToOxoGSuffix.andThen((s) -> s+=".tbi"); 
@@ -405,26 +410,26 @@ public class OxoGWrapperWorkflow extends BaseOxoGWrapperWorkflow {
 		
 		this.filesForUpload.add("/datastore/oxog_results/" + this.aliquotID + ".gnos_files.tar");
 			
-		Job prepOxoGTarAndMutectCallsforUpload = this.getWorkflow().createBashJob("prepare OxoG tar and mutect calls file for upload");
-		prepOxoGTarAndMutectCallsforUpload.setCommand("( ([ -d "+pathToUploadDir+" ] || mkdir -p "+pathToUploadDir+") "
-				+ " && cp /datastore/oxog_results/tumour_"+tumourID+"/"+this.aliquotID+".gnos_files.tar "+pathToUploadDir+" \\\n"
-				+ " && cp " + pathToResults + "*.vcf.gz  "+pathToUploadDir+" \\\n"
-				+ " && cp " + pathToResults + "*.vcf.gz.tbi  "+pathToUploadDir+" \\\n"
-				// Also need to upload normalized INDELs - TODO: Move to its own job, or maybe combine with the normalization job?
-				+ " && cp " + this.broadNormalizedIndelVCFName+" "+pathToUploadDir+" \\\n"
-				+ " && cp " + this.dkfzEmblNormalizedIndelVCFName+" "+pathToUploadDir+" \\\n"
-				+ " && cp " + this.sangerNormalizedIndelVCFName+" "+pathToUploadDir+" \\\n"
-				+ " && cp " + this.broadNormalizedIndelVCFName+".tbi "+pathToUploadDir+" \\\n"
-				+ " && cp " + this.dkfzEmblNormalizedIndelVCFName+".tbi "+pathToUploadDir+" \\\n"
-				+ " && cp " + this.sangerNormalizedIndelVCFName+".tbi "+pathToUploadDir+" \\\n"
-				// Copy the call_stats 
-				+ " && cp /datastore/oxog_workspace/tumour_"+tumourID+"/mutect/sg/gather/"+this.aliquotID+".call_stats.txt "+pathToUploadDir+this.aliquotID+".call_stats.txt \\\n"
-				+ " && cd "+pathToUploadDir+" && gzip -f "+this.aliquotID+".call_stats.txt && tar -cvf ./"+this.aliquotID+".call_stats.txt.gz.tar ./"+this.aliquotID+".call_stats.txt.gz ) || "+moveToFailed);
+//		Job prepOxoGTarAndMutectCallsforUpload = this.getWorkflow().createBashJob("prepare OxoG tar and mutect calls file for upload");
+//		prepOxoGTarAndMutectCallsforUpload.setCommand("( ([ -d "+pathToUploadDir+" ] || mkdir -p "+pathToUploadDir+") "
+//				+ " && cp /datastore/oxog_results/tumour_"+tumourID+"/"+this.aliquotID+".gnos_files.tar "+pathToUploadDir+" \\\n"
+//				+ " && cp " + pathToResults + "*.vcf.gz  "+pathToUploadDir+" \\\n"
+//				+ " && cp " + pathToResults + "*.vcf.gz.tbi  "+pathToUploadDir+" \\\n"
+//				// Also need to upload normalized INDELs - TODO: Move to its own job, or maybe combine with the normalization job?
+//				+ " && cp " + this.broadNormalizedIndelVCFName+" "+pathToUploadDir+" \\\n"
+//				+ " && cp " + this.dkfzEmblNormalizedIndelVCFName+" "+pathToUploadDir+" \\\n"
+//				+ " && cp " + this.sangerNormalizedIndelVCFName+" "+pathToUploadDir+" \\\n"
+//				+ " && cp " + this.broadNormalizedIndelVCFName+".tbi "+pathToUploadDir+" \\\n"
+//				+ " && cp " + this.dkfzEmblNormalizedIndelVCFName+".tbi "+pathToUploadDir+" \\\n"
+//				+ " && cp " + this.sangerNormalizedIndelVCFName+".tbi "+pathToUploadDir+" \\\n"
+//				// Copy the call_stats 
+//				+ " && cp /datastore/oxog_workspace/tumour_"+tumourID+"/mutect/sg/gather/"+this.aliquotID+".call_stats.txt "+pathToUploadDir+this.aliquotID+".call_stats.txt \\\n"
+//				+ " && cd "+pathToUploadDir+" && gzip -f "+this.aliquotID+".call_stats.txt && tar -cvf ./"+this.aliquotID+".call_stats.txt.gz.tar ./"+this.aliquotID+".call_stats.txt.gz ) || "+moveToFailed);
 		this.filesForUpload.add("/datastore/files_for_upload/tumour_"+tumourID+"/"+this.aliquotID+".call_stats.txt.gz.tar");
 		
-		prepOxoGTarAndMutectCallsforUpload.addParent(extractOutputFiles);
+//		prepOxoGTarAndMutectCallsforUpload.addParent(extractOutputFiles);
 		
-		return prepOxoGTarAndMutectCallsforUpload;
+		return runOxoGWorkflow;
 		
 	}
 
@@ -654,7 +659,8 @@ public class OxoGWrapperWorkflow extends BaseOxoGWrapperWorkflow {
 		}
 		String command = "";
 		
-		
+		containerName += "_tumour_"+tumourGnosID;
+		commandName += "_tumour_"+tumourGnosID;
 		Job annotatorJob = this.getWorkflow().createBashJob(commandName);
 		if (!this.skipAnnotation)
 		{
