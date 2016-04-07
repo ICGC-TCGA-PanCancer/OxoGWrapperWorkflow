@@ -1,7 +1,7 @@
 # OxoG Wrapper Workflow
 
 ## Overview
-This workflow will download all VCF files for all analysis pipelines (Broad, DKFZ/EMBL, Muse, Sanger) and all BAM files (normal and all tumour BAMs) to
+This workflow will download all VCF (SNV, SV, INDEL) files for all analysis pipelines (Broad, DKFZ/EMBL, Muse, Sanger) and all BAM files (normal and all tumour BAMs) to
 perform the various analysis tasks.
 
 This workflow will perform three tasks:
@@ -106,20 +106,28 @@ When the main processes have finished and the upload is in progress, the file wi
 If the workflow fails, the file may be moved to the `failed-jobs` directory. If you re-run a workflow on a worker manually, be aware that you'll have to move the JSON file back to the directory that the workflow expects it to be in.
   
 
-### Downloads
+### Inputs
 
-The inputs are 1) all the variant calling workflow outputs (Sanger, DKFZ/EMBL, EMBL, Muse) and
-2) the BAM files for normal and tumour(s). 
+The inputs to this wrapper workflow are VCFs and BAMs.
 
-These are downloaded from either AWS S3 or the Collaboratory using the ICGC Storage Client.
+VCFs and VCF index files must be located in `/datastore/vcf/${workflowName}` where `${workflowName}` name can be one of:
+ - broad
+ - sanger
+ - dkfz_embl
+ - muse
+ 
+BAMs and BAIs must be located in `/datastore/bam/${bamType}/${gnosID}/` where `${bamType}` must be either `tumour` or `normal` and `${gnosID}` is the GNOS ID of the BAM file.
 
-See TODO for more information.
+### Outputs
+#### OxoG
+The OxoG workspace will be located in `/datastore/oxog_workspace`. This directory will contain files such as logs produced by OxoG. These can be useful when debugging an OxoG failure.
+The OxoG results will be located in `/datastore/oxog_results/tumour_${tumourGnosID}`, where `${tumourGnosID}` is the GNOS ID of a specific tumour. When there are multiple tumours, there will be multiple OxoG results, as OxoG must be run on each normal-tumour BAM pair.
 
-### Uploads
+#### Variantbam
+The outputs of variantbam will be located in `/datastore/variantbam_results/`. There will be one mini-bam and BAI for each input BAM.
 
-Uploads are 1) the merged/normalized/OxoG filtered variant calls, specifics depend on the
-variant type. 2) the mini-bams for normal and tumour(s).
+#### Other files
+The VCF files that will be rsynced at the end of this wrapper workflow can be found in `/datastore/files_for_upload/tumour_${tumourGnosID}`, where `${tumourGnosID}` is the GNOS ID of a specific tumour. These directories contain the pass-filtered VCFs, normalized INDEL VCFs, extracted SNV-from-INDEL VCFs, OxoG VCFs, OxoG call-stats, annotated OxoG VCFs, and the index files for all VCFs.
+BAM files are rsynced directly from `/datastore/variantbam_results/`.
 
-## TODO
-
-* need support for inputs from (tentatively) 1) local file paths and 2) GNOS directly (specifically CGHub for TCGA donors that aren't on S3 or Collaboratory)
+Metadata files are generated for later submission to GNOS (which happens as a separate process, after the results are rsynced). These files can be found under `/datastore/vcf-upload-prep/` and `/datastore/bam-upload-prep/`.   
