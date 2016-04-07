@@ -94,6 +94,34 @@ Other fields that are useful to populate in the INI:
  - downloadMethod - Which method to use to download files. Default will be to use the icgc storage client (`icgcStorageClient`), but you can also specify `gtdownload` or `s3` (which will use `aws s3`).
  - storageSource - Where to download files from, if the `downloadMethod` is `icgcStorageClient`. Defaults to `collab` but if you are using the icgc storage client in AWS, you will want to specify `aws`.
 
+### Download Methods
+There are three tools that this workflow can download files:
+ - icgc-storage-client
+ - gtdownload
+ - aws CLI
+ 
+#### icgc-storage-client
+This is the **default** download method.
+To use this download method, specify `downloadMethod=icgcStorageClient` in the INI file.
+You must have a `collab.token` file that is in the `~/.gnos` directory of the machine that will run the workflow.
+
+#### gtdownload
+This will use the gtdownload tool, as found in the docker container `pancancer/pancancer_upload_download`.
+To use this download method, specify `downloadMethod=gtdownload` in the INI file.
+You must have your GNOS key files available in the `~/.gnos` directory. This workflow allows you to specify separate keys for BAMs and VCFs in case they are located on different servers with different credentials.
+You  must reference the GNOS key files in the INI file like this:
+
+    gtDownloadBamKey=/home/ubuntu/.gnos/bamDownloadKey.key
+    gtDownloadVcfKey=/home/ubuntu/.gnos/VCFDownloadKey.key
+
+You must also ensure that your INI file contains GNOS repos for each file set you wish to download. The INI Generator that is packaged with this workflow should do this for you, if the information is already available in its input JSON file. It should look something like this:
+
+    sanger_download_url=https://gtrepo-osdc-icgc.annailabs.com/cghub/data/analysis/download/some-long-uuid-here
+
+#### s3
+This will use Amazon's AWS CLI tool to download from an S3 URL. Currently, it can only download from the OICR Collaboratory buckets in S3. 
+To use this download method, specify `downloadMethod=s3` in the INI file.
+You must have valid credentials to download from this location. Place your `credentials` file in `~/.gnos` so that the workflow can have access to it when it downloads.
 
 ### Flow Control
 
