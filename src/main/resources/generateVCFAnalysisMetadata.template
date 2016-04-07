@@ -27,11 +27,12 @@ echo "SNV_FROM_INDEL_OXOG_MD5 = $SNV_FROM_INDEL_OXOG_MD5"
 # tumourMetadataURLs should be populated as:
 # this.tumours.stream().map(t -> t.getTumourMetdataURL()).reduce("", (a,b)->a+=b+"," )
 set -x
-docker run --rm --name=upload_vcfs_and_tarballs -v /datastore/vcf-upload-prep/:/vcf/ -v {{ gnosKey }}:/gnos.key -v /datastore/:/datastore/ \ 
+docker run --rm --name=upload_vcfs_and_tarballs -v /datastore/vcf-upload-prep/:/vcf/ -v {{ gnosKey }}:/gnos.key -v /datastore/:/datastore/ \
 	pancancer/pancancer_upload_download:1.7 /bin/bash -c "
 cat << DESCRIPTIONFILE > /vcf/description.txt
 {{ vcfDescription }}
 DESCRIPTIONFILE
+
 perl -I /opt/gt-download-upload-wrapper/gt-download-upload-wrapper-2.0.13/lib/ /opt/vcf-uploader/vcf-uploader-2.0.9/gnos_upload_vcf.pl \
 	--gto-only --key /gnos.key --upload-url {{ gnosMetadataUploadURL }} \
 	--metadata-urls {{ normalMetdataURL }},{{ tumourMetadataURLs }} \

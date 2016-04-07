@@ -4,8 +4,9 @@ docker run --rm --name=upload_bams -v /datastore/bam-upload-prep/:/vcf/ -v {{ gn
 cat << DESCRIPTIONFILE > /vcf/description.txt
 {{ bamDescription }}
 DESCRIPTIONFILE
+
 perl -I /opt/gt-download-upload-wrapper/gt-download-upload-wrapper-2.0.13/lib/ /opt/vcf-uploader/vcf-uploader-2.0.9/gnos_upload_vcf.pl \
-	--gto-only --key /gnos.key --upload-url {{ gnosMetadataUploadURL }}
+	--gto-only --key /gnos.key --upload-url {{ gnosMetadataUploadURL }} \
 	--metadata-urls {{ normalMetdataURL }},{{ tumourMetadataURLs }} \
 	--bams {{ bams }} \
 	--bam-bais {{ bamIndicies }} \
@@ -18,5 +19,4 @@ perl -I /opt/gt-download-upload-wrapper/gt-download-upload-wrapper-2.0.13/lib/ /
 	--workflow-src-url https://github.com/ICGC-TCGA-PanCancer/OxoGWrapperWorkflow \
 	--workflow-url https://github.com/ICGC-TCGA-PanCancer/OxoGWrapperWorkflow ";
 
-cp /datastore/bam-upload-prep/*/*/manifest.xml /datastore/variantbam_results/manifest.xml  && cp /datastore/bam-upload-prep/*/*/analysis.xml /datastore/variantbam_results/analysis.xml 
-		
+cp /datastore/bam-upload-prep/*/*/manifest.xml /datastore/variantbam_results/manifest.xml  && cp /datastore/bam-upload-prep/*/*/analysis.xml /datastore/variantbam_results/analysis.xml
