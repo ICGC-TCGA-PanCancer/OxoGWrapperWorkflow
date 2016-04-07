@@ -6,7 +6,7 @@
 			-v /datastore/merged_vcfs/indel.clean.sorted.vcf:/indel.vcf \
 			-v /datastore/variantbam_results/:/outdir/ \
 			-v /datastore/padding_rules.txt:/rules.txt \
-			-v /datastore/bam/{{ pathToBam }}:/input.bam \
+			-v {{ pathToBam }}:/input.bam \
 		oxog:160329 /bin/bash -c "
 			/cga/fh/pcawg_pipeline/modules/VariantBam/variant \
 				-o /outdir/{{ minibamName }} \
