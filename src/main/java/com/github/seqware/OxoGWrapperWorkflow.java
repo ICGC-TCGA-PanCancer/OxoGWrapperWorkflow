@@ -354,8 +354,6 @@ public class OxoGWrapperWorkflow extends BaseOxoGWrapperWorkflow {
 		//		Job extractOutputFiles = this.getWorkflow().createBashJob("extract oxog output files from tar");
 		if (!skipOxoG)
 		{
-
-			runOxoGWorkflow = this.getWorkflow().createBashJob("run OxoG Filter for tumour "+tumourID);
 			String runOxoGCommand = TemplateUtils.getRenderedTemplate(Arrays.stream(new String[][] {
 					{ "sangerExtractedSNVVCFPath", this.sangerExtractedSNVVCFName }, { "sangerWorkflow", Pipeline.sanger.toString() }, { "sangerExtractedSNVVCF", getFileName.apply(this.sangerExtractedSNVVCFName) },
 					{ "broadExtractedSNVVCFPath", this.broadExtractedSNVVCFName }, { "broadWorkflow", Pipeline.broad.toString() }, { "broadExtractedSNVVCF", getFileName.apply(this.broadExtractedSNVVCFName) },
@@ -443,7 +441,7 @@ public class OxoGWrapperWorkflow extends BaseOxoGWrapperWorkflow {
 	 * @return
 	 */
 	private Job doVariantBam(Job parent, BAMType bamType, String bamPath, String tumourBAMFileName, String tumourID) {
-		Job runOxoGWorkflow = this.getWorkflow().createBashJob("run "+bamType+(bamType==BAMType.tumour?"_"+tumourID+"_":"")+" variantbam");
+		Job runVariantbam = this.getWorkflow().createBashJob("run "+bamType+(bamType==BAMType.tumour?"_"+tumourID+"_":"")+" variantbam");
 
 		String minibamName = "";
 		if (bamType == BAMType.normal)
@@ -480,12 +478,12 @@ public class OxoGWrapperWorkflow extends BaseOxoGWrapperWorkflow {
 			
 			String moveToFailed = GitUtils.gitMoveCommand("running-jobs","failed-jobs",this.JSONlocation + "/" + this.JSONrepoName + "/" + this.JSONfolderName,this.JSONfileName, this.gitMoveTestMode, this.getWorkflowBaseDir() + "/scripts/");
 			command += (" || " + moveToFailed);
-			runOxoGWorkflow.setCommand(command);
+			runVariantbam.setCommand(command);
 		}
-		runOxoGWorkflow.addParent(parent);
+		runVariantbam.addParent(parent);
 		
 		//Job getLogs = this.getOxoGLogs(runOxoGWorkflow);
-		return runOxoGWorkflow;
+		return runVariantbam;
 	}
 	
 	/**
