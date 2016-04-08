@@ -333,6 +333,8 @@ public class OxoGWrapperWorkflow extends BaseOxoGWrapperWorkflow {
 		vcfCombineJob.setCommand(combineCommand);
 		vcfCombineJob.addParent(prepVCFs);
 		
+		//these files names are hard-coded in runVariantbam.template. So, either get rid of them here (if they're not used anywhere else),
+		//or add them as parameters to the template.
 		this.snvVCF = "/datastore/merged_vcfs/snv.clean.sorted.vcf";
 		this.svVCF = "/datastore/merged_vcfs/sv.clean.sorted.vcf";
 		this.indelVCF = "/datastore/merged_vcfs/indel.clean.sorted.vcf";
@@ -374,8 +376,11 @@ public class OxoGWrapperWorkflow extends BaseOxoGWrapperWorkflow {
 			runOxoGWorkflow.addParent(parent);
 		}
 
-		
-		Function<String,String> changeToOxoGSuffix = (s) -> {return pathToUploadDir + s.replace(".vcf.gz", ".oxoG.vcf.gz"); };
+		//Predicate<String> containsTumourID = (p) -> p.contains("tumour_"+tumourID);
+		Function<String,String> includeTumourID = (s) -> { return ( !s.contains("tumour_"+tumourID)
+																		? s.replace(".pass-filtered.",".tumour_"+tumourID+".pass-filtered.")
+																		: s); };
+		Function<String,String> changeToOxoGSuffix = includeTumourID.andThen((s) -> {return pathToUploadDir + s.replace(".vcf.gz", ".oxoG.vcf.gz"); });
 		Function<String,String> changeToOxoGTBISuffix = changeToOxoGSuffix.andThen((s) -> s+=".tbi"); 
 		//regular VCFs
 		this.filesForUpload.add(changeToOxoGSuffix.apply(this.broadSNVName));

@@ -46,6 +46,11 @@
 
 (cd /datastore/oxog_results/tumour_{{ tumourID }}/ && sudo chmod a+rw -R /datastore/oxog_results/ && tar -xvkf ./{{ aliquotID }}.gnos_files.tar  )
 
+cd /datastore/oxog_results/tumour_{{ tumourID }}/
+for f in $(ls *.oxoG.vcf.gz) ; do
+	rename -v 's/\.pass-filtered\./.tumour_{{tumourID}}.pass-filtered/' $f
+done
+
 ( ([ -d {{ pathToUploadDir }} ] || mkdir -p {{ pathToUploadDir }}) \
 	&& cp /datastore/oxog_results/tumour_{{ tumourID }}/{{ aliquotID }}.gnos_files.tar {{ pathToUploadDir }} \
 	&& cp {{ pathToResults }}/*.vcf.gz  {{ pathToUploadDir }} \
