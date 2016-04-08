@@ -57,7 +57,7 @@
 	&& cp {{ dkfzEmblNormalizedIndelVCFName }}.tbi  {{ pathToUploadDir }} \
 	&& cp {{ sangerNormalizedIndelVCFName }}.tbi  {{ pathToUploadDir }} \
 	&& cp /datastore/oxog_workspace/tumour_{{ tumourID }}/mutect/sg/gather/{{ aliquotID }}.call_stats.txt  {{ pathToUploadDir }}/{{ aliquotID }}.call_stats_tumour_{{ tumourID }}.txt \
-	&& cp /datastore/oxog_workspace/tumour_{{ tumourID }}/{{ aliquotID }}.gnos_files.tar {{ pathToUploadDir }}/{{ aliquotID }}.gnos_files_tumour_{{ tumourID }}.tar \
+	&& cp /datastore/oxog_results/tumour_{{ tumourID }}/{{ aliquotID }}.gnos_files.tar {{ pathToUploadDir }}/{{ aliquotID }}.gnos_files_tumour_{{ tumourID }}.tar \
 	&& cd {{ pathToUploadDir }} \
 	&& gzip -f {{ aliquotID }}.call_stats_tumour_{{ tumourID }}.txt \
 	&& tar -cvf ./{{ aliquotID }}.call_stats_tumour_{{ tumourID }}.txt.gz.tar ./{{ aliquotID }}.call_stats_tumour_{{ tumourID }}.txt.gz )  
