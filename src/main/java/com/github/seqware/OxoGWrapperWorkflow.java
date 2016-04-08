@@ -396,7 +396,7 @@ public class OxoGWrapperWorkflow extends BaseOxoGWrapperWorkflow {
 		this.filesForUpload.add(changeToOxoGTBISuffix.apply(getFileName.apply(this.broadExtractedSNVVCFName)));
 		this.filesForUpload.add(changeToOxoGTBISuffix.apply(getFileName.apply(this.dkfzEmblExtractedSNVVCFName)));
 		
-		this.filesForUpload.add("/datastore/oxog_results/tumour_"+tumourID+"/" + this.aliquotID + ".gnos_files_tumour_"+tumourID+".tar");
+		this.filesForUpload.add("/datastore/files_for_upload/tumour_"+tumourID+"/" + this.aliquotID + ".gnos_files_tumour_"+tumourID+".tar");
 		this.filesForUpload.add("/datastore/files_for_upload/tumour_"+tumourID+"/"+this.aliquotID+".call_stats_tumour_"+tumourID+".txt.gz.tar");
 		
 		return runOxoGWorkflow;
