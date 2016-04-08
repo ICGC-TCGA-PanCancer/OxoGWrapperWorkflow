@@ -76,6 +76,7 @@ public class OxoGWrapperWorkflow extends BaseOxoGWrapperWorkflow {
 		//lscpu | grep "^CPU(s):" | grep -o "[^ ]$"
 		//Andy says transport.parallel is not yet supported, but transport.memory may improve performance.
 		//Also set transport.memory: either "4" or "6" (GB - implied). 
+		// ...but really, the workflow should not be modifying the collab.token file. Whoever's running the workflow should set what they want.
 		Job copy = this.getWorkflow().createBashJob("copy /home/ubuntu/.gnos");
 		copy.setCommand("mkdir /datastore/credentials && cp -r /home/ubuntu/.gnos/* /datastore/credentials && ls -l /datastore/credentials");
 		copy.addParent(parentJob);
@@ -120,7 +121,7 @@ public class OxoGWrapperWorkflow extends BaseOxoGWrapperWorkflow {
 			default:
 				throw new RuntimeException("Unknown downloadMethod: "+downloadMethod.toString());
 		}
-		
+//		getBamCommandString = DownloadUtils.getFileCommandString(downloadMethod, outDir, bamType.toString(), this.storageSource, this.gtDownloadVcfKey, objectIDs);
 		String moveToFailed = GitUtils.gitMoveCommand("downloading-jobs","failed-jobs",this.JSONlocation + "/" + this.JSONrepoName + "/" + this.JSONfolderName,this.JSONfileName, this.gitMoveTestMode, this.getWorkflowBaseDir() + "/scripts/");
 		getBamFileJob.setCommand("( "+getBamCommandString+" ) || "+moveToFailed);
 
@@ -165,6 +166,7 @@ public class OxoGWrapperWorkflow extends BaseOxoGWrapperWorkflow {
 			default:
 				throw new RuntimeException("Unknown downloadMethod: "+downloadMethod.toString());
 		}
+//		getVCFCommand = DownloadUtils.getFileCommandString(downloadMethod, outDir, workflowName.toString(), this.storageSource, this.gtDownloadVcfKey, objectIDs);
 		getVCFCommand += (" || " + moveToFailed);
 		getVCFJob.setCommand(getVCFCommand);
 		
@@ -366,12 +368,12 @@ public class OxoGWrapperWorkflow extends BaseOxoGWrapperWorkflow {
 					{ "dkfzEmblNormalizedIndelVCFName",this.dkfzEmblNormalizedIndelVCFName }
 				} ).collect(this.collectToMap), "runOxoGFilter.template");
 			runOxoGWorkflow.setCommand("( "+runOxoGCommand+" ) || "+ moveToFailed);
-
-			for (Job parent : parents)
-			{
-				runOxoGWorkflow.addParent(parent);
-			}
 		}
+		for (Job parent : parents)
+		{
+			runOxoGWorkflow.addParent(parent);
+		}
+
 		
 		Function<String,String> changeToOxoGSuffix = (s) -> {return pathToUploadDir + s.replace(".vcf.gz", ".oxoG.vcf.gz"); };
 		Function<String,String> changeToOxoGTBISuffix = changeToOxoGSuffix.andThen((s) -> s+=".tbi"); 
@@ -394,8 +396,8 @@ public class OxoGWrapperWorkflow extends BaseOxoGWrapperWorkflow {
 		this.filesForUpload.add(changeToOxoGTBISuffix.apply(getFileName.apply(this.broadExtractedSNVVCFName)));
 		this.filesForUpload.add(changeToOxoGTBISuffix.apply(getFileName.apply(this.dkfzEmblExtractedSNVVCFName)));
 		
-		this.filesForUpload.add("/datastore/oxog_results/" + this.aliquotID + ".gnos_files.tar");
-		this.filesForUpload.add("/datastore/files_for_upload/tumour_"+tumourID+"/"+this.aliquotID+".call_stats.txt.gz.tar");
+		this.filesForUpload.add("/datastore/oxog_results/tumour_"+tumourID+"/" + this.aliquotID + ".gnos_files_tumour_"+tumourID+".tar");
+		this.filesForUpload.add("/datastore/files_for_upload/tumour_"+tumourID+"/"+this.aliquotID+".call_stats_tumour_"+tumourID+".txt.gz.tar");
 		
 		return runOxoGWorkflow;
 		
@@ -528,10 +530,9 @@ public class OxoGWrapperWorkflow extends BaseOxoGWrapperWorkflow {
 				{"workflowName", this.getName()}, {"workflowVersion", this.getVersion()}, {"workflowURL", this.workflowURL},
 				{"workflowSrcURL", this.workflowSourceURL}, {"changeLogURL", this.changelogURL}, {"descriptionSuffix", descriptionEnd}
 			}).collect(this.collectToMap), "analysisBAMDescription.template");
-		
 		generateAnalysisFilesBAMsCommand += TemplateUtils.getRenderedTemplate(Arrays.stream(new String[][] {
 				{ "gnosKey", this.gnosKey }, { "gnosMetadataUploadURL", this.gnosMetadataUploadURL }, { "bamDescription", bamDescription },
-				{ "normalMetadataURL", this.normalMetdataURL } , { "tumourMetadataURLs", this.tumours.stream().map(t -> t.getTumourMetdataURL()).reduce("", (a,b)->a+=b+"," ) },
+				{ "normalMetadataURL", this.normalMetdataURL } , { "tumourMetadataURLs", String.join("," , this.tumours.stream().map(t -> t.getTumourMetdataURL()).collect(Collectors.toList()) ) },
 				{ "bams", bams }, { "bamIndicies", bamIndicies}, { "bamMD5Sums", bamMD5Sums }, { "bamIndexMD5Sums", bamIndexMD5Sums}, 
 				{ "studyRefNameOverride", this.studyRefNameOverride }, { "workflowVersion", this.getVersion() } 
 			}).collect(this.collectToMap),"generateBAMAnalysisMetadata.template");
@@ -590,9 +591,10 @@ public class OxoGWrapperWorkflow extends BaseOxoGWrapperWorkflow {
 				{ "workflowSrcURL",this.workflowSourceURL },	{ "changeLogURL",this.changelogURL },		{ "descriptionSuffix",descriptionEnd },
 			}).collect(this.collectToMap), "analysisVCFDescription.template");
 
-		generateAnalysisFilesVCFCommand = TemplateUtils.getRenderedTemplate(Arrays.stream(new String[][] {
+		
+		generateAnalysisFilesVCFCommand += TemplateUtils.getRenderedTemplate(Arrays.stream(new String[][] {
 				{ "gnosKey", this.gnosKey }, { "gnosMetadataUploadURL", this.gnosMetadataUploadURL }, { "vcfDescription", vcfDescription },
-				{ "normalMetadataURL", this.normalMetdataURL } , { "tumourMetadataURLs", this.tumours.stream().map(t -> t.getTumourMetdataURL()).reduce("", (a,b)->a+=b+"," ) },
+				{ "normalMetadataURL", this.normalMetdataURL } , { "tumourMetadataURLs", String.join("," , this.tumours.stream().map(t -> t.getTumourMetdataURL()).collect(Collectors.toList()) ) },
 				{ "vcfs", vcfs }, { "tars", tars }, { "tarMD5Sums", tarMD5Sums }, { "vcfIndicies", vcfIndicies}, { "vcfMD5Sums", vcfMD5Sums },
 				{ "vcfIndexMD5Sums", vcfIndexMD5Sums}, { "studyRefNameOverride", this.studyRefNameOverride }, { "workflowVersion", this.getVersion() } 
 			}).collect(this.collectToMap),"generateVCFAnalysisMetadata.template");
@@ -653,8 +655,8 @@ public class OxoGWrapperWorkflow extends BaseOxoGWrapperWorkflow {
 			String moveToFailed = GitUtils.gitMoveCommand("running-jobs","failed-jobs",this.JSONlocation + "/" + this.JSONrepoName + "/" + this.JSONfolderName,this.JSONfileName, this.gitMoveTestMode, this.getWorkflowBaseDir() + "/scripts/");
 			command += " || " + moveToFailed;
 		}
-		this.filesForUpload.add("/datastore/files_for_upload/"+annotatedFileName+".gz ");
-		this.filesForUpload.add("/datastore/files_for_upload/"+annotatedFileName+".gz.tbi ");
+		this.filesForUpload.add("/datastore/files_for_upload/tumour_"+tumourGnosID+"/"+annotatedFileName+".gz ");
+		this.filesForUpload.add("/datastore/files_for_upload/tumour_"+tumourGnosID+"/"+annotatedFileName+".gz.tbi ");
 		
 		annotatorJob.setCommand(command);
 		for (Job parent : parents)
@@ -774,11 +776,11 @@ public class OxoGWrapperWorkflow extends BaseOxoGWrapperWorkflow {
 			Job pullRepo = GitUtils.pullRepo(this.getWorkflow(), this.GITPemFile, this.JSONrepo, this.JSONrepoName, this.JSONlocation);
 			pullRepo.addParent(copy);
 			
-			Job installTabix = this.installTools(pullRepo);
+			Job installTabix = this.installTools(copy);
 			
 			// indicate job is in downloading stage.
 			String pathToScripts = this.getWorkflowBaseDir() + "/scripts";
-			Job move2download = GitUtils.gitMove("queued-jobs", "downloading-jobs", this.getWorkflow(), this.JSONlocation, this.JSONrepoName, this.JSONfolderName, this.GITname, this.GITemail, this.gitMoveTestMode, this.JSONfileName, pathToScripts ,installTabix);
+			Job move2download = GitUtils.gitMove("queued-jobs", "downloading-jobs", this.getWorkflow(), this.JSONlocation, this.JSONrepoName, this.JSONfolderName, this.GITname, this.GITemail, this.gitMoveTestMode, this.JSONfileName, pathToScripts ,installTabix, pullRepo);
 			Job move2running;
 			if (!skipDownload) {
 				//Download jobs. VCFs downloading serial. Trying to download all in parallel seems to put too great a strain on the system 
