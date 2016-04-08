@@ -18,26 +18,21 @@ public class DownloadUtils {
 	 * @param objectIDs - The list of objects to download.
 	 * @return
 	 */
+	//TODO: Does this really need to be in a separate Utility class? Maybe move it back in to the main workflow class.
 	static String getFileCommandString(DownloadMethod downloadMethod, String outDir, String downloadType, String storageSource, String downloadKey, String ... objectIDs  )
 	{
-		String command = "";
 		switch (downloadMethod)
 		{
 			case icgcStorageClient:
 				//System.out.println("DEBUG: storageSource: "+this.storageSource);
-				command = ( DownloaderBuilder.of(ICGCStorageDownloader::new).with(ICGCStorageDownloader::setStorageSource, storageSource).build() ).getDownloadCommandString(outDir, downloadType, objectIDs);
-				break;
+				return ( DownloaderBuilder.of(ICGCStorageDownloader::new).with(ICGCStorageDownloader::setStorageSource, storageSource).build() ).getDownloadCommandString(outDir, downloadType, objectIDs);
 			case gtdownload:
 				//System.out.println("DEBUG: gtDownloadKey: "+this.gtDownloadVcfKey);
-				command = ( DownloaderBuilder.of(GNOSDownloader::new).with(GNOSDownloader::setDownloadKey, downloadKey).build() ).getDownloadCommandString(outDir, downloadType, objectIDs);
-				break;
+				return ( DownloaderBuilder.of(GNOSDownloader::new).with(GNOSDownloader::setDownloadKey, downloadKey).build() ).getDownloadCommandString(outDir, downloadType, objectIDs);
 			case s3:
-				command = ( DownloaderBuilder.of(S3Downloader::new).build() ).getDownloadCommandString(outDir, downloadType, objectIDs);
-				break;
+				return ( DownloaderBuilder.of(S3Downloader::new).build() ).getDownloadCommandString(outDir, downloadType, objectIDs);
 			default:
 				throw new RuntimeException("Unknown downloadMethod: "+downloadMethod.toString());
 		}
-
-		return command;
 	}
 }
