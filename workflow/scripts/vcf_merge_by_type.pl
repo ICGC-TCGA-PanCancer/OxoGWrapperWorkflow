@@ -1,5 +1,5 @@
 use strict;
-
+use Getopt::Long;
 # this creates a merge VCF by variant type e.g. SNV, indel, SV
 # this produces a very simple VCF and also handles merging multiple variants
 # into a single line
@@ -37,10 +37,25 @@ my $d = {};
 #                                               /datastore/path_to_above_VCFs/ \
 #                                               /datastore/output_directory 
 
+
+
 my ($broad_snv, $sanger_snv, $de_snv, $muse_snv,
         $broad_indel, $sanger_indel, $de_indel,
         $broad_sv, $sanger_sv, $de_sv,
-        $in_dir, $out_dir) = @ARGV;
+        $in_dir, $out_dir); # = @ARGV;
+
+GetOptions ("broad_snv=s" => \$broad_snv,
+			"sanger_snv=s" => \$sanger_snv,
+			"de_snv=s" => \$de_snv,
+			"muse_snv=s" => \$muse_snv,
+			"broad_sv=s" => \$broad_sv,
+			"sanger_sv=s" => \$sanger_sv,
+			"de_sv=s" => \$de_sv,
+			"broad_indel=s" => \$broad_indel,
+			"sanger_indel=s" => \$sanger_indel,
+			"de_indel=s" => \$de_indel,
+			"indir=s" => \$in_dir,
+			"outdir=s" => \$out_dir);
 
 my @snv = ($broad_snv, $sanger_snv, $de_snv, $muse_snv);
 my @indel = ($broad_indel, $sanger_indel, $de_indel);
