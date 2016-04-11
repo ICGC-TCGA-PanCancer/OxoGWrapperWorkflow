@@ -25,17 +25,18 @@ my $d = {};
 # the path to the output directory.
 
 # Call this script like this:
-# perl vcf_cleaner.pl 35a74e53-16ff-4764-8397-6a9b02dfe733.broad-mutect.20151216.somatic.snv_mnv.vcf.gz \
-#                                               35a74e53-16ff-4764-8397-6a9b02dfe733.svcp_1-0-5.20150707.somatic.snv_mnv.vcf.gz \
-#                                               35a74e53-16ff-4764-8397-6a9b02dfe733.dkfz-snvCalling_1-0-132-1.20150731.somatic.snv_mnv.vcf.gz \
-#                                               35a74e53-16ff-4764-8397-6a9b02dfe733.broad-snowman.20151216.somatic.indel.vcf.gz \
-#                                               35a74e53-16ff-4764-8397-6a9b02dfe733.svcp_1-0-5.20150707.somatic.indel.vcf.gz \
-#                                               35a74e53-16ff-4764-8397-6a9b02dfe733.dkfz-indelCalling_1-0-132-1.20150731.somatic.indel.vcf.gz \
-#                                               35a74e53-16ff-4764-8397-6a9b02dfe733.broad-dRanger_snowman.20151216.somatic.sv.vcf.gz \
-#                                               35a74e53-16ff-4764-8397-6a9b02dfe733.svcp_1-0-5.20150707.somatic.sv.vcf.gz \
-#                                               35a74e53-16ff-4764-8397-6a9b02dfe733.embl-delly_1-3-0-preFilter.20150731.somatic.sv.vcf.gz \
-#                                               /datastore/path_to_above_VCFs/ \
-#                                               /datastore/output_directory 
+# perl vcf_merge_by_type.pl --broad_snv <broad SNV filename> \
+#                           --sanger_snv <sanger SNV filename> \
+#                           --de_snv <DKFZ/EMBL SNV filename> \
+#                           --muse_snv <MUSE SNV filename> \
+#                           --broad_sv <broad SV filename> \
+#                           --sanger_sv <sanger SV filename> \
+#                           --de_sv <DKFZ/EMBL SV filename> \
+#                           --broad_indel <broad INDEL filename> \
+#                           --sanger_indel <sanger INDEL filename> \
+#                           --de_indel <DKFZ/EMBL INDEL filename> \
+#                           --indir /datastore/path_to_above_VCFs/ \
+#                           --outdir /datastore/output_directory 
 
 
 
@@ -85,8 +86,11 @@ EOS
 
   # process file into hash
   foreach my $i (@files) {
-    print "processing file $i\n";
-    process_file($in_dir."/".$i, $OUT);
+  	if ((defined $i) && !($i eq ""))
+  	{
+	    print "processing file $i\n";
+	    process_file($in_dir."/".$i, $OUT);
+  	}
   }
 
   # write hash
@@ -124,7 +128,7 @@ sub sort_and_index {
   print "Status of sort: $result\n";
 }
 
-
+#Is this sub even used anymore? If not, it should be removed.
 sub parse_info {
   my ($file, $info_hash) = @_;
   open(IN, "zcat $file |") or die;
