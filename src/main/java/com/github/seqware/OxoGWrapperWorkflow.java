@@ -321,7 +321,7 @@ public class OxoGWrapperWorkflow extends BaseOxoGWrapperWorkflow {
 		}
 		
 		Job vcfCombineJob = this.getWorkflow().createBashJob("combining VCFs by type");
-		
+		//TODO: This will probably be the place where many changes to allow missing files will have to take place. And in the perl script too.
 		//run the merge script, then bgzip and index them all.
 		String combineCommand = "( perl "+this.getWorkflowBaseDir()+"/scripts/vcf_merge_by_type.pl "
 				+ Pipeline.broad+"_snv.vcf "+Pipeline.sanger+"_snv.vcf "+Pipeline.dkfz_embl+"_snv.vcf "+Pipeline.muse+"_snv.vcf "

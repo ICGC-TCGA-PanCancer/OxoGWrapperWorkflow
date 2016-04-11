@@ -175,6 +175,8 @@ public abstract class BaseOxoGWrapperWorkflow extends AbstractWorkflowDataModel 
 	
 	List<TumourInfo> tumours ;
 	
+	protected boolean allowMissingFiles = false;
+	
 	/**
 	 * Get a property name that is mandatory
 	 * @param propName The name of the property
