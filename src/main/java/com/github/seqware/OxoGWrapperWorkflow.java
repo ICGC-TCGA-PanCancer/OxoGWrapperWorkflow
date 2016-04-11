@@ -19,7 +19,7 @@ import net.sourceforge.seqware.pipeline.workflowV2.model.Job;
 
 public class OxoGWrapperWorkflow extends BaseOxoGWrapperWorkflow {
 
-	private Collector<String[], ?, Map<String, Object>> collectToMap = Collectors.toMap(kv -> kv[0], kv -> kv[1]);;
+	
 
 	/**
 	 * The types of VCF files there are:
@@ -725,37 +725,40 @@ public class OxoGWrapperWorkflow extends BaseOxoGWrapperWorkflow {
 
 	private Job statInputFiles(Job parent) {
 		Job statFiles = this.getWorkflow().createBashJob("stat downloaded input files");
-		String moveToFailed = GitUtils.gitMoveCommand("running-jobs","failed-jobs",this.JSONlocation + "/" + this.JSONrepoName + "/" + this.JSONfolderName,this.JSONfileName, this.gitMoveTestMode, this.getWorkflowBaseDir() + "/scripts/");
-		String statFilesCMD = "( ";
 		
-		for (String s : new ArrayList<String>( Arrays.asList(this.sangerSNVName,this.sangerSNVIndexFileName,this.sangerSVName,this.sangerSVIndexFileName,this.sangerIndelName,this.sangerINDELIndexFileName) ) ) {
-			statFilesCMD+="stat /datastore/vcf/"+Pipeline.sanger.toString()+"/"+this.sangerGnosID+"/"+s+ " && \\\n";
-		}
-
-		for (String s : new ArrayList<String>( Arrays.asList(this.broadSNVName,this.broadSNVIndexFileName,this.broadSVName,this.broadSVIndexFileName,this.broadIndelName,this.broadINDELIndexFileName) ) ) {
-			statFilesCMD+="stat /datastore/vcf/"+Pipeline.broad.toString()+"/"+this.broadGnosID+"/"+s + " && \\\n";
-		}
-
-		for (String s : new ArrayList<String>( Arrays.asList(this.dkfzEmblSNVName,this.dkfzEmblSNVIndexFileName,this.dkfzEmblSVName,this.dkfzEmblSVIndexFileName,this.dkfzEmblIndelName,this.dkfzEmblINDELIndexFileName) ) ) {
-			statFilesCMD+="stat /datastore/vcf/"+Pipeline.dkfz_embl.toString()+"/"+this.dkfzemblGnosID+"/"+s + " && \\\n";
-		}
-		
-		statFilesCMD += "stat /datastore/vcf/"+Pipeline.muse.toString()+"/"+this.museGnosID+"/"+this.museSNVName + " && \\\n";
-		statFilesCMD += "stat /datastore/vcf/"+Pipeline.muse.toString()+"/"+this.museGnosID+"/"+this.museSNVIndexFileName + " && \\\n";
-
-		//stat all tumour BAMS
-		for (int i = 0 ; i < this.tumours.size() ; i++)
+		if (!this.allowMissingFiles)
 		{
-			statFilesCMD += "stat /datastore/bam/"+BAMType.tumour.toString()+"/"+this.tumours.get(i).getTumourBamGnosID()+"/"+this.tumours.get(i).getTumourBAMFileName() + " && \\\n";
-			statFilesCMD += "stat /datastore/bam/"+BAMType.tumour.toString()+"/"+this.tumours.get(i).getTumourBamGnosID()+"/"+this.tumours.get(i).getTumourBamIndexFileName() + " && \\\n";
+			String moveToFailed = GitUtils.gitMoveCommand("running-jobs","failed-jobs",this.JSONlocation + "/" + this.JSONrepoName + "/" + this.JSONfolderName,this.JSONfileName, this.gitMoveTestMode, this.getWorkflowBaseDir() + "/scripts/");
+			String statFilesCMD = "( ";
+			
+			for (String s : new ArrayList<String>( Arrays.asList(this.sangerSNVName,this.sangerSNVIndexFileName,this.sangerSVName,this.sangerSVIndexFileName,this.sangerIndelName,this.sangerINDELIndexFileName) ) ) {
+				statFilesCMD+="stat /datastore/vcf/"+Pipeline.sanger.toString()+"/"+this.sangerGnosID+"/"+s+ " && \\\n";
+			}
+	
+			for (String s : new ArrayList<String>( Arrays.asList(this.broadSNVName,this.broadSNVIndexFileName,this.broadSVName,this.broadSVIndexFileName,this.broadIndelName,this.broadINDELIndexFileName) ) ) {
+				statFilesCMD+="stat /datastore/vcf/"+Pipeline.broad.toString()+"/"+this.broadGnosID+"/"+s + " && \\\n";
+			}
+	
+			for (String s : new ArrayList<String>( Arrays.asList(this.dkfzEmblSNVName,this.dkfzEmblSNVIndexFileName,this.dkfzEmblSVName,this.dkfzEmblSVIndexFileName,this.dkfzEmblIndelName,this.dkfzEmblINDELIndexFileName) ) ) {
+				statFilesCMD+="stat /datastore/vcf/"+Pipeline.dkfz_embl.toString()+"/"+this.dkfzemblGnosID+"/"+s + " && \\\n";
+			}
+			
+			statFilesCMD += "stat /datastore/vcf/"+Pipeline.muse.toString()+"/"+this.museGnosID+"/"+this.museSNVName + " && \\\n";
+			statFilesCMD += "stat /datastore/vcf/"+Pipeline.muse.toString()+"/"+this.museGnosID+"/"+this.museSNVIndexFileName + " && \\\n";
+	
+			//stat all tumour BAMS
+			for (int i = 0 ; i < this.tumours.size() ; i++)
+			{
+				statFilesCMD += "stat /datastore/bam/"+BAMType.tumour.toString()+"/"+this.tumours.get(i).getTumourBamGnosID()+"/"+this.tumours.get(i).getTumourBAMFileName() + " && \\\n";
+				statFilesCMD += "stat /datastore/bam/"+BAMType.tumour.toString()+"/"+this.tumours.get(i).getTumourBamGnosID()+"/"+this.tumours.get(i).getTumourBamIndexFileName() + " && \\\n";
+			}
+	
+			statFilesCMD += "stat /datastore/bam/"+BAMType.normal.toString()+"/"+this.normalBamGnosID+"/"+this.normalBAMFileName + " && \\\n";
+			statFilesCMD += "stat /datastore/bam/"+BAMType.normal.toString()+"/"+this.normalBamGnosID+"/"+this.normalBamIndexFileName + " \\\n";
+			statFilesCMD += " ) || "+ moveToFailed;
+			
+			statFiles.setCommand(statFilesCMD);
 		}
-
-		statFilesCMD += "stat /datastore/bam/"+BAMType.normal.toString()+"/"+this.normalBamGnosID+"/"+this.normalBAMFileName + " && \\\n";
-		statFilesCMD += "stat /datastore/bam/"+BAMType.normal.toString()+"/"+this.normalBamGnosID+"/"+this.normalBamIndexFileName + " \\\n";
-		statFilesCMD += " ) || "+ moveToFailed;
-		
-		statFiles.setCommand(statFilesCMD);
-		
 		statFiles.addParent(parent);
 		return statFiles;
 	}
