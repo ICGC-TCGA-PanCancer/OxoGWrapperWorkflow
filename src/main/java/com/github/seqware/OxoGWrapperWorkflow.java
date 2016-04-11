@@ -242,7 +242,7 @@ public class OxoGWrapperWorkflow extends BaseOxoGWrapperWorkflow {
 		String runBCFToolsNormCommand = TemplateUtils.getRenderedTemplate(Arrays.stream(new String[][]{
 			{ "sedTab", sedTab }, { "outDir", outDir }, { "vcfName", vcfName }, { "workflowName", workflowName.toString() } ,
 			{ "refFile", this.refFile }, { "fixedIndel", fixedIndel }, { "normalizedINDELName", normalizedINDELName } 
-		}).collect(this.collectToMap), "bcfTools.template");
+		}).collect(this.collectToObjectToStringMap), "bcfTools.template");
 
 		String moveToFailed = GitUtils.gitMoveCommand("running-jobs","failed-jobs",this.JSONlocation + "/" + this.JSONrepoName + "/" + this.JSONfolderName,this.JSONfileName, this.gitMoveTestMode, this.getWorkflowBaseDir() + "/scripts/");				 
 		runBCFToolsNormCommand += (" || " + moveToFailed );
@@ -366,7 +366,7 @@ public class OxoGWrapperWorkflow extends BaseOxoGWrapperWorkflow {
 					{ "pathToResults", pathToResults}, { "pathToUploadDir", pathToUploadDir },
 					{ "broadNormalizedIndelVCFName",this.broadNormalizedIndelVCFName }, { "sangerNormalizedIndelVCFName",this.sangerNormalizedIndelVCFName },
 					{ "dkfzEmblNormalizedIndelVCFName",this.dkfzEmblNormalizedIndelVCFName }
-				} ).collect(this.collectToMap), "runOxoGFilter.template");
+				} ).collect(this.collectToObjectToStringMap), "runOxoGFilter.template");
 			runOxoGWorkflow.setCommand("( "+runOxoGCommand+" ) || "+ moveToFailed);
 		}
 		for (Job parent : parents)
@@ -446,7 +446,7 @@ public class OxoGWrapperWorkflow extends BaseOxoGWrapperWorkflow {
 				{ "containerNameSuffix", bamType + (bamType == BAMType.tumour ? "_with_tumour_"+tumourID:"") },
 				{ "minibamName", minibamName+".bam"},  {"snvPadding", String.valueOf(this.snvPadding)}, {"svPadding", String.valueOf(this.svPadding)},
 				{ "indelPadding", String.valueOf(this.indelPadding) }, { "pathToBam", bamPath }
-			}).collect(this.collectToMap), "runVariantbam.template" );
+			}).collect(this.collectToObjectToStringMap), "runVariantbam.template" );
 			
 			String moveToFailed = GitUtils.gitMoveCommand("running-jobs","failed-jobs",this.JSONlocation + "/" + this.JSONrepoName + "/" + this.JSONfolderName,this.JSONfileName, this.gitMoveTestMode, this.getWorkflowBaseDir() + "/scripts/");
 			command += (" || " + moveToFailed);
@@ -529,13 +529,13 @@ public class OxoGWrapperWorkflow extends BaseOxoGWrapperWorkflow {
 				{"indelPadding", String.valueOf(this.indelPadding)}, {"svPadding", String.valueOf(this.svPadding)},
 				{"workflowName", this.getName()}, {"workflowVersion", this.getVersion()}, {"workflowURL", this.workflowURL},
 				{"workflowSrcURL", this.workflowSourceURL}, {"changeLogURL", this.changelogURL}, {"descriptionSuffix", descriptionEnd}
-			}).collect(this.collectToMap), "analysisBAMDescription.template");
+			}).collect(this.collectToObjectToStringMap), "analysisBAMDescription.template");
 		generateAnalysisFilesBAMsCommand += TemplateUtils.getRenderedTemplate(Arrays.stream(new String[][] {
 				{ "gnosKey", this.gnosKey }, { "gnosMetadataUploadURL", this.gnosMetadataUploadURL }, { "bamDescription", bamDescription },
 				{ "normalMetadataURL", this.normalMetdataURL } , { "tumourMetadataURLs", String.join("," , this.tumours.stream().map(t -> t.getTumourMetdataURL()).collect(Collectors.toList()) ) },
 				{ "bams", bams }, { "bamIndicies", bamIndicies}, { "bamMD5Sums", bamMD5Sums }, { "bamIndexMD5Sums", bamIndexMD5Sums}, 
 				{ "studyRefNameOverride", this.studyRefNameOverride }, { "workflowVersion", this.getVersion() } 
-			}).collect(this.collectToMap),"generateBAMAnalysisMetadata.template");
+			}).collect(this.collectToObjectToStringMap),"generateBAMAnalysisMetadata.template");
 
 		generateAnalysisFilesBAMs.setCommand("( "+generateAnalysisFilesBAMsCommand+" ) || "+moveToFailed);
 		generateAnalysisFilesBAMs.addParent(parentJob);
@@ -589,7 +589,7 @@ public class OxoGWrapperWorkflow extends BaseOxoGWrapperWorkflow {
 				{ "OxoQScore",this.oxoQScore },					{ "donorID",this.donorID },					{ "specimenID",this.specimenID },
 				{ "workflowName",this.getName() },				{ "workflowVersion",this.getVersion() },	{ "workflowURL",this.workflowURL },
 				{ "workflowSrcURL",this.workflowSourceURL },	{ "changeLogURL",this.changelogURL },		{ "descriptionSuffix",descriptionEnd },
-			}).collect(this.collectToMap), "analysisVCFDescription.template");
+			}).collect(this.collectToObjectToStringMap), "analysisVCFDescription.template");
 
 		
 		generateAnalysisFilesVCFCommand += TemplateUtils.getRenderedTemplate(Arrays.stream(new String[][] {
@@ -597,7 +597,7 @@ public class OxoGWrapperWorkflow extends BaseOxoGWrapperWorkflow {
 				{ "normalMetadataURL", this.normalMetdataURL } , { "tumourMetadataURLs", String.join("," , this.tumours.stream().map(t -> t.getTumourMetdataURL()).collect(Collectors.toList()) ) },
 				{ "vcfs", vcfs }, { "tars", tars }, { "tarMD5Sums", tarMD5Sums }, { "vcfIndicies", vcfIndicies}, { "vcfMD5Sums", vcfMD5Sums },
 				{ "vcfIndexMD5Sums", vcfIndexMD5Sums}, { "studyRefNameOverride", this.studyRefNameOverride }, { "workflowVersion", this.getVersion() } 
-			}).collect(this.collectToMap),"generateVCFAnalysisMetadata.template");
+			}).collect(this.collectToObjectToStringMap),"generateVCFAnalysisMetadata.template");
 		generateAnalysisFilesVCFs.setCommand("( "+generateAnalysisFilesVCFCommand+ " ) || "+moveToFailed);
 		generateAnalysisFilesVCFs.addParent(parentJob);
 		return generateAnalysisFilesVCFs;

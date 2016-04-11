@@ -1,11 +1,9 @@
 package com.github.seqware;
 
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.Optional;
 import java.util.function.BiConsumer;
 import java.util.function.Function;
 import java.util.stream.Collector;
@@ -17,8 +15,8 @@ import net.sourceforge.seqware.pipeline.workflowV2.AbstractWorkflowDataModel;
 
 public abstract class BaseOxoGWrapperWorkflow extends AbstractWorkflowDataModel {
 	
-	protected Collector<String[], ?, Map<String, Object>> collectToMap = Collectors.toMap(kv -> kv[0], kv -> kv[1]);
-	protected Collector<String[], ?, Map<String, String>> altCollectToMap = Collectors.toMap(kv -> kv[0], kv -> kv[1]);
+	protected Collector<String[], ?, Map<String, Object>> collectToObjectToStringMap = Collectors.toMap(kv -> kv[0], kv -> kv[1]);
+	protected Collector<String[], ?, Map<String, String>> collectToStringToStringMap = Collectors.toMap(kv -> kv[0], kv -> kv[1]);
 	
 	//ugh... so many fields. There's probably a better way to do this, just no time right now.
 	protected String oxoQScore = "";
@@ -274,51 +272,12 @@ public abstract class BaseOxoGWrapperWorkflow extends AbstractWorkflowDataModel 
 			
 			this.bamNormalObjectID = this.getMandatoryProperty(JSONUtils.BAM_NORMAL_OBJECT_ID);
 			this.normalMetdataURL = this.getMandatoryProperty(JSONUtils.BAM_NORMAL_METADATA_URL);
-//			this.sangerSNVVCFObjectID = this.getMandatoryProperty(JSONUtils.SANGER_SNV_VCF_OBJECT_ID);
-//			this.dkfzemblSNVVCFObjectID = this.getMandatoryProperty(JSONUtils.DKFZEMBL_SNV_VCF_OBJECT_ID);
-//			this.broadSNVVCFObjectID = this.getMandatoryProperty(JSONUtils.BROAD_SNV_VCF_OBJECT_ID);
-//			this.museSNVVCFObjectID = this.getMandatoryProperty(JSONUtils.MUSE_VCF_OBJECT_ID);
 			this.uploadURL = this.getMandatoryProperty("uploadURL");
 			this.aliquotID = this.getMandatoryProperty(JSONUtils.ALIQUOT_ID);
 			
 			this.GITPemFile = this.getMandatoryProperty("GITPemFile");
 
 			this.normalBAMFileName = this.getMandatoryProperty(JSONUtils.BAM_NORMAL_FILE_NAME);
-			//this.tumourBAMFileName = this.getMandatoryProperty(JSONUtils.BAM_TUMOUR_FILE_NAME);
-			
-//			this.sangerSNVName = this.getMandatoryProperty(JSONUtils.SANGER_SNV_VCF_NAME);
-//			this.broadSNVName = this.getMandatoryProperty(JSONUtils.BROAD_SNV_VCF_NAME);
-//			this.dkfzEmblSNVName = this.getMandatoryProperty(JSONUtils.DKFZEMBL_SNV_VCF_NAME);
-//			this.museSNVName = this.getMandatoryProperty(JSONUtils.MUSE_VCF_NAME);
-//			
-//			this.sangerIndelName = this.getMandatoryProperty(JSONUtils.SANGER_INDEL_VCF_NAME);
-//			this.dkfzEmblIndelName = this.getMandatoryProperty(JSONUtils.DKFZEMBL_INDEL_VCF_NAME);
-//			this.broadIndelName = this.getMandatoryProperty(JSONUtils.BROAD_INDEL_VCF_NAME);
-//
-//			this.sangerSVName = this.getMandatoryProperty(JSONUtils.SANGER_SV_VCF_NAME);
-//			this.dkfzEmblSVName = this.getMandatoryProperty(JSONUtils.DKFZEMBL_SV_VCF_NAME);
-//			this.broadSVName = this.getMandatoryProperty(JSONUtils.BROAD_SV_VCF_NAME);
-//
-//			this.sangerSVVCFObjectID = this.getMandatoryProperty(JSONUtils.SANGER_SV_VCF_OBJECT_ID);
-//			this.broadSVVCFObjectID = this.getMandatoryProperty(JSONUtils.BROAD_SV_VCF_OBJECT_ID);
-//			this.dkfzemblSVVCFObjectID = this.getMandatoryProperty(JSONUtils.DKFZEMBL_SV_VCF_OBJECT_ID);
-//			
-//			this.sangerIndelVCFObjectID = this.getMandatoryProperty(JSONUtils.SANGER_INDEL_VCF_OBJECT_ID);
-//			this.broadIndelVCFObjectID = this.getMandatoryProperty(JSONUtils.BROAD_INDEL_VCF_OBJECT_ID);
-//			this.dkfzemblIndelVCFObjectID = this.getMandatoryProperty(JSONUtils.DKFZEMBL_INDEL_VCF_OBJECT_ID);
-//			
-//			this.sangerSNVIndexObjectID = this.getMandatoryProperty(JSONUtils.SANGER_SNV_INDEX_OBJECT_ID);
-//			this.broadSNVIndexObjectID = this.getMandatoryProperty(JSONUtils.BROAD_SNV_INDEX_OBJECT_ID);
-//			this.dkfzemblSNVIndexObjectID = this.getMandatoryProperty(JSONUtils.DKFZEMBL_SNV_INDEX_OBJECT_ID);
-//			this.museSNVIndexObjectID = this.getMandatoryProperty(JSONUtils.MUSE_SNV_INDEX_OBJECT_ID);
-//			
-//			this.sangerSVIndexObjectID = this.getMandatoryProperty(JSONUtils.SANGER_SV_INDEX_OBJECT_ID);
-//			this.broadSVIndexObjectID = this.getMandatoryProperty(JSONUtils.BROAD_SV_INDEX_OBJECT_ID);
-//			this.dkfzemblSVIndexObjectID = this.getMandatoryProperty(JSONUtils.DKFZEMBL_SV_INDEX_OBJECT_ID);
-//			
-//			this.sangerIndelIndexObjectID = this.getMandatoryProperty(JSONUtils.SANGER_INDEL_INDEX_OBJECT_ID);
-//			this.broadIndelIndexObjectID = this.getMandatoryProperty(JSONUtils.BROAD_INDEL_INDEX_OBJECT_ID);
-//			this.dkfzemblIndelIndexObjectID = this.getMandatoryProperty(JSONUtils.DKFZEMBL_INDEL_INDEX_OBJECT_ID);
 			
 			this.bamNormalIndexObjectID = this.getMandatoryProperty(JSONUtils.BAM_NORMAL_INDEX_OBJECT_ID);
 
@@ -335,45 +294,6 @@ public abstract class BaseOxoGWrapperWorkflow extends AbstractWorkflowDataModel 
 			this.workflowNamestoGnosIds.put(OxoGWrapperWorkflow.Pipeline.muse.toString(), this.museGnosID);
 			this.workflowNamestoGnosIds.put(OxoGWrapperWorkflow.BAMType.normal.toString(), this.normalBamGnosID);
 
-//			this.normalBamIndexFileName = this.getMandatoryProperty(JSONUtils.NORMAL_BAM_INDEX_FILE_NAME);
-//			//this.tumourBamIndexFileName = this.getMandatoryProperty(JSONUtils.TUMOUR_BAM_INDEX_FILE_NAME);
-//			this.sangerSNVIndexFileName = this.getMandatoryProperty(JSONUtils.SANGER_SNV_INDEX_FILE_NAME);
-//			this.sangerSVIndexFileName = this.getMandatoryProperty(JSONUtils.SANGER_SV_INDEX_FILE_NAME);
-//			this.sangerINDELIndexFileName = this.getMandatoryProperty(JSONUtils.SANGER_INDEL_INDEX_FILE_NAME);
-//			this.broadSNVIndexFileName = this.getMandatoryProperty(JSONUtils.BROAD_SNV_INDEX_FILE_NAME);
-//			this.broadSVIndexFileName = this.getMandatoryProperty(JSONUtils.BROAD_SV_INDEX_FILE_NAME);
-//			this.broadINDELIndexFileName = this.getMandatoryProperty(JSONUtils.BROAD_INDEL_INDEX_FILE_NAME);
-//			this.dkfzEmblSNVIndexFileName = this.getMandatoryProperty(JSONUtils.DKFZ_EMBL_SNV_INDEX_FILE_NAME);
-//			this.dkfzEmblSVIndexFileName = this.getMandatoryProperty(JSONUtils.DKFZ_EMBL_SV_INDEX_FILE_NAME);
-//			this.dkfzEmblINDELIndexFileName = this.getMandatoryProperty(JSONUtils.DKFZ_EMBL_INDEL_INDEX_FILE_NAME);
-//			this.museSNVIndexFileName = this.getMandatoryProperty(JSONUtils.MUSE_SNV_INDEX_FILE_NAME);
-			
-//			this.objectToFilenames.put(this.bamNormalObjectID, this.normalBAMFileName);
-//			this.objectToFilenames.put(this.bamNormalIndexObjectID, this.normalBamIndexFileName);
-//
-//			this.objectToFilenames.put(this.sangerSNVVCFObjectID, this.sangerSNVName);
-//			this.objectToFilenames.put(this.sangerSVVCFObjectID, this.sangerSVName);
-//			this.objectToFilenames.put(this.sangerIndelVCFObjectID, this.sangerIndelName);
-//			this.objectToFilenames.put(this.sangerSNVIndexObjectID, this.sangerSNVIndexFileName);
-//			this.objectToFilenames.put(this.sangerSVIndexObjectID, this.sangerSVIndexFileName);
-//			this.objectToFilenames.put(this.sangerIndelIndexObjectID, this.sangerINDELIndexFileName);
-//
-//			this.objectToFilenames.put(this.broadSNVVCFObjectID, this.broadSNVName);
-//			this.objectToFilenames.put(this.broadSVVCFObjectID, this.broadSVName);
-//			this.objectToFilenames.put(this.broadIndelVCFObjectID, this.broadIndelName);
-//			this.objectToFilenames.put(this.broadSNVIndexObjectID, this.broadSNVIndexFileName);
-//			this.objectToFilenames.put(this.broadSVIndexObjectID, this.broadSVIndexFileName);
-//			this.objectToFilenames.put(this.broadIndelIndexObjectID, this.broadINDELIndexFileName);
-//			
-//			this.objectToFilenames.put(this.dkfzemblSNVVCFObjectID, this.dkfzEmblSNVName);
-//			this.objectToFilenames.put(this.dkfzemblSVVCFObjectID, this.dkfzEmblSVName);
-//			this.objectToFilenames.put(this.dkfzemblIndelVCFObjectID, this.dkfzEmblIndelName);
-//			this.objectToFilenames.put(this.dkfzemblSNVIndexObjectID, this.dkfzEmblSNVIndexFileName);
-//			this.objectToFilenames.put(this.dkfzemblSVIndexObjectID, this.dkfzEmblSVIndexFileName);
-//			this.objectToFilenames.put(this.dkfzemblIndelIndexObjectID, this.dkfzEmblINDELIndexFileName);
-//			
-//			this.objectToFilenames.put(this.museSNVVCFObjectID, this.museSNVName);
-//			this.objectToFilenames.put(this.museSNVIndexObjectID, this.museSNVIndexFileName);
 			
 			this.uploadKey= this.getMandatoryProperty("uploadKey");
 			this.gnosKey= this.getMandatoryProperty("gnosKey");
@@ -439,7 +359,6 @@ public abstract class BaseOxoGWrapperWorkflow extends AbstractWorkflowDataModel 
 				this.dkfzEmblGNOSRepoURL = this.getMandatoryProperty(JSONUtils.DKFZ_EMBL_DOWNLOAD_URL);
 				this.museGNOSRepoURL = this.getMandatoryProperty(JSONUtils.MUSE_DOWNLOAD_URL);
 				this.normalBamGNOSRepoURL = this.getMandatoryProperty(JSONUtils.NORMAL_BAM_DOWNLOAD_URL);
-				//this.tumourBamGNOSRepoURL = this.getMandatoryProperty(JSONUtils.TUMOUR_BAM_DOWNLOAD_URL);
 				this.gtDownloadBamKey = this.getMandatoryProperty("gtDownloadBamKey");
 				this.gtDownloadVcfKey = this.getMandatoryProperty("gtDownloadVcfKey");
 			}
@@ -461,7 +380,6 @@ public abstract class BaseOxoGWrapperWorkflow extends AbstractWorkflowDataModel 
 							 : this.getOptionalProperty(lookupKey) );
 			};
 			
-			//this.sangerSNVIndexFileName = this.getMandatoryProperty(JSONUtils.SANGER_SNV_INDEX_FILE_NAME);
 			this.sangerSNVIndexFileName = setBasedOnAllowMissingFiles.apply(JSONUtils.SANGER_SNV_INDEX_FILE_NAME);
 			this.sangerSVIndexFileName = setBasedOnAllowMissingFiles.apply(JSONUtils.SANGER_SV_INDEX_FILE_NAME);
 			this.sangerINDELIndexFileName = setBasedOnAllowMissingFiles.apply(JSONUtils.SANGER_INDEL_INDEX_FILE_NAME);
