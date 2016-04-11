@@ -354,7 +354,7 @@ public class OxoGWrapperWorkflow extends BaseOxoGWrapperWorkflow {
 		Job runOxoGWorkflow = this.getWorkflow().createBashJob("run OxoG Filter for tumour "+tumourID); 
 		Function<String,String> getFileName = (s) -> {  return s.substring(s.lastIndexOf("/")); };
 		String pathToResults = "/datastore/oxog_results/tumour_"+tumourID+"/cga/fh/pcawg_pipeline/jobResults_pipette/jobs/"+this.aliquotID+"/links_for_gnos/annotate_failed_sites_to_vcfs/";
-		String pathToUploadDir = "/datastore/files_for_upload/tumour_"+tumourID+"/";
+		String pathToUploadDir = "/datastore/files_for_upload/";
 		if (!this.skipOxoG)
 		{
 			String runOxoGCommand = TemplateUtils.getRenderedTemplate(Arrays.stream(new String[][] {
@@ -401,8 +401,8 @@ public class OxoGWrapperWorkflow extends BaseOxoGWrapperWorkflow {
 		this.filesForUpload.add(changeToOxoGTBISuffix.apply(getFileName.apply(this.broadExtractedSNVVCFName)));
 		this.filesForUpload.add(changeToOxoGTBISuffix.apply(getFileName.apply(this.dkfzEmblExtractedSNVVCFName)));
 		
-		this.filesForUpload.add("/datastore/files_for_upload/tumour_"+tumourID+"/" + this.aliquotID + ".gnos_files_tumour_"+tumourID+".tar");
-		this.filesForUpload.add("/datastore/files_for_upload/tumour_"+tumourID+"/"+this.aliquotID+".call_stats_tumour_"+tumourID+".txt.gz.tar");
+		this.filesForUpload.add("/datastore/files_for_upload/" + this.aliquotID + ".gnos_files_tumour_" + tumourID + ".tar");
+		this.filesForUpload.add("/datastore/files_for_upload/" + this.aliquotID + ".call_stats_tumour_" + tumourID + ".txt.gz.tar");
 		
 		return runOxoGWorkflow;
 		
@@ -621,7 +621,7 @@ public class OxoGWrapperWorkflow extends BaseOxoGWrapperWorkflow {
 	 */
 	private Job runAnnotator(String inputType, Pipeline workflowName, String vcfPath, String tumourBamPath, String normalBamPath, String tumourGnosID, Job ...parents)
 	{
-		String outDir = "/datastore/files_for_upload/tumour_"+tumourGnosID+"/";
+		String outDir = "/datastore/files_for_upload/";
 		String containerName = "pcawg-annotator_"+workflowName+"_"+inputType;
 		String commandName ="run annotator for "+workflowName+" "+inputType;
 		String annotatedFileName = this.aliquotID+"_annotated_"+workflowName+"_"+inputType+"_tumour_"+tumourGnosID+".vcf";
@@ -660,8 +660,8 @@ public class OxoGWrapperWorkflow extends BaseOxoGWrapperWorkflow {
 			String moveToFailed = GitUtils.gitMoveCommand("running-jobs","failed-jobs",this.JSONlocation + "/" + this.JSONrepoName + "/" + this.JSONfolderName,this.JSONfileName, this.gitMoveTestMode, this.getWorkflowBaseDir() + "/scripts/");
 			command += " || " + moveToFailed;
 		}
-		this.filesForUpload.add("/datastore/files_for_upload/tumour_"+tumourGnosID+"/"+annotatedFileName+".gz ");
-		this.filesForUpload.add("/datastore/files_for_upload/tumour_"+tumourGnosID+"/"+annotatedFileName+".gz.tbi ");
+		this.filesForUpload.add("/datastore/files_for_upload/"+annotatedFileName+".gz ");
+		this.filesForUpload.add("/datastore/files_for_upload/"+annotatedFileName+".gz.tbi ");
 		
 		annotatorJob.setCommand(command);
 		for (Job parent : parents)
@@ -690,7 +690,7 @@ public class OxoGWrapperWorkflow extends BaseOxoGWrapperWorkflow {
 		List<Job> finalAnnotatorJobs = new ArrayList<Job>(3);
 		
 		Predicate<String> isExtractedSNV = p -> p.contains("extracted-snv") && p.endsWith(".vcf.gz");
-		final String passFilteredOxoGSuffix = "somatic.snv_mnv.pass-filtered.oxoG.vcf.gz";
+		final String passFilteredOxoGSuffix = ".pass-filtered.oxoG.vcf.gz";
 		//list filtering should only ever produce one result.
 		String broadOxogSNVFileName = this.filesForUpload.stream().filter(p -> ((p.contains("broad-mutect") && p.endsWith(passFilteredOxoGSuffix)))).collect(Collectors.toList()).get(0);
 		String broadOxoGSNVFromIndelFileName = this.filesForUpload.stream().filter(p -> (p.contains(Pipeline.broad.toString()) && isExtractedSNV.test(p) )).collect(Collectors.toList()).get(0);

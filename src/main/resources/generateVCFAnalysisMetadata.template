@@ -4,7 +4,7 @@ SNV_FROM_INDEL_OXOG=''
 SNV_FROM_INDEL_OXOG_INDEX=''
 SNV_FROM_INDEL_OXOG_MD5=''
 SNV_FROM_INDEL_OXOG_INDEX_MD5=''
-for f in $(ls /datastore/files_for_upload/tumour_*/ | grep -v : | grep -e from_INDELs -e extracted | grep -e gz | grep -v md5) ; do
+for f in $(ls /datastore/files_for_upload/ | grep -v : | grep -e from_INDELs -e extracted | grep -e gz | grep -v md5) ; do
     echo "processing $f"
     f=/datastore/files_for_upload/$f
     md5sum $f | cut -d ' ' -f 1 > $f.md5
