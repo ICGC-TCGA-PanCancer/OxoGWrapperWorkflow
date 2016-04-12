@@ -302,24 +302,6 @@ public class OxoGWrapperWorkflow extends BaseOxoGWrapperWorkflow {
 		normalizedIndel.setOriginatingTumourAliquotID(tumourAliquotID);
 		this.normalizedIndels.add(normalizedIndel);
 
-//		switch (workflowName) {
-//			case sanger:
-//				this.sangerNormalizedIndelVCFName = outDir + "/"+normalizedINDELName;
-//				this.sangerExtractedSNVVCFName = outDir + "/"+extractedSNVVCFName+".gz";
-//				break;
-//			case broad:
-//				this.broadNormalizedIndelVCFName = outDir + "/"+normalizedINDELName;
-//				this.broadExtractedSNVVCFName = outDir + "/"+extractedSNVVCFName+".gz";
-//				break;
-//			case dkfz_embl:
-//				this.dkfzEmblNormalizedIndelVCFName = outDir + "/"+normalizedINDELName;
-//				this.dkfzEmblExtractedSNVVCFName = outDir + "/"+extractedSNVVCFName+".gz";
-//				break;
-//			default:
-//				// Just in case someone adds a new pipeline and then doesn't write code to handle it.
-//				throw new RuntimeException("Unknown pipeline: "+workflowName);
-//		}
-	
 		return extractSNVFromIndel;
 	}
 	
@@ -417,9 +399,6 @@ public class OxoGWrapperWorkflow extends BaseOxoGWrapperWorkflow {
 		this.mergedVcfs.add(mergedSnvVcf);
 		this.mergedVcfs.add(mergedSvVcf);
 		this.mergedVcfs.add(mergedIndelVcf);
-//		this.snvVCF = "/datastore/merged_vcfs/snv.clean.sorted.vcf";
-//		this.svVCF = "/datastore/merged_vcfs/sv.clean.sorted.vcf";
-//		this.indelVCF = "/datastore/merged_vcfs/indel.clean.sorted.vcf";
 
 		return vcfCombineJob;
 	}
@@ -479,10 +458,6 @@ public class OxoGWrapperWorkflow extends BaseOxoGWrapperWorkflow {
 			runOxoGWorkflow.addParent(parent);
 		}
 
-		//Predicate<String> containsTumourID = (p) -> p.contains("tumour_"+tumourID);
-/*		Function<String,String> includeTumourID = (s) -> { return ( !s.contains("tumour_"+tumourAliquotID)
-																		? s.replace(".pass-filtered.",".tumour_"+tumourAliquotID+".pass-filtered.")
-																		: s); };*/
 		Function<String,String> changeToOxoGSuffix = (s) -> {return pathToUploadDir + s.replace(".vcf.gz", ".oxoG.vcf.gz"); };
 		Function<String,String> changeToOxoGTBISuffix = changeToOxoGSuffix.andThen((s) -> s+=".tbi"); 
 		//regular VCFs
@@ -851,25 +826,10 @@ public class OxoGWrapperWorkflow extends BaseOxoGWrapperWorkflow {
 
 		for (VcfInfo vcfInfo : this.vcfs)
 		{
-				statFilesCMD+="stat /datastore/vcf/"+vcfInfo.getOriginatingPipeline().toString()+"/"+vcfInfo.getPipelineGnosID()+"/"+vcfInfo.getFileName()+ " && \\\n";
-				statFilesCMD+="stat /datastore/vcf/"+vcfInfo.getOriginatingPipeline().toString()+"/"+vcfInfo.getPipelineGnosID()+"/"+vcfInfo.getIndexFileName()+ " && \\\n";
+			statFilesCMD+="stat /datastore/vcf/"+vcfInfo.getOriginatingPipeline().toString()+"/"+vcfInfo.getPipelineGnosID()+"/"+vcfInfo.getFileName()+ " && \\\n";
+			statFilesCMD+="stat /datastore/vcf/"+vcfInfo.getOriginatingPipeline().toString()+"/"+vcfInfo.getPipelineGnosID()+"/"+vcfInfo.getIndexFileName()+ " && \\\n";
 		}
 		
-//		for (String s : new ArrayList<String>( Arrays.asList(this.sangerSNVName,this.sangerSNVIndexFileName,this.sangerSVName,this.sangerSVIndexFileName,this.sangerIndelName,this.sangerINDELIndexFileName) ) ) {
-//			statFilesCMD+="stat /datastore/vcf/"+Pipeline.sanger.toString()+"/"+this.sangerGnosID+"/"+s+ " && \\\n";
-//		}
-//
-//		for (String s : new ArrayList<String>( Arrays.asList(this.broadSNVName,this.broadSNVIndexFileName,this.broadSVName,this.broadSVIndexFileName,this.broadIndelName,this.broadINDELIndexFileName) ) ) {
-//			statFilesCMD+="stat /datastore/vcf/"+Pipeline.broad.toString()+"/"+this.broadGnosID+"/"+s + " && \\\n";
-//		}
-//
-//		for (String s : new ArrayList<String>( Arrays.asList(this.dkfzEmblSNVName,this.dkfzEmblSNVIndexFileName,this.dkfzEmblSVName,this.dkfzEmblSVIndexFileName,this.dkfzEmblIndelName,this.dkfzEmblINDELIndexFileName) ) ) {
-//			statFilesCMD+="stat /datastore/vcf/"+Pipeline.dkfz_embl.toString()+"/"+this.dkfzemblGnosID+"/"+s + " && \\\n";
-//		}
-		
-//		statFilesCMD += "stat /datastore/vcf/"+Pipeline.muse.toString()+"/"+this.museGnosID+"/"+this.museSNVName + " && \\\n";
-//		statFilesCMD += "stat /datastore/vcf/"+Pipeline.muse.toString()+"/"+this.museGnosID+"/"+this.museSNVIndexFileName + " && \\\n";
-
 		//stat all tumour BAMS
 		for (int i = 0 ; i < this.tumours.size() ; i++)
 		{
@@ -1038,18 +998,6 @@ public class OxoGWrapperWorkflow extends BaseOxoGWrapperWorkflow {
 			{
 				vInfo.setFileName(addPassFilteredSuffix.apply( vInfo.getFileName() ) );
 			}
-			
-//			this.sangerSNVName = addPassFilteredSuffix.apply(this.sangerSNVName);
-//			this.sangerIndelName = addPassFilteredSuffix.apply(this.sangerIndelName);
-//			this.sangerSVName = addPassFilteredSuffix.apply(this.sangerSVName);
-//
-//			this.broadSNVName = addPassFilteredSuffix.apply(this.broadSNVName);
-//			this.broadIndelName = addPassFilteredSuffix.apply(this.broadIndelName);
-//			this.broadSVName = addPassFilteredSuffix.apply(this.broadSVName);
-//			
-//			this.dkfzEmblSNVName = addPassFilteredSuffix.apply(this.dkfzEmblSNVName);
-//			this.dkfzEmblIndelName = addPassFilteredSuffix.apply(this.dkfzEmblIndelName);
-//			this.dkfzEmblSVName = addPassFilteredSuffix.apply(this.dkfzEmblSVName);
 			
 			// OxoG will run after move2running. Move2running will run after all the jobs that perform input file downloads and file preprocessing have finished.
 			
