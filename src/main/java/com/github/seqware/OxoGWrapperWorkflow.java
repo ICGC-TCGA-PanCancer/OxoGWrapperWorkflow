@@ -9,6 +9,7 @@ import java.util.function.Function;
 import java.util.function.Predicate;
 import java.util.stream.Collector;
 import java.util.stream.Collectors;
+import java.util.stream.Stream;
 
 import com.github.seqware.downloaders.DownloaderBuilder;
 import com.github.seqware.downloaders.GNOSDownloader;
@@ -21,6 +22,15 @@ public class OxoGWrapperWorkflow extends BaseOxoGWrapperWorkflow {
 
 	private Collector<String[], ?, Map<String, Object>> collectToMap = Collectors.toMap(kv -> kv[0], kv -> kv[1]);;
 
+	Predicate<VcfInfo> isSanger = p -> p.getOriginatingPipeline() == Pipeline.sanger;
+	Predicate<VcfInfo> isBroad = p -> p.getOriginatingPipeline() == Pipeline.broad;
+	Predicate<VcfInfo> isDkfzEmbl = p -> p.getOriginatingPipeline() == Pipeline.dkfz_embl;
+	Predicate<VcfInfo> isMuse = p -> p.getOriginatingPipeline() == Pipeline.muse;
+	
+	Predicate<VcfInfo> isIndel = p -> p.getVcfType() == VCFType.indel; 
+	Predicate<VcfInfo> isSnv = p -> p.getVcfType() == VCFType.snv;
+	Predicate<VcfInfo> isSv = p -> p.getVcfType() == VCFType.sv;
+	
 	/**
 	 * The types of VCF files there are:
 	 * <ul>
@@ -64,6 +74,10 @@ public class OxoGWrapperWorkflow extends BaseOxoGWrapperWorkflow {
 	{
 		gtdownload, icgcStorageClient, s3
 	}
+	
+	private List<VcfInfo> extractedSnvsFromIndels;
+	private List<VcfInfo> mergedVcfs;
+	private List<VcfInfo> normalizedIndels;
 	
 	/**
 	 * Copy the credentials files from ~/.gnos to /datastore/credentials
@@ -231,17 +245,18 @@ public class OxoGWrapperWorkflow extends BaseOxoGWrapperWorkflow {
 	 * @param vcfName The name of the INDEL VCF to normalize.
 	 * @return
 	 */
-	private Job preProcessIndelVCF(Job parent, Pipeline workflowName, String vcfName )
+	private Job preProcessIndelVCF(Job parent, Pipeline workflowName, String vcfName, String tumourAliquotID )
 	{
 		String outDir = "/datastore/vcf/"+workflowName;
-		String normalizedINDELName = this.aliquotID+ "_"+ workflowName+"_somatic.indel.pass-filtered.bcftools-norm.vcf.gz";
-		String extractedSNVVCFName = this.aliquotID+ "_"+ workflowName+"_somatic.indel.pass-filtered.bcftools-norm.extracted-snvs.vcf";
+		String normalizedINDELName = tumourAliquotID+ "_"+ workflowName+"_somatic.indel.pass-filtered.bcftools-norm.vcf.gz";
+		String extractedSNVVCFName = tumourAliquotID+ "_"+ workflowName+"_somatic.indel.pass-filtered.bcftools-norm.extracted-snvs.vcf";
 		String fixedIndel = vcfName.replace("indel.", "indel.fixed.").replace(".gz", ""); //...because the fixed indel will not be a gz file - at least not immediately.
 		Job bcfToolsNormJob = this.getWorkflow().createBashJob("normalize "+workflowName+" Indels");
 		String sedTab = "\\\"$(echo -e '\\t')\\\"";
 		String runBCFToolsNormCommand = TemplateUtils.getRenderedTemplate(Arrays.stream(new String[][]{
 			{ "sedTab", sedTab }, { "outDir", outDir }, { "vcfName", vcfName }, { "workflowName", workflowName.toString() } ,
-			{ "refFile", this.refFile }, { "fixedIndel", fixedIndel }, { "normalizedINDELName", normalizedINDELName } 
+			{ "refFile", this.refFile }, { "fixedIndel", fixedIndel }, { "normalizedINDELName", normalizedINDELName },
+			{ "tumourAliquotID", tumourAliquotID }
 		}).collect(this.collectToMap), "bcfTools.template");
 
 		String moveToFailed = GitUtils.gitMoveCommand("running-jobs","failed-jobs",this.JSONlocation + "/" + this.JSONrepoName + "/" + this.JSONfolderName,this.JSONfileName, this.gitMoveTestMode, this.getWorkflowBaseDir() + "/scripts/");				 
@@ -266,23 +281,37 @@ public class OxoGWrapperWorkflow extends BaseOxoGWrapperWorkflow {
 		extractSNVFromIndel.setCommand(extractSNVFromIndelCommand);
 		extractSNVFromIndel.addParent(bcfToolsNormJob);
 		
-		switch (workflowName) {
-			case sanger:
-				this.sangerNormalizedIndelVCFName = outDir + "/"+normalizedINDELName;
-				this.sangerExtractedSNVVCFName = outDir + "/"+extractedSNVVCFName+".gz";
-				break;
-			case broad:
-				this.broadNormalizedIndelVCFName = outDir + "/"+normalizedINDELName;
-				this.broadExtractedSNVVCFName = outDir + "/"+extractedSNVVCFName+".gz";
-				break;
-			case dkfz_embl:
-				this.dkfzEmblNormalizedIndelVCFName = outDir + "/"+normalizedINDELName;
-				this.dkfzEmblExtractedSNVVCFName = outDir + "/"+extractedSNVVCFName+".gz";
-				break;
-			default:
-				// Just in case someone adds a new pipeline and then doesn't write code to handle it.
-				throw new RuntimeException("Unknown pipeline: "+workflowName);
-		}
+		VcfInfo extractedSnv = new VcfInfo();
+		extractedSnv.setFileName(outDir + "/"+extractedSNVVCFName+".gz");
+		extractedSnv.setOriginatingPipeline(workflowName);
+		extractedSnv.setVcfType(VCFType.snv);
+		extractedSnv.setOriginatingTumourAliquotID(tumourAliquotID);
+		this.extractedSnvsFromIndels.add(extractedSnv);
+		
+		VcfInfo normalizedIndel = new VcfInfo();
+		normalizedIndel.setFileName(outDir + "/"+normalizedINDELName);
+		normalizedIndel.setOriginatingPipeline(workflowName);
+		normalizedIndel.setVcfType(VCFType.indel);
+		normalizedIndel.setOriginatingTumourAliquotID(tumourAliquotID);
+		this.normalizedIndels.add(normalizedIndel);
+
+//		switch (workflowName) {
+//			case sanger:
+//				this.sangerNormalizedIndelVCFName = outDir + "/"+normalizedINDELName;
+//				this.sangerExtractedSNVVCFName = outDir + "/"+extractedSNVVCFName+".gz";
+//				break;
+//			case broad:
+//				this.broadNormalizedIndelVCFName = outDir + "/"+normalizedINDELName;
+//				this.broadExtractedSNVVCFName = outDir + "/"+extractedSNVVCFName+".gz";
+//				break;
+//			case dkfz_embl:
+//				this.dkfzEmblNormalizedIndelVCFName = outDir + "/"+normalizedINDELName;
+//				this.dkfzEmblExtractedSNVVCFName = outDir + "/"+extractedSNVVCFName+".gz";
+//				break;
+//			default:
+//				// Just in case someone adds a new pipeline and then doesn't write code to handle it.
+//				throw new RuntimeException("Unknown pipeline: "+workflowName);
+//		}
 	
 		return extractSNVFromIndel;
 	}
@@ -293,22 +322,48 @@ public class OxoGWrapperWorkflow extends BaseOxoGWrapperWorkflow {
 	 * @param parents
 	 * @return
 	 */
-	private Job combineVCFsByType(Job ... parents)
+	private Job combineVCFsByType(String tumourAliquotID, Job ... parents)
 	{
+		Predicate<? super VcfInfo> matchesTumourAliquotID = p -> p.getOriginatingTumourAliquotID().equals(tumourAliquotID);
+		
+		Predicate<? super VcfInfo> isSangerSNV = isSanger.and(isSnv.and(matchesTumourAliquotID));
+		Predicate<? super VcfInfo> isBroadSNV = isBroad.and(isSnv.and(matchesTumourAliquotID));
+		Predicate<? super VcfInfo> isDkfzEmblSNV = isDkfzEmbl.and(isSnv.and(matchesTumourAliquotID));
+		
+		Predicate<? super VcfInfo> isSangerSV = isSanger.and(isSv.and(matchesTumourAliquotID));
+		Predicate<? super VcfInfo> isBroadSV = isBroad.and(isSv.and(matchesTumourAliquotID));
+		Predicate<? super VcfInfo> isDkfzEmblSV = isDkfzEmbl.and(isSv.and(matchesTumourAliquotID));
+		
+		Predicate<? super VcfInfo> isMuseSNV = isMuse.and(isSnv.and(matchesTumourAliquotID));
+				
+		String sangerSNV = (this.vcfs.stream().filter(isSangerSNV).findFirst().get()).getFileName();
+		String broadSNV = (this.vcfs.stream().filter(isBroadSNV).findFirst().get()).getFileName();
+		String dkfzEmblSNV = (this.vcfs.stream().filter(isDkfzEmblSNV).findFirst().get()).getFileName();
+		String museSNV = (this.vcfs.stream().filter(isMuseSNV).findFirst().get()).getFileName();
+		
+		String normalizedSangerIndel = (this.normalizedIndels.stream().filter(isSangerSNV).findFirst().get()).getFileName();
+		String normalizedBroadIndel = (this.normalizedIndels.stream().filter(isBroadSNV).findFirst().get()).getFileName();
+		String normalizedDkfzEmblIndel = (this.normalizedIndels.stream().filter(isDkfzEmblSNV).findFirst().get()).getFileName();
+
+		String sangerSV = (this.vcfs.stream().filter(isSangerSV).findFirst().get()).getFileName();
+		String broadSV = (this.vcfs.stream().filter(isBroadSV).findFirst().get()).getFileName();
+		String dkfzEmblSV = (this.vcfs.stream().filter(isDkfzEmblSV).findFirst().get()).getFileName();
+
+		
 		//Create symlinks to the files in the proper directory.
 		Job prepVCFs = this.getWorkflow().createBashJob("create links to VCFs");
 		String prepCommand = "";
 		prepCommand+="\n ( ( [ -d /datastore/merged_vcfs ] || sudo mkdir /datastore/merged_vcfs/ ) && sudo chmod a+rw /datastore/merged_vcfs && \\\n"
-		+"\n ln -s /datastore/vcf/"+Pipeline.sanger+"/"+this.sangerGnosID+"/"+this.sangerSNVName+" /datastore/vcf/"+Pipeline.sanger+"_snv.vcf && \\\n"
-		+" ln -s /datastore/vcf/"+Pipeline.broad+"/"+this.broadGnosID+"/"+this.broadSNVName+" /datastore/vcf/"+Pipeline.broad+"_snv.vcf && \\\n"
-		+" ln -s /datastore/vcf/"+Pipeline.dkfz_embl+"/"+this.dkfzemblGnosID+"/"+this.dkfzEmblSNVName+" /datastore/vcf/"+Pipeline.dkfz_embl+"_snv.vcf && \\\n"
-		+" ln -s /datastore/vcf/"+Pipeline.muse+"/"+this.museGnosID+"/"+this.museSNVName+" /datastore/vcf/"+Pipeline.muse+"_snv.vcf && \\\n"
-		+" ln -s "+this.sangerNormalizedIndelVCFName+" /datastore/vcf/"+Pipeline.sanger+"_indel.vcf && \\\n"
-		+" ln -s "+this.broadNormalizedIndelVCFName+" /datastore/vcf/"+Pipeline.broad+"_indel.vcf && \\\n"
-		+" ln -s "+this.dkfzEmblNormalizedIndelVCFName+" /datastore/vcf/"+Pipeline.dkfz_embl+"_indel.vcf && \\\n"
-		+" ln -s /datastore/vcf/"+Pipeline.sanger+"/"+this.sangerGnosID+"/"+this.sangerSVName+" /datastore/vcf/"+Pipeline.sanger+"_sv.vcf && \\\n"
-		+" ln -s /datastore/vcf/"+Pipeline.broad+"/"+this.broadGnosID+"/"+this.broadSVName+" /datastore/vcf/"+Pipeline.broad+"_sv.vcf && \\\n"
-		+" ln -s /datastore/vcf/"+Pipeline.dkfz_embl+"/"+this.dkfzemblGnosID+"/"+this.dkfzEmblSVName+" /datastore/vcf/"+Pipeline.dkfz_embl+"_sv.vcf ) ";
+		+"\n ln -s /datastore/vcf/"+Pipeline.sanger+"/"+this.sangerGnosID+"/"+sangerSNV+" /datastore/vcf/"+Pipeline.sanger+"_snv.vcf && \\\n"
+		+" ln -s /datastore/vcf/"+Pipeline.broad+"/"+this.broadGnosID+"/"+broadSNV+" /datastore/vcf/"+Pipeline.broad+"_snv.vcf && \\\n"
+		+" ln -s /datastore/vcf/"+Pipeline.dkfz_embl+"/"+this.dkfzemblGnosID+"/"+dkfzEmblSNV+" /datastore/vcf/"+Pipeline.dkfz_embl+"_snv.vcf && \\\n"
+		+" ln -s /datastore/vcf/"+Pipeline.muse+"/"+this.museGnosID+"/"+museSNV+" /datastore/vcf/"+Pipeline.muse+"_snv.vcf && \\\n"
+		+" ln -s "+normalizedSangerIndel+" /datastore/vcf/"+Pipeline.sanger+"_indel.vcf && \\\n"
+		+" ln -s "+normalizedBroadIndel+" /datastore/vcf/"+Pipeline.broad+"_indel.vcf && \\\n"
+		+" ln -s "+normalizedDkfzEmblIndel+" /datastore/vcf/"+Pipeline.dkfz_embl+"_indel.vcf && \\\n"
+		+" ln -s /datastore/vcf/"+Pipeline.sanger+"/"+this.sangerGnosID+"/"+sangerSV+" /datastore/vcf/"+Pipeline.sanger+"_sv.vcf && \\\n"
+		+" ln -s /datastore/vcf/"+Pipeline.broad+"/"+this.broadGnosID+"/"+broadSV+" /datastore/vcf/"+Pipeline.broad+"_sv.vcf && \\\n"
+		+" ln -s /datastore/vcf/"+Pipeline.dkfz_embl+"/"+this.dkfzemblGnosID+"/"+dkfzEmblSV+" /datastore/vcf/"+Pipeline.dkfz_embl+"_sv.vcf ) ";
 		
 		String moveToFailed = GitUtils.gitMoveCommand("running-jobs","failed-jobs",this.JSONlocation + "/" + this.JSONrepoName + "/" + this.JSONfolderName,this.JSONfileName, this.gitMoveTestMode, this.getWorkflowBaseDir() + "/scripts/");
 		prepCommand += (" || " + moveToFailed);
@@ -328,16 +383,36 @@ public class OxoGWrapperWorkflow extends BaseOxoGWrapperWorkflow {
 				+ Pipeline.broad+"_indel.vcf "+Pipeline.sanger+"_indel.vcf "+Pipeline.dkfz_embl+"_indel.vcf " 
 				+ Pipeline.broad+"_sv.vcf "+Pipeline.sanger+"_sv.vcf "+Pipeline.dkfz_embl+"_sv.vcf "
 				+ " /datastore/vcf/ /datastore/merged_vcfs/ "
-				+ " ) || "+moveToFailed;
+				//rename the merged VCFs to ensure they contain the correct aliquot IDs.
+				+ " && cd /datastore/merged_vcfs/ "
+				+ " && mv snv.clean.sorted.vcf snv."+tumourAliquotID+".clean.sorted.vcf "
+				+ " && mv sv.clean.sorted.vcf sv."+tumourAliquotID+".clean.sorted.vcf "
+				+ " && mv indel.clean.sorted.vcf indel."+tumourAliquotID+".clean.sorted.vcf ) || "+moveToFailed;
 
 		vcfCombineJob.setCommand(combineCommand);
 		vcfCombineJob.addParent(prepVCFs);
 		
 		//these files names are hard-coded in runVariantbam.template. So, either get rid of them here (if they're not used anywhere else),
 		//or add them as parameters to the template.
-		this.snvVCF = "/datastore/merged_vcfs/snv.clean.sorted.vcf";
-		this.svVCF = "/datastore/merged_vcfs/sv.clean.sorted.vcf";
-		this.indelVCF = "/datastore/merged_vcfs/indel.clean.sorted.vcf";
+		//TODO: merged VCFs must now be done on SETS of VCFs from the same tumour.
+		VcfInfo mergedSnvVcf = new VcfInfo();
+		mergedSnvVcf.setFileName("snv."+tumourAliquotID+".clean.sorted.vcf");
+		mergedSnvVcf.setVcfType(VCFType.snv);
+		mergedSnvVcf.setOriginatingTumourAliquotID(tumourAliquotID);
+		VcfInfo mergedSvVcf = new VcfInfo();
+		mergedSvVcf.setFileName("sv."+tumourAliquotID+".clean.sorted.vcf");
+		mergedSvVcf.setVcfType(VCFType.sv);
+		mergedSvVcf.setOriginatingTumourAliquotID(tumourAliquotID);
+		VcfInfo mergedIndelVcf = new VcfInfo();
+		mergedIndelVcf.setFileName("indel."+tumourAliquotID+".clean.sorted.vcf");
+		mergedIndelVcf.setVcfType(VCFType.indel);
+		mergedIndelVcf.setOriginatingTumourAliquotID(tumourAliquotID);
+		this.mergedVcfs.add(mergedSnvVcf);
+		this.mergedVcfs.add(mergedSvVcf);
+		this.mergedVcfs.add(mergedIndelVcf);
+//		this.snvVCF = "/datastore/merged_vcfs/snv.clean.sorted.vcf";
+//		this.svVCF = "/datastore/merged_vcfs/sv.clean.sorted.vcf";
+//		this.indelVCF = "/datastore/merged_vcfs/indel.clean.sorted.vcf";
 
 		return vcfCombineJob;
 	}
@@ -348,26 +423,47 @@ public class OxoGWrapperWorkflow extends BaseOxoGWrapperWorkflow {
 	 * @param parent
 	 * @return
 	 */
-	private Job doOxoG(String pathToTumour, String tumourID, Job ...parents) {
+	private Job doOxoG(String pathToTumour, String tumourAliquotID, Job ...parents) {
 		
 		String moveToFailed = GitUtils.gitMoveCommand("running-jobs","failed-jobs",this.JSONlocation + "/" + this.JSONrepoName + "/" + this.JSONfolderName,this.JSONfileName, this.gitMoveTestMode, this.getWorkflowBaseDir() + "/scripts/");
-		Job runOxoGWorkflow = this.getWorkflow().createBashJob("run OxoG Filter for tumour "+tumourID); 
+		Job runOxoGWorkflow = this.getWorkflow().createBashJob("run OxoG Filter for tumour "+tumourAliquotID); 
 		Function<String,String> getFileName = (s) -> {  return s.substring(s.lastIndexOf("/")); };
-		String pathToResults = "/datastore/oxog_results/tumour_"+tumourID+"/cga/fh/pcawg_pipeline/jobResults_pipette/jobs/"+this.aliquotID+"/links_for_gnos/annotate_failed_sites_to_vcfs/";
+		String pathToResults = "/datastore/oxog_results/tumour_"+tumourAliquotID+"/cga/fh/pcawg_pipeline/jobResults_pipette/jobs/"+this.aliquotID+"/links_for_gnos/annotate_failed_sites_to_vcfs/";
 		String pathToUploadDir = "/datastore/files_for_upload/";
+		
+		Predicate<? super VcfInfo> matchesTumourAliquotID = p -> p.getOriginatingTumourAliquotID().equals(tumourAliquotID);
+		
+		Predicate<? super VcfInfo> isSangerSNV = isSanger.and(isSnv.and(matchesTumourAliquotID));
+		Predicate<? super VcfInfo> isBroadSNV = isBroad.and(isSnv.and(matchesTumourAliquotID));
+		Predicate<? super VcfInfo> isDkfzEmblSNV = isDkfzEmbl.and(isSnv.and(matchesTumourAliquotID));
+		Predicate<? super VcfInfo> isMuseSNV = isMuse.and(isSnv.and(matchesTumourAliquotID));
+				
+		String sangerSNV = (this.vcfs.stream().filter(isSangerSNV).findFirst().get()).getFileName();
+		String broadSNV = (this.vcfs.stream().filter(isBroadSNV).findFirst().get()).getFileName();
+		String dkfzEmblSNV = (this.vcfs.stream().filter(isDkfzEmblSNV).findFirst().get()).getFileName();
+		String museSNV = (this.vcfs.stream().filter(isMuseSNV).findFirst().get()).getFileName();
+		
+		String extractedSangerSNV = (this.extractedSnvsFromIndels.stream().filter(isSangerSNV).findFirst().get()).getFileName();
+		String extractedBroadSNV = (this.extractedSnvsFromIndels.stream().filter(isBroadSNV).findFirst().get()).getFileName();
+		String extractedDkfzEmblSNV = (this.extractedSnvsFromIndels.stream().filter(isDkfzEmblSNV).findFirst().get()).getFileName();
+		
+		String normalizedSangerIndel = (this.normalizedIndels.stream().filter(isSangerSNV).findFirst().get()).getFileName();
+		String normalizedBroadIndel = (this.normalizedIndels.stream().filter(isBroadSNV).findFirst().get()).getFileName();
+		String normalizedDkfzEmblIndel = (this.normalizedIndels.stream().filter(isDkfzEmblSNV).findFirst().get()).getFileName();
+		
 		if (!this.skipOxoG)
 		{
 			String runOxoGCommand = TemplateUtils.getRenderedTemplate(Arrays.stream(new String[][] {
-					{ "sangerExtractedSNVVCFPath", this.sangerExtractedSNVVCFName }, { "sangerWorkflow", Pipeline.sanger.toString() }, { "sangerExtractedSNVVCF", getFileName.apply(this.sangerExtractedSNVVCFName) },
-					{ "broadExtractedSNVVCFPath", this.broadExtractedSNVVCFName }, { "broadWorkflow", Pipeline.broad.toString() }, { "broadExtractedSNVVCF", getFileName.apply(this.broadExtractedSNVVCFName) },
-					{ "dkfzEmblExtractedSNVVCFPath", this.dkfzEmblExtractedSNVVCFName }, { "dkfzEmblWorkflow", Pipeline.dkfz_embl.toString() }, { "dkfzEmblExtractedSNVVCF", getFileName.apply(this.dkfzEmblExtractedSNVVCFName) },
-					{ "tumourID", tumourID }, { "aliquotID", this.aliquotID }, { "oxoQScore", this.oxoQScore }, { "museWorkflow", Pipeline.muse.toString() },
+					{ "sangerExtractedSNVVCFPath", extractedSangerSNV }, { "sangerWorkflow", Pipeline.sanger.toString() }, { "sangerExtractedSNVVCF", getFileName.apply(extractedSangerSNV) },
+					{ "broadExtractedSNVVCFPath", extractedBroadSNV }, { "broadWorkflow", Pipeline.broad.toString() }, { "broadExtractedSNVVCF", getFileName.apply(extractedBroadSNV) },
+					{ "dkfzEmblExtractedSNVVCFPath", extractedDkfzEmblSNV }, { "dkfzEmblWorkflow", Pipeline.dkfz_embl.toString() }, { "dkfzEmblExtractedSNVVCF", getFileName.apply(extractedDkfzEmblSNV) },
+					{ "tumourID", tumourAliquotID }, { "aliquotID", this.aliquotID }, { "oxoQScore", this.oxoQScore }, { "museWorkflow", Pipeline.muse.toString() },
 					{ "pathToTumour", pathToTumour }, { "normalBamGnosID", this.normalBamGnosID }, { "normalBAMFileName", this.normalBAMFileName } ,
 					{ "broadGnosID", this.broadGnosID }, { "sangerGnosID", this.sangerGnosID }, { "dkfzemblGnosID", this.dkfzemblGnosID }, { "museGnosID", this.museGnosID },
-					{ "sangerSNVName", this.sangerSNVName}, { "broadSNVName", this.broadSNVName }, { "dkfzEmblSNVName", this.dkfzEmblSNVName }, { "museSNVName", this.museSNVName },
+					{ "sangerSNVName", sangerSNV}, { "broadSNVName", broadSNV }, { "dkfzEmblSNVName", dkfzEmblSNV }, { "museSNVName", museSNV },
 					{ "pathToResults", pathToResults}, { "pathToUploadDir", pathToUploadDir },
-					{ "broadNormalizedIndelVCFName",this.broadNormalizedIndelVCFName }, { "sangerNormalizedIndelVCFName",this.sangerNormalizedIndelVCFName },
-					{ "dkfzEmblNormalizedIndelVCFName",this.dkfzEmblNormalizedIndelVCFName }
+					{ "broadNormalizedIndelVCFName",normalizedBroadIndel }, { "sangerNormalizedIndelVCFName",normalizedSangerIndel },
+					{ "dkfzEmblNormalizedIndelVCFName",normalizedDkfzEmblIndel }
 				} ).collect(this.collectToMap), "runOxoGFilter.template");
 			runOxoGWorkflow.setCommand("( "+runOxoGCommand+" ) || "+ moveToFailed);
 		}
@@ -377,37 +473,41 @@ public class OxoGWrapperWorkflow extends BaseOxoGWrapperWorkflow {
 		}
 
 		//Predicate<String> containsTumourID = (p) -> p.contains("tumour_"+tumourID);
-		Function<String,String> includeTumourID = (s) -> { return ( !s.contains("tumour_"+tumourID)
-																		? s.replace(".pass-filtered.",".tumour_"+tumourID+".pass-filtered.")
+		Function<String,String> includeTumourID = (s) -> { return ( !s.contains("tumour_"+tumourAliquotID)
+																		? s.replace(".pass-filtered.",".tumour_"+tumourAliquotID+".pass-filtered.")
 																		: s); };
 		Function<String,String> changeToOxoGSuffix = includeTumourID.andThen((s) -> {return pathToUploadDir + s.replace(".vcf.gz", ".oxoG.vcf.gz"); });
 		Function<String,String> changeToOxoGTBISuffix = changeToOxoGSuffix.andThen((s) -> s+=".tbi"); 
 		//regular VCFs
-		this.filesForUpload.add(changeToOxoGSuffix.apply(this.broadSNVName));
-		this.filesForUpload.add(changeToOxoGSuffix.apply(this.dkfzEmblSNVName));
-		this.filesForUpload.add(changeToOxoGSuffix.apply(this.sangerSNVName));
-		this.filesForUpload.add(changeToOxoGSuffix.apply(this.museSNVName));
+		this.filesForUpload.add(changeToOxoGSuffix.apply(broadSNV));
+		this.filesForUpload.add(changeToOxoGSuffix.apply(dkfzEmblSNV));
+		this.filesForUpload.add(changeToOxoGSuffix.apply(sangerSNV));
+		this.filesForUpload.add(changeToOxoGSuffix.apply(museSNV));
 		//index files
-		this.filesForUpload.add(changeToOxoGTBISuffix.apply(this.broadSNVName));
-		this.filesForUpload.add(changeToOxoGTBISuffix.apply(this.dkfzEmblSNVName));
-		this.filesForUpload.add(changeToOxoGTBISuffix.apply(this.sangerSNVName));
-		this.filesForUpload.add(changeToOxoGTBISuffix.apply(this.museSNVName));
+		this.filesForUpload.add(changeToOxoGTBISuffix.apply(broadSNV));
+		this.filesForUpload.add(changeToOxoGTBISuffix.apply(dkfzEmblSNV));
+		this.filesForUpload.add(changeToOxoGTBISuffix.apply(sangerSNV));
+		this.filesForUpload.add(changeToOxoGTBISuffix.apply(museSNV));
 		//Extracted SNVs
-		this.filesForUpload.add(changeToOxoGSuffix.apply(getFileName.apply(this.sangerExtractedSNVVCFName)));
-		this.filesForUpload.add(changeToOxoGSuffix.apply(getFileName.apply(this.broadExtractedSNVVCFName)));
-		this.filesForUpload.add(changeToOxoGSuffix.apply(getFileName.apply(this.dkfzEmblExtractedSNVVCFName)));
+		this.filesForUpload.add(changeToOxoGSuffix.apply(getFileName.apply(extractedSangerSNV)));
+		this.filesForUpload.add(changeToOxoGSuffix.apply(getFileName.apply(extractedBroadSNV)));
+		this.filesForUpload.add(changeToOxoGSuffix.apply(getFileName.apply(extractedDkfzEmblSNV)));
 		//index files
-		this.filesForUpload.add(changeToOxoGTBISuffix.apply(getFileName.apply(this.sangerExtractedSNVVCFName)));
-		this.filesForUpload.add(changeToOxoGTBISuffix.apply(getFileName.apply(this.broadExtractedSNVVCFName)));
-		this.filesForUpload.add(changeToOxoGTBISuffix.apply(getFileName.apply(this.dkfzEmblExtractedSNVVCFName)));
+		this.filesForUpload.add(changeToOxoGTBISuffix.apply(getFileName.apply(extractedSangerSNV)));
+		this.filesForUpload.add(changeToOxoGTBISuffix.apply(getFileName.apply(extractedBroadSNV)));
+		this.filesForUpload.add(changeToOxoGTBISuffix.apply(getFileName.apply(extractedDkfzEmblSNV)));
 		
-		this.filesForUpload.add("/datastore/files_for_upload/" + this.aliquotID + ".gnos_files_tumour_" + tumourID + ".tar");
-		this.filesForUpload.add("/datastore/files_for_upload/" + this.aliquotID + ".call_stats_tumour_" + tumourID + ".txt.gz.tar");
+		this.filesForUpload.add("/datastore/files_for_upload/" + this.aliquotID + ".gnos_files_tumour_" + tumourAliquotID + ".tar");
+		this.filesForUpload.add("/datastore/files_for_upload/" + this.aliquotID + ".call_stats_tumour_" + tumourAliquotID + ".txt.gz.tar");
 		
 		return runOxoGWorkflow;
 		
 	}
 
+	private Job doVariantBam(BAMType bamType, String bamPath,  Job ...parents) {
+		return doVariantBam(bamType, bamPath,  null, null, parents);
+	}
+	
 	/**
 	 * Runs the variant program inside the Broad's OxoG container to produce a mini-BAM for a given BAM. 
 	 * @param parent
@@ -417,7 +517,7 @@ public class OxoGWrapperWorkflow extends BaseOxoGWrapperWorkflow {
 	 * @param tumourID - GNOS ID of the tumour. Only used if bamType == BAMType.tumour.
 	 * @return
 	 */
-	private Job doVariantBam(Job parent, BAMType bamType, String bamPath, String tumourBAMFileName, String tumourID) {
+	private Job doVariantBam(BAMType bamType, String bamPath, String tumourBAMFileName, String tumourID, Job ...parents) {
 		Job runVariantbam = this.getWorkflow().createBashJob("run "+bamType+(bamType==BAMType.tumour?"_"+tumourID+"_":"")+" variantbam");
 
 		String minibamName = "";
@@ -457,7 +557,10 @@ public class OxoGWrapperWorkflow extends BaseOxoGWrapperWorkflow {
 			command += (" || " + moveToFailed);
 			runVariantbam.setCommand(command);
 		}
-		runVariantbam.addParent(parent);
+		for (Job parent : parents)
+		{
+			runVariantbam.addParent(parent);
+		}
 		
 		//Job getLogs = this.getOxoGLogs(runOxoGWorkflow);
 		return runVariantbam;
@@ -692,24 +795,30 @@ public class OxoGWrapperWorkflow extends BaseOxoGWrapperWorkflow {
 		Predicate<String> isExtractedSNV = p -> p.contains("extracted-snv") && p.endsWith(".vcf.gz");
 		final String passFilteredOxoGSuffix = ".pass-filtered.oxoG.vcf.gz";
 		//list filtering should only ever produce one result.
-		String broadOxogSNVFileName = this.filesForUpload.stream().filter(p -> ((p.contains("broad-mutect") && p.endsWith(passFilteredOxoGSuffix)))).collect(Collectors.toList()).get(0);
-		String broadOxoGSNVFromIndelFileName = this.filesForUpload.stream().filter(p -> (p.contains(Pipeline.broad.toString()) && isExtractedSNV.test(p) )).collect(Collectors.toList()).get(0);
-		
-		String sangerOxogSNVFileName = this.filesForUpload.stream().filter(p -> ((p.contains("svcp_") && p.endsWith(passFilteredOxoGSuffix)))).collect(Collectors.toList()).get(0);
-		String sangerOxoGSNVFromIndelFileName = this.filesForUpload.stream().filter(p -> (p.contains(Pipeline.sanger.toString()) && isExtractedSNV.test(p) )).collect(Collectors.toList()).get(0);
-		
-		String dkfzEmbleOxogSNVFileName = this.filesForUpload.stream().filter(p -> ((p.contains("dkfz-snvCalling") && p.endsWith(passFilteredOxoGSuffix)))).collect(Collectors.toList()).get(0);
-		String dkfzEmblOxoGSNVFromIndelFileName = this.filesForUpload.stream().filter(p -> (p.contains(Pipeline.dkfz_embl.toString()) && isExtractedSNV.test(p) )).collect(Collectors.toList()).get(0);
-
-		//Remember: MUSE files do not get PASS-filtered. Also, there is no INDEL so there cannot be any SNVs extracted from INDELs.
-		String museOxogSNVFileName = this.filesForUpload.stream().filter(p -> p.contains("MUSE") && p.endsWith("somatic.snv_mnv.oxoG.vcf.gz")).collect(Collectors.toList()).get(0);
 		
 		for (int i = 0; i < this.tumours.size(); i++)
 		{
 			TumourInfo tInf = this.tumours.get(i);
-			Job broadIndelAnnotatorJob = this.runAnnotator("indel", Pipeline.broad, this.broadNormalizedIndelVCFName, tInf.getTumourMinibamPath(),this.normalMinibamPath, tInf.getTumourBamGnosID(), parents);
-			Job dfkzEmblIndelAnnotatorJob = this.runAnnotator("indel", Pipeline.dkfz_embl, this.dkfzEmblNormalizedIndelVCFName, tInf.getTumourMinibamPath(), this.normalMinibamPath, tInf.getTumourBamGnosID(), broadIndelAnnotatorJob);
-			Job sangerIndelAnnotatorJob = this.runAnnotator("indel", Pipeline.sanger, this.sangerNormalizedIndelVCFName, tInf.getTumourMinibamPath(), this.normalMinibamPath, tInf.getTumourBamGnosID(), dfkzEmblIndelAnnotatorJob);
+			String tumourAliquotID = tInf.getAliquotID();
+			String broadOxogSNVFileName = this.filesForUpload.stream().filter(p -> ((p.contains(tumourAliquotID) && p.contains("broad-mutect") && p.endsWith(passFilteredOxoGSuffix)))).collect(Collectors.toList()).get(0);
+			String broadOxoGSNVFromIndelFileName = this.filesForUpload.stream().filter(p -> (p.contains(Pipeline.broad.toString()) && isExtractedSNV.test(p) )).collect(Collectors.toList()).get(0);
+			
+			String sangerOxogSNVFileName = this.filesForUpload.stream().filter(p -> ((p.contains(tumourAliquotID) && p.contains("svcp_") && p.endsWith(passFilteredOxoGSuffix)))).collect(Collectors.toList()).get(0);
+			String sangerOxoGSNVFromIndelFileName = this.filesForUpload.stream().filter(p -> (p.contains(Pipeline.sanger.toString()) && isExtractedSNV.test(p) )).collect(Collectors.toList()).get(0);
+			
+			String dkfzEmbleOxogSNVFileName = this.filesForUpload.stream().filter(p -> ((p.contains(tumourAliquotID) && p.contains("dkfz-snvCalling") && p.endsWith(passFilteredOxoGSuffix)))).collect(Collectors.toList()).get(0);
+			String dkfzEmblOxoGSNVFromIndelFileName = this.filesForUpload.stream().filter(p -> (p.contains(Pipeline.dkfz_embl.toString()) && isExtractedSNV.test(p) )).collect(Collectors.toList()).get(0);
+
+			//Remember: MUSE files do not get PASS-filtered. Also, there is no INDEL so there cannot be any SNVs extracted from INDELs.
+			String museOxogSNVFileName = this.filesForUpload.stream().filter(p -> p.contains("MUSE") && p.endsWith("somatic.snv_mnv.oxoG.vcf.gz")).collect(Collectors.toList()).get(0);
+			
+			String normalizedBroadIndel = this.normalizedIndels.stream().filter(isBroad.and(p -> p.getOriginatingTumourAliquotID().equals(tumourAliquotID))).findFirst().get().getFileName();
+			String normalizedSangerIndel = this.normalizedIndels.stream().filter(isSanger.and(p -> p.getOriginatingTumourAliquotID().equals(tumourAliquotID))).findFirst().get().getFileName();
+			String normalizedDkfzEmblIndel = this.normalizedIndels.stream().filter(isDkfzEmbl.and(p -> p.getOriginatingTumourAliquotID().equals(tumourAliquotID))).findFirst().get().getFileName();
+			
+			Job broadIndelAnnotatorJob = this.runAnnotator("indel", Pipeline.broad, normalizedBroadIndel, tInf.getTumourMinibamPath(),this.normalMinibamPath, tInf.getTumourBamGnosID(), parents);
+			Job dfkzEmblIndelAnnotatorJob = this.runAnnotator("indel", Pipeline.dkfz_embl, normalizedDkfzEmblIndel, tInf.getTumourMinibamPath(), this.normalMinibamPath, tInf.getTumourBamGnosID(), broadIndelAnnotatorJob);
+			Job sangerIndelAnnotatorJob = this.runAnnotator("indel", Pipeline.sanger, normalizedSangerIndel, tInf.getTumourMinibamPath(), this.normalMinibamPath, tInf.getTumourBamGnosID(), dfkzEmblIndelAnnotatorJob);
 	
 			Job broadSNVAnnotatorJob = this.runAnnotator("SNV", Pipeline.broad,broadOxogSNVFileName, tInf.getTumourMinibamPath(), this.normalMinibamPath, tInf.getTumourBamGnosID(), parents);
 			Job dfkzEmblSNVAnnotatorJob = this.runAnnotator("SNV", Pipeline.dkfz_embl,dkfzEmbleOxogSNVFileName, tInf.getTumourMinibamPath(), this.normalMinibamPath, tInf.getTumourBamGnosID(), broadSNVAnnotatorJob);
@@ -732,21 +841,27 @@ public class OxoGWrapperWorkflow extends BaseOxoGWrapperWorkflow {
 		Job statFiles = this.getWorkflow().createBashJob("stat downloaded input files");
 		String moveToFailed = GitUtils.gitMoveCommand("running-jobs","failed-jobs",this.JSONlocation + "/" + this.JSONrepoName + "/" + this.JSONfolderName,this.JSONfileName, this.gitMoveTestMode, this.getWorkflowBaseDir() + "/scripts/");
 		String statFilesCMD = "( ";
-		
-		for (String s : new ArrayList<String>( Arrays.asList(this.sangerSNVName,this.sangerSNVIndexFileName,this.sangerSVName,this.sangerSVIndexFileName,this.sangerIndelName,this.sangerINDELIndexFileName) ) ) {
-			statFilesCMD+="stat /datastore/vcf/"+Pipeline.sanger.toString()+"/"+this.sangerGnosID+"/"+s+ " && \\\n";
-		}
 
-		for (String s : new ArrayList<String>( Arrays.asList(this.broadSNVName,this.broadSNVIndexFileName,this.broadSVName,this.broadSVIndexFileName,this.broadIndelName,this.broadINDELIndexFileName) ) ) {
-			statFilesCMD+="stat /datastore/vcf/"+Pipeline.broad.toString()+"/"+this.broadGnosID+"/"+s + " && \\\n";
-		}
-
-		for (String s : new ArrayList<String>( Arrays.asList(this.dkfzEmblSNVName,this.dkfzEmblSNVIndexFileName,this.dkfzEmblSVName,this.dkfzEmblSVIndexFileName,this.dkfzEmblIndelName,this.dkfzEmblINDELIndexFileName) ) ) {
-			statFilesCMD+="stat /datastore/vcf/"+Pipeline.dkfz_embl.toString()+"/"+this.dkfzemblGnosID+"/"+s + " && \\\n";
+		for (VcfInfo vcfInfo : this.vcfs)
+		{
+				statFilesCMD+="stat /datastore/vcf/"+vcfInfo.getOriginatingPipeline().toString()+"/"+vcfInfo.getPipelineGnosID()+"/"+vcfInfo.getFileName()+ " && \\\n";
+				statFilesCMD+="stat /datastore/vcf/"+vcfInfo.getOriginatingPipeline().toString()+"/"+vcfInfo.getPipelineGnosID()+"/"+vcfInfo.getIndexFileName()+ " && \\\n";
 		}
 		
-		statFilesCMD += "stat /datastore/vcf/"+Pipeline.muse.toString()+"/"+this.museGnosID+"/"+this.museSNVName + " && \\\n";
-		statFilesCMD += "stat /datastore/vcf/"+Pipeline.muse.toString()+"/"+this.museGnosID+"/"+this.museSNVIndexFileName + " && \\\n";
+//		for (String s : new ArrayList<String>( Arrays.asList(this.sangerSNVName,this.sangerSNVIndexFileName,this.sangerSVName,this.sangerSVIndexFileName,this.sangerIndelName,this.sangerINDELIndexFileName) ) ) {
+//			statFilesCMD+="stat /datastore/vcf/"+Pipeline.sanger.toString()+"/"+this.sangerGnosID+"/"+s+ " && \\\n";
+//		}
+//
+//		for (String s : new ArrayList<String>( Arrays.asList(this.broadSNVName,this.broadSNVIndexFileName,this.broadSVName,this.broadSVIndexFileName,this.broadIndelName,this.broadINDELIndexFileName) ) ) {
+//			statFilesCMD+="stat /datastore/vcf/"+Pipeline.broad.toString()+"/"+this.broadGnosID+"/"+s + " && \\\n";
+//		}
+//
+//		for (String s : new ArrayList<String>( Arrays.asList(this.dkfzEmblSNVName,this.dkfzEmblSNVIndexFileName,this.dkfzEmblSVName,this.dkfzEmblSVIndexFileName,this.dkfzEmblIndelName,this.dkfzEmblINDELIndexFileName) ) ) {
+//			statFilesCMD+="stat /datastore/vcf/"+Pipeline.dkfz_embl.toString()+"/"+this.dkfzemblGnosID+"/"+s + " && \\\n";
+//		}
+		
+//		statFilesCMD += "stat /datastore/vcf/"+Pipeline.muse.toString()+"/"+this.museGnosID+"/"+this.museSNVName + " && \\\n";
+//		statFilesCMD += "stat /datastore/vcf/"+Pipeline.muse.toString()+"/"+this.museGnosID+"/"+this.museSNVIndexFileName + " && \\\n";
 
 		//stat all tumour BAMS
 		for (int i = 0 ; i < this.tumours.size() ; i++)
@@ -792,13 +907,24 @@ public class OxoGWrapperWorkflow extends BaseOxoGWrapperWorkflow {
 				//since the icgc-storage-client can make full use of all cores on a multi-core system. 
 				DownloadMethod downloadMethod = DownloadMethod.valueOf(this.downloadMethod);
 				
-				List<String> sangerList = Arrays.asList(this.sangerSNVVCFObjectID, this.sangerSNVIndexObjectID, this.sangerSVVCFObjectID, this.sangerSVIndexObjectID, this.sangerIndelVCFObjectID, this.sangerIndelIndexObjectID);
-				List<String> broadList = Arrays.asList(this.broadSNVVCFObjectID, this.broadSNVIndexObjectID, this.broadSVVCFObjectID, this.broadSVIndexObjectID, this.broadIndelVCFObjectID, this.broadIndelIndexObjectID);
-				List<String> dkfzEmblList = Arrays.asList(this.dkfzemblSNVVCFObjectID, this.dkfzemblSNVIndexObjectID, this.dkfzemblSVVCFObjectID, this.dkfzemblSVIndexObjectID,this.dkfzemblIndelVCFObjectID, this.dkfzemblIndelIndexObjectID);
-				List<String> museList = Arrays.asList(this.museSNVVCFObjectID, this.museSNVIndexObjectID);
+				List<String> sangerList =  Stream.concat(
+						this.vcfs.stream().filter(p -> p.getOriginatingPipeline()==Pipeline.sanger).map(m -> m.getObjectID()), 
+						this.vcfs.stream().filter(p -> p.getOriginatingPipeline()==Pipeline.sanger).map(m -> m.getIndexObjectID())
+					).collect(Collectors.toList()) ;
+				List<String> broadList = Stream.concat(
+						this.vcfs.stream().filter(p -> p.getOriginatingPipeline()==Pipeline.broad).map(m -> m.getObjectID()), 
+						this.vcfs.stream().filter(p -> p.getOriginatingPipeline()==Pipeline.broad).map(m -> m.getIndexObjectID())
+					).collect(Collectors.toList()) ;
+				List<String> dkfzEmblList = Stream.concat(
+						this.vcfs.stream().filter(p -> p.getOriginatingPipeline()==Pipeline.dkfz_embl).map(m -> m.getObjectID()), 
+						this.vcfs.stream().filter(p -> p.getOriginatingPipeline()==Pipeline.dkfz_embl).map(m -> m.getIndexObjectID())
+					).collect(Collectors.toList()) ;
+				List<String> museList = Stream.concat(
+						this.vcfs.stream().filter(p -> p.getOriginatingPipeline()==Pipeline.muse).map(m -> m.getObjectID()), 
+						this.vcfs.stream().filter(p -> p.getOriginatingPipeline()==Pipeline.muse).map(m -> m.getIndexObjectID())
+					).collect(Collectors.toList()) ;
 				List<String> normalList = Arrays.asList( this.bamNormalIndexObjectID,this.bamNormalObjectID);
-				//List<String> tumourList = Arrays.asList( this.bamTumourIndexObjectID,this.bamTumourObjectID);
-				//List<List<String>> tumourList = new ArrayList<List<String>>();
+
 				
 				Map<String,List<String>> workflowObjectIDs = new HashMap<String,List<String>>(6);
 				workflowObjectIDs.put(Pipeline.broad.toString(), broadList);
@@ -897,27 +1023,52 @@ public class OxoGWrapperWorkflow extends BaseOxoGWrapperWorkflow {
 			Job dkfzemblPassFilter = this.passFilterWorkflow(Pipeline.dkfz_embl, statFiles);
 			// No, we're not going to filter the Muse SNV file.
 			
-
 			//update all filenames to include ".pass-filtered."
 			Function<String,String> addPassFilteredSuffix = (x) -> { return x.replace(".vcf.gz",".pass-filtered.vcf.gz"); };
-			this.sangerSNVName = addPassFilteredSuffix.apply(this.sangerSNVName);
-			this.sangerIndelName = addPassFilteredSuffix.apply(this.sangerIndelName);
-			this.sangerSVName = addPassFilteredSuffix.apply(this.sangerSVName);
-
-			this.broadSNVName = addPassFilteredSuffix.apply(this.broadSNVName);
-			this.broadIndelName = addPassFilteredSuffix.apply(this.broadIndelName);
-			this.broadSVName = addPassFilteredSuffix.apply(this.broadSVName);
 			
-			this.dkfzEmblSNVName = addPassFilteredSuffix.apply(this.dkfzEmblSNVName);
-			this.dkfzEmblIndelName = addPassFilteredSuffix.apply(this.dkfzEmblIndelName);
-			this.dkfzEmblSVName = addPassFilteredSuffix.apply(this.dkfzEmblSVName);
 			
-			// OxoG will run after move2running. Move2running will run after all the jobs that perform input file downloads and file preprocessing have finished.  
-			Job sangerPreprocessVCF = this.preProcessIndelVCF(sangerPassFilter, Pipeline.sanger,"/"+ this.sangerGnosID +"/"+ this.sangerIndelName);
-			Job dkfzEmblPreprocessVCF = this.preProcessIndelVCF(dkfzemblPassFilter, Pipeline.dkfz_embl, "/"+ this.dkfzemblGnosID +"/"+ this.dkfzEmblIndelName);
-			Job broadPreprocessVCF = this.preProcessIndelVCF(broadPassFilter, Pipeline.broad, "/"+ this.broadGnosID +"/"+ this.broadIndelName);
+			for (VcfInfo vInfo : this.vcfs)
+			{
+				vInfo.setFileName(addPassFilteredSuffix.apply( vInfo.getFileName() ) );
+			}
 			
-			Job combineVCFsByType = this.combineVCFsByType( sangerPreprocessVCF, dkfzEmblPreprocessVCF, broadPreprocessVCF);
+//			this.sangerSNVName = addPassFilteredSuffix.apply(this.sangerSNVName);
+//			this.sangerIndelName = addPassFilteredSuffix.apply(this.sangerIndelName);
+//			this.sangerSVName = addPassFilteredSuffix.apply(this.sangerSVName);
+//
+//			this.broadSNVName = addPassFilteredSuffix.apply(this.broadSNVName);
+//			this.broadIndelName = addPassFilteredSuffix.apply(this.broadIndelName);
+//			this.broadSVName = addPassFilteredSuffix.apply(this.broadSVName);
+//			
+//			this.dkfzEmblSNVName = addPassFilteredSuffix.apply(this.dkfzEmblSNVName);
+//			this.dkfzEmblIndelName = addPassFilteredSuffix.apply(this.dkfzEmblIndelName);
+//			this.dkfzEmblSVName = addPassFilteredSuffix.apply(this.dkfzEmblSVName);
+			
+			// OxoG will run after move2running. Move2running will run after all the jobs that perform input file downloads and file preprocessing have finished.
+			
+			List<Job> preprocessJobs = new ArrayList<Job>(this.tumours.size() * 3);
+			for (int i =0; i < this.tumours.size(); i++)
+			{
+			
+				Job sangerPreprocessVCF = this.preProcessIndelVCF(sangerPassFilter, Pipeline.sanger,"/"+ this.sangerGnosID +"/"+ this.vcfs.stream()
+																																.filter(isSanger.and(isIndel))
+																																.map(m -> m.getFileName()), this.tumours.get(i).getAliquotID());
+				Job dkfzEmblPreprocessVCF = this.preProcessIndelVCF(dkfzemblPassFilter, Pipeline.dkfz_embl, "/"+ this.dkfzemblGnosID +"/"+ this.vcfs.stream()
+																																.filter(isDkfzEmbl.and(isIndel))
+																																.map(m -> m.getFileName()), this.tumours.get(i).getAliquotID());
+				Job broadPreprocessVCF = this.preProcessIndelVCF(broadPassFilter, Pipeline.broad, "/"+ this.broadGnosID +"/"+ this.vcfs.stream().
+																																filter(isBroad.and(isIndel))
+																																.map(m -> m.getFileName()), this.tumours.get(i).getAliquotID());
+				preprocessJobs.add(broadPreprocessVCF);
+				preprocessJobs.add(sangerPreprocessVCF);
+				preprocessJobs.add(dkfzEmblPreprocessVCF);
+			}
+			List<Job> combineVCFJobs = new ArrayList<Job>(this.tumours.size());
+			for (int i =0; i< this.tumours.size(); i++)
+			{		
+				Job combineVCFsByType = this.combineVCFsByType(this.tumours.get(i).getAliquotID(), preprocessJobs.toArray(new Job[preprocessJobs.size()]) );
+				combineVCFJobs.add(combineVCFsByType);
+			}
 			
 			List<Job> oxogJobs = new ArrayList<Job>(this.tumours.size());
 			for (int i = 0 ; i < this.tumours.size(); i++)
@@ -928,16 +1079,24 @@ public class OxoGWrapperWorkflow extends BaseOxoGWrapperWorkflow {
 				{
 					//OxoG jobs can put a heavy CPU load on the system (in bursts) so probably better to run them in sequence.
 					//If there is > 1 OxoG job (i.e. a multi-tumour donor), each OxoG job should have the prior OxoG job as its parent.
-					oxoG = this.doOxoG(tInf.getTumourBamGnosID()+"/"+tInf.getTumourBAMFileName(),tInf.getTumourBamGnosID(), combineVCFsByType, oxogJobs.get(i-1));
+					oxoG = this.doOxoG(tInf.getTumourBamGnosID()+"/"+tInf.getTumourBAMFileName(),tInf.getTumourBamGnosID(), oxogJobs.get(i-1));
+					for (int j =0 ; j<combineVCFJobs.size(); j++)
+					{
+						oxoG.addParent(combineVCFJobs.get(j));
+					}
 				}
 				else
 				{
-					oxoG = this.doOxoG(tInf.getTumourBamGnosID()+"/"+tInf.getTumourBAMFileName(),tInf.getTumourBamGnosID(), combineVCFsByType);
+					oxoG = this.doOxoG(tInf.getTumourBamGnosID()+"/"+tInf.getTumourBAMFileName(),tInf.getTumourBamGnosID());
+					for (int j =0 ; j<combineVCFJobs.size(); j++)
+					{
+						oxoG.addParent(combineVCFJobs.get(j));
+					}
 				}
 				oxogJobs.add(oxoG);
 			}
 			
-			Job normalVariantBam = this.doVariantBam(combineVCFsByType,BAMType.normal,"/datastore/bam/normal/"+this.normalBamGnosID+"/"+this.normalBAMFileName,null,null);
+			Job normalVariantBam = this.doVariantBam(BAMType.normal,"/datastore/bam/normal/"+this.normalBamGnosID+"/"+this.normalBAMFileName,combineVCFJobs.toArray(new Job[combineVCFJobs.size()]));
 			List<Job> parentJobsToAnnotationJobs = new ArrayList<Job>(this.tumours.size());
 
 			//create a list of tumour variant-bam jobs.
@@ -945,7 +1104,7 @@ public class OxoGWrapperWorkflow extends BaseOxoGWrapperWorkflow {
 			for (int i = 0; i < this.tumours.size() ; i ++)
 			{
 				TumourInfo tInfo = this.tumours.get(i);
-				Job tumourVariantBam = this.doVariantBam(combineVCFsByType,BAMType.tumour,"/datastore/bam/tumour/"+tInfo.getTumourBamGnosID()+"/"+tInfo.getTumourBAMFileName(), tInfo.getTumourBAMFileName(), tInfo.getTumourBamGnosID());
+				Job tumourVariantBam = this.doVariantBam(BAMType.tumour,"/datastore/bam/tumour/"+tInfo.getTumourBamGnosID()+"/"+tInfo.getTumourBAMFileName(), tInfo.getTumourBAMFileName(), tInfo.getTumourBamGnosID(),combineVCFJobs.toArray(new Job[combineVCFJobs.size()]));
 				variantBamJobs.add(tumourVariantBam);
 			}
 			variantBamJobs.add(normalVariantBam);

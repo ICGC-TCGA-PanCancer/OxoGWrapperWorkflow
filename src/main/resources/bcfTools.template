@@ -9,7 +9,7 @@
 #Sixth, get rid of trailing semi-colons in header lines.
 
 sudo chmod a+rw -R /datastore/vcf/ && (
-	docker run --rm --name normalize_indel_{{ workflowName }} \
+	docker run --rm --name normalize_indel_{{ tumourAliquotID }}_{{ workflowName }} \
 		-v {{ outDir }}/{{ vcfName }}:/datastore/datafile.vcf.gz \
 		-v {{ outDir }}/:/outdir/:rw \
 		-v /refdata/:/ref/ \

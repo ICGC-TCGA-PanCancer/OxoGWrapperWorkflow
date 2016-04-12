@@ -13,6 +13,7 @@ public class VcfInfo {
 	private Pipeline originatingPipeline;
 	private String originatingTumourAliquotID;
 	private long fileSize;
+	private String pipelineGnosID;
 	
 	public String getFileName() {
 		return this.fileName;
@@ -61,5 +62,11 @@ public class VcfInfo {
 	}
 	public void setIndexObjectID(String indexObjectID) {
 		this.indexObjectID = indexObjectID;
+	}
+	public String getPipelineGnosID() {
+		return pipelineGnosID;
+	}
+	public void setPipelineGnosID(String pipelineGnosID) {
+		this.pipelineGnosID = pipelineGnosID;
 	}
 }
