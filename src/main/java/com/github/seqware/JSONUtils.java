@@ -87,7 +87,7 @@ public abstract class JSONUtils {
 	static final String DKFZEMBL_GNOS_ID = "dkfz_embl_gnosID";
 	static final String MUSE_GNOS_ID = "muse_gnosID";
 
-	static final String ALIQUOT_ID = "aliquotID";
+	static final String NORMAL_ALIQUOT_ID = "normalAliquotID";
 	static final String SUBMITTER_DONOR_ID = "submitterDonorID";
 	static final String SUBMITTER_SPECIMENT_ID = "submitterSpecimenID";
 	static final String PROJECT_CODE = "projectCode";
@@ -292,7 +292,7 @@ public abstract class JSONUtils {
 			
 			// Get the normal ID from the tumour.
 			String aliquotID = (String) (parsedJSON.read("$.normal.aliquot_id", String.class));
-			results.put(ALIQUOT_ID, aliquotID);
+			results.put(NORMAL_ALIQUOT_ID, aliquotID);
 
 			//Need to get the VCFs for each tumour aliquot
 			int i = 0;

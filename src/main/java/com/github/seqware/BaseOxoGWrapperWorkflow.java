@@ -17,7 +17,7 @@ public abstract class BaseOxoGWrapperWorkflow extends AbstractWorkflowDataModel 
 	protected String oxoQScore = "";
 	protected String donorID;
 	protected String specimenID;
-	protected String aliquotID;
+	protected String normalAliquotID;
 	protected String bamNormalObjectID;
 	protected String bamNormalIndexObjectID;
 	protected String bamTumourObjectID;
@@ -175,7 +175,7 @@ public abstract class BaseOxoGWrapperWorkflow extends AbstractWorkflowDataModel 
 	
 	protected int tumourCount;
 	
-	List<TumourInfo> tumours ;
+	List<TumourInfo> tumours;
 	
 	List<VcfInfo> vcfs;
 	
@@ -209,7 +209,8 @@ public abstract class BaseOxoGWrapperWorkflow extends AbstractWorkflowDataModel 
 			
 			this.tumourCount = Integer.valueOf(this.getMandatoryProperty(JSONUtils.TUMOUR_COUNT));
 			
-			tumours = new ArrayList<TumourInfo>(tumourCount);
+			this.tumours = new ArrayList<TumourInfo>(tumourCount);
+			this.vcfs = new ArrayList<VcfInfo>((tumourCount * 3)+1);
 			
 			this.sangerGnosID = this.getMandatoryProperty(JSONUtils.SANGER_GNOS_ID);
 			this.broadGnosID = this.getMandatoryProperty(JSONUtils.BROAD_GNOS_ID);
@@ -227,6 +228,7 @@ public abstract class BaseOxoGWrapperWorkflow extends AbstractWorkflowDataModel 
 				tInf.setTumourBamIndexFileName ( this.getMandatoryProperty(JSONUtils.TUMOUR_BAM_INDEX_FILE_NAME+"_"+i));
 				tInf.setBamTumourObjectID  (this.getMandatoryProperty(JSONUtils.BAM_TUMOUR_OBJECT_ID+"_"+i));
 				tInf.setBamTumourIndexObjectID (this.getMandatoryProperty(JSONUtils.BAM_TUMOUR_INDEX_OBJECT_ID+"_"+i));
+				tInf.setAliquotID(this.getMandatoryProperty(JSONUtils.TUMOUR_ALIQUOT_ID+"_"+i));
 				this.workflowNamestoGnosIds.put(OxoGWrapperWorkflow.BAMType.tumour.toString()+"_"+i, tInf.getTumourBamGnosID());
 				this.objectToFilenames.put(tInf.getBamTumourObjectID(), tInf.getTumourBAMFileName());
 				this.objectToFilenames.put(tInf.getBamTumourIndexObjectID(), tInf.getTumourBamIndexFileName());
@@ -254,15 +256,15 @@ public abstract class BaseOxoGWrapperWorkflow extends AbstractWorkflowDataModel 
 						if (p == Pipeline.muse && v != VCFType.snv)
 						{
 							//break out to the next element in VCFType.values
-							break;
+							//break;
 						}
 						else
 						{
 							VcfInfo vInfo = new VcfInfo();
-							vInfo.setFileName(this.getMandatoryProperty(JSONUtils.lookUpKeyGenerator(p, v, "data", "object_id_"+i)));
-							vInfo.setFileName(this.getMandatoryProperty(JSONUtils.lookUpKeyGenerator(p, v, "index", "object_id_"+i)));
+							vInfo.setObjectID(this.getMandatoryProperty(JSONUtils.lookUpKeyGenerator(p, v, "data", "object_id_"+i)));
+							vInfo.setIndexObjectID(this.getMandatoryProperty(JSONUtils.lookUpKeyGenerator(p, v, "index", "object_id_"+i)));
 							vInfo.setFileName(this.getMandatoryProperty(JSONUtils.lookUpKeyGenerator(p, v, "data", "file_name_"+i)));
-							vInfo.setFileName(this.getMandatoryProperty(JSONUtils.lookUpKeyGenerator(p, v, "index", "file_name_"+i)));
+							vInfo.setIndexFileName(this.getMandatoryProperty(JSONUtils.lookUpKeyGenerator(p, v, "index", "file_name_"+i)));
 							vInfo.setOriginatingTumourAliquotID(this.getMandatoryProperty((JSONUtils.TUMOUR_ALIQUOT_ID+"_"+i)));
 							vInfo.setVcfType(v);
 							vInfo.setOriginatingPipeline(p);
@@ -311,7 +313,7 @@ public abstract class BaseOxoGWrapperWorkflow extends AbstractWorkflowDataModel 
 //			this.broadSNVVCFObjectID = this.getMandatoryProperty(JSONUtils.BROAD_SNV_VCF_OBJECT_ID);
 //			this.museSNVVCFObjectID = this.getMandatoryProperty(JSONUtils.MUSE_VCF_OBJECT_ID);
 			this.uploadURL = this.getMandatoryProperty("uploadURL");
-			this.aliquotID = this.getMandatoryProperty(JSONUtils.ALIQUOT_ID);
+			this.normalAliquotID = this.getMandatoryProperty(JSONUtils.NORMAL_ALIQUOT_ID);
 			
 			this.GITPemFile = this.getMandatoryProperty("GITPemFile");
 

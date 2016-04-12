@@ -75,7 +75,7 @@ public class INIGenerator {
 			sb.append(ini);
 			String donorID = (String) fromJSON.get(JSONUtils.SUBMITTER_DONOR_ID);
 			String projectCode = (String) fromJSON.get(JSONUtils.PROJECT_CODE);
-			sb.append("JSONfileName = " + projectCode + "." + donorID + ".json");
+			sb.append("JSONfileName = " + projectCode + "." + donorID + ".json\n\n");
 			sb.append(iniFromJSON);
 			Files.write(Paths.get("./" + donorID + ".INI"), sb.toString().getBytes());
 			System.out.println("Writing file: " + "./" + donorID + ".INI");
