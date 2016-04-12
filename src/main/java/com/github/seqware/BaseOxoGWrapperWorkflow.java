@@ -6,6 +6,8 @@ import java.util.List;
 import java.util.Map;
 
 import com.github.seqware.OxoGWrapperWorkflow.DownloadMethod;
+import com.github.seqware.OxoGWrapperWorkflow.Pipeline;
+import com.github.seqware.OxoGWrapperWorkflow.VCFType;
 
 import net.sourceforge.seqware.pipeline.workflowV2.AbstractWorkflowDataModel;
 
@@ -175,6 +177,8 @@ public abstract class BaseOxoGWrapperWorkflow extends AbstractWorkflowDataModel 
 	
 	List<TumourInfo> tumours ;
 	
+	List<VcfInfo> vcfs;
+	
 	/**
 	 * Get a property name that is mandatory
 	 * @param propName The name of the property
@@ -226,6 +230,16 @@ public abstract class BaseOxoGWrapperWorkflow extends AbstractWorkflowDataModel 
 					tInf.setTumourBamGNOSRepoURL ( this.getMandatoryProperty(JSONUtils.TUMOUR_BAM_DOWNLOAD_URL+"_"+i) );
 				}
 				this.tumours.add(tInf);
+				
+				VcfInfo sangerSnvVcfInfo = new VcfInfo();
+				sangerSnvVcfInfo.setFileName(this.getMandatoryProperty(JSONUtils.SANGER_SNV_VCF_NAME+"_"+i));
+				sangerSnvVcfInfo.setIndexFileName(this.getMandatoryProperty(JSONUtils.SANGER_SNV_INDEX_FILE_NAME+"_"+i));
+				sangerSnvVcfInfo.setObjectID(this.getMandatoryProperty(JSONUtils.SANGER_SNV_VCF_OBJECT_ID+"_"+i));
+				sangerSnvVcfInfo.setIndexObjectID(this.getMandatoryProperty(JSONUtils.SANGER_SNV_INDEX_OBJECT_ID+"_"+i));
+				sangerSnvVcfInfo.setOriginatingPipeline(Pipeline.sanger);
+				sangerSnvVcfInfo.setVcfType(VCFType.snv);
+				sangerSnvVcfInfo.setOriginatingTumourAliquotID(this.getMandatoryProperty(JSONUtils.TUMOUR_ALIQUOT_ID+"_"+i));
+				this.vcfs.add(sangerSnvVcfInfo);
 			}
 			
 			this.oxoQScore = this.getMandatoryProperty(JSONUtils.OXOQ_SCORE);
@@ -243,7 +257,7 @@ public abstract class BaseOxoGWrapperWorkflow extends AbstractWorkflowDataModel 
 			this.normalMetdataURL = this.getMandatoryProperty(JSONUtils.BAM_NORMAL_METADATA_URL);
 			///this.bamTumourObjectID = this.getMandatoryProperty(JSONUtils.BAM_TUMOUR_OBJECT_ID);
 			//this.tumourMetdataURL = this.getMandatoryProperty(JSONUtils.BAM_TUMOUR_METADATA_URL);
-			this.sangerSNVVCFObjectID = this.getMandatoryProperty(JSONUtils.SANGER_SNV_VCF_OBJECT_ID);
+			//this.sangerSNVVCFObjectID = this.getMandatoryProperty(JSONUtils.SANGER_SNV_VCF_OBJECT_ID);
 			this.dkfzemblSNVVCFObjectID = this.getMandatoryProperty(JSONUtils.DKFZEMBL_SNV_VCF_OBJECT_ID);
 			this.broadSNVVCFObjectID = this.getMandatoryProperty(JSONUtils.BROAD_SNV_VCF_OBJECT_ID);
 			this.museSNVVCFObjectID = this.getMandatoryProperty(JSONUtils.MUSE_VCF_OBJECT_ID);
@@ -255,7 +269,7 @@ public abstract class BaseOxoGWrapperWorkflow extends AbstractWorkflowDataModel 
 			this.normalBAMFileName = this.getMandatoryProperty(JSONUtils.BAM_NORMAL_FILE_NAME);
 			//this.tumourBAMFileName = this.getMandatoryProperty(JSONUtils.BAM_TUMOUR_FILE_NAME);
 			
-			this.sangerSNVName = this.getMandatoryProperty(JSONUtils.SANGER_SNV_VCF_NAME);
+			//this.sangerSNVName = this.getMandatoryProperty(JSONUtils.SANGER_SNV_VCF_NAME);
 			this.broadSNVName = this.getMandatoryProperty(JSONUtils.BROAD_SNV_VCF_NAME);
 			this.dkfzEmblSNVName = this.getMandatoryProperty(JSONUtils.DKFZEMBL_SNV_VCF_NAME);
 			this.museSNVName = this.getMandatoryProperty(JSONUtils.MUSE_VCF_NAME);
@@ -264,7 +278,7 @@ public abstract class BaseOxoGWrapperWorkflow extends AbstractWorkflowDataModel 
 			this.dkfzEmblIndelName = this.getMandatoryProperty(JSONUtils.DKFZEMBL_INDEL_VCF_NAME);
 			this.broadIndelName = this.getMandatoryProperty(JSONUtils.BROAD_INDEL_VCF_NAME);
 
-			this.sangerSVName = this.getMandatoryProperty(JSONUtils.SANGER_SV_VCF_NAME);
+			//this.sangerSVName = this.getMandatoryProperty(JSONUtils.SANGER_SV_VCF_NAME);
 			this.dkfzEmblSVName = this.getMandatoryProperty(JSONUtils.DKFZEMBL_SV_VCF_NAME);
 			this.broadSVName = this.getMandatoryProperty(JSONUtils.BROAD_SV_VCF_NAME);
 
@@ -276,7 +290,7 @@ public abstract class BaseOxoGWrapperWorkflow extends AbstractWorkflowDataModel 
 			this.broadIndelVCFObjectID = this.getMandatoryProperty(JSONUtils.BROAD_INDEL_VCF_OBJECT_ID);
 			this.dkfzemblIndelVCFObjectID = this.getMandatoryProperty(JSONUtils.DKFZEMBL_INDEL_VCF_OBJECT_ID);
 			
-			this.sangerSNVIndexObjectID = this.getMandatoryProperty(JSONUtils.SANGER_SNV_INDEX_OBJECT_ID);
+			//this.sangerSNVIndexObjectID = this.getMandatoryProperty(JSONUtils.SANGER_SNV_INDEX_OBJECT_ID);
 			this.broadSNVIndexObjectID = this.getMandatoryProperty(JSONUtils.BROAD_SNV_INDEX_OBJECT_ID);
 			this.dkfzemblSNVIndexObjectID = this.getMandatoryProperty(JSONUtils.DKFZEMBL_SNV_INDEX_OBJECT_ID);
 			this.museSNVIndexObjectID = this.getMandatoryProperty(JSONUtils.MUSE_SNV_INDEX_OBJECT_ID);
@@ -309,7 +323,7 @@ public abstract class BaseOxoGWrapperWorkflow extends AbstractWorkflowDataModel 
 
 			this.normalBamIndexFileName = this.getMandatoryProperty(JSONUtils.NORMAL_BAM_INDEX_FILE_NAME);
 			//this.tumourBamIndexFileName = this.getMandatoryProperty(JSONUtils.TUMOUR_BAM_INDEX_FILE_NAME);
-			this.sangerSNVIndexFileName = this.getMandatoryProperty(JSONUtils.SANGER_SNV_INDEX_FILE_NAME);
+			//this.sangerSNVIndexFileName = this.getMandatoryProperty(JSONUtils.SANGER_SNV_INDEX_FILE_NAME);
 			this.sangerSVIndexFileName = this.getMandatoryProperty(JSONUtils.SANGER_SV_INDEX_FILE_NAME);
 			this.sangerINDELIndexFileName = this.getMandatoryProperty(JSONUtils.SANGER_INDEL_INDEX_FILE_NAME);
 			this.broadSNVIndexFileName = this.getMandatoryProperty(JSONUtils.BROAD_SNV_INDEX_FILE_NAME);
@@ -404,7 +418,7 @@ public abstract class BaseOxoGWrapperWorkflow extends AbstractWorkflowDataModel 
 				this.studyRefNameOverride = getProperty("studyRefNameOverride");
 			}
 			
-						System.out.println("DEBUG: downloadMethod: "+this.downloadMethod);
+			//System.out.println("DEBUG: downloadMethod: "+this.downloadMethod);
 			if (this.downloadMethod != null && !this.downloadMethod.equals("") && this.downloadMethod.equals(DownloadMethod.gtdownload.toString()))
 			{
 				System.out.println("DEBUG: Setting gtdownload-specific config values");

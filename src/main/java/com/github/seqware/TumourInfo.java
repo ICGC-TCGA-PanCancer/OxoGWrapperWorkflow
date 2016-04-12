@@ -9,6 +9,7 @@ class TumourInfo {
 	private String tumourBamIndexFileName;
 	private String bamTumourIndexObjectID;
 	private String bamTumourObjectID;
+	private String aliquotID;
 
 	public String getTumourMetdataURL() {
 		return this.tumourMetdataURL;
@@ -72,5 +73,13 @@ class TumourInfo {
 
 	public void setBamTumourIndexObjectID(String bamTumourIndexObjectID) {
 		this.bamTumourIndexObjectID = bamTumourIndexObjectID;
+	}
+
+	public String getAliquotID() {
+		return aliquotID;
+	}
+
+	public void setAliquotID(String aliquotID) {
+		this.aliquotID = aliquotID;
 	}
 }
