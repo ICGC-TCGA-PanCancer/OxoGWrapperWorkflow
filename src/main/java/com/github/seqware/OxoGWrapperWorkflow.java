@@ -319,6 +319,10 @@ public class OxoGWrapperWorkflow extends BaseOxoGWrapperWorkflow {
 		Predicate<? super VcfInfo> isBroadSNV = isBroad.and(isSnv.and(matchesTumourAliquotID));
 		Predicate<? super VcfInfo> isDkfzEmblSNV = isDkfzEmbl.and(isSnv.and(matchesTumourAliquotID));
 		
+		Predicate<? super VcfInfo> isSangerINDEL = isSanger.and(isIndel.and(matchesTumourAliquotID));
+		Predicate<? super VcfInfo> isBroadINDEL = isBroad.and(isIndel.and(matchesTumourAliquotID));
+		Predicate<? super VcfInfo> isDkfzEmblINDEL = isDkfzEmbl.and(isIndel.and(matchesTumourAliquotID));
+		
 		Predicate<? super VcfInfo> isSangerSV = isSanger.and(isSv.and(matchesTumourAliquotID));
 		Predicate<? super VcfInfo> isBroadSV = isBroad.and(isSv.and(matchesTumourAliquotID));
 		Predicate<? super VcfInfo> isDkfzEmblSV = isDkfzEmbl.and(isSv.and(matchesTumourAliquotID));
@@ -330,9 +334,9 @@ public class OxoGWrapperWorkflow extends BaseOxoGWrapperWorkflow {
 		String dkfzEmblSNV = (this.vcfs.stream().filter(isDkfzEmblSNV).findFirst().get()).getFileName();
 		String museSNV = (this.vcfs.stream().filter(isMuseSNV).findFirst().get()).getFileName();
 		
-		String normalizedSangerIndel = (this.normalizedIndels.stream().filter(isSangerSNV).findFirst().get()).getFileName();
-		String normalizedBroadIndel = (this.normalizedIndels.stream().filter(isBroadSNV).findFirst().get()).getFileName();
-		String normalizedDkfzEmblIndel = (this.normalizedIndels.stream().filter(isDkfzEmblSNV).findFirst().get()).getFileName();
+		String normalizedSangerIndel = (this.normalizedIndels.stream().filter(isSangerINDEL).findFirst().get()).getFileName();
+		String normalizedBroadIndel = (this.normalizedIndels.stream().filter(isBroadINDEL).findFirst().get()).getFileName();
+		String normalizedDkfzEmblIndel = (this.normalizedIndels.stream().filter(isDkfzEmblINDEL).findFirst().get()).getFileName();
 
 		String sangerSV = (this.vcfs.stream().filter(isSangerSV).findFirst().get()).getFileName();
 		String broadSV = (this.vcfs.stream().filter(isBroadSV).findFirst().get()).getFileName();
