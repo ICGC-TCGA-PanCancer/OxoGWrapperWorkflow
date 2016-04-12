@@ -10,6 +10,8 @@ import java.util.Map.Entry;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 
+import com.github.seqware.OxoGWrapperWorkflow.BAMType;
+import com.github.seqware.OxoGWrapperWorkflow.Pipeline;
 import com.github.seqware.OxoGWrapperWorkflow.VCFType;
 import com.jayway.jsonpath.Configuration;
 import com.jayway.jsonpath.DocumentContext;
@@ -17,6 +19,17 @@ import com.jayway.jsonpath.JsonPath;
 
 public abstract class JSONUtils {
 
+	public static String lookUpKeyGenerator(Pipeline p, VCFType v, String dataOrIndex, String keyType)
+	{
+		return p.toString()+"_"+v.toString()+"_"+dataOrIndex+"_"+keyType;
+	}
+	
+	public static String lookUpKeyGenerator(BAMType b, VCFType v, String dataOrIndex, String keyType)
+	{
+		return b.toString()+"_"+v.toString()+"_"+dataOrIndex+"_"+keyType;
+	}
+
+	
 	static final String OXOQ_SCORE = "OxoQScore";
 
 	// ugh... so many constants. There's probably a more elegant way to do this,
