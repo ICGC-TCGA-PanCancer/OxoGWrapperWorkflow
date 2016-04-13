@@ -313,34 +313,31 @@ public class OxoGWrapperWorkflow extends BaseOxoGWrapperWorkflow {
 	 */
 	private Job combineVCFsByType(String tumourAliquotID, Job ... parents)
 	{
-		Predicate<? super VcfInfo> matchesTumourAliquotID = p -> p.getOriginatingTumourAliquotID().equals(tumourAliquotID);
+		Predicate<? super VcfInfo> isSangerSNV = this.vcfMatchesTypePipelineTumour(isSnv,isSanger,tumourAliquotID);//isSanger.and(isSnv.and(this.matchesTumour(tumourAliquotID)));
+		Predicate<? super VcfInfo> isBroadSNV = this.vcfMatchesTypePipelineTumour(isSnv,isBroad,tumourAliquotID);//isBroad.and(isSnv.and(this.matchesTumour(tumourAliquotID)));
+		Predicate<? super VcfInfo> isDkfzEmblSNV = this.vcfMatchesTypePipelineTumour(isSnv,isDkfzEmbl,tumourAliquotID);//isDkfzEmbl.and(isSnv.and(this.matchesTumour(tumourAliquotID)));
+		Predicate<? super VcfInfo> isMuseSNV = this.vcfMatchesTypePipelineTumour(isSnv,isMuse,tumourAliquotID);//isMuse.and(isSnv.and(this.matchesTumour(tumourAliquotID)));
 		
-		Predicate<? super VcfInfo> isSangerSNV = isSanger.and(isSnv.and(matchesTumourAliquotID));
-		Predicate<? super VcfInfo> isBroadSNV = isBroad.and(isSnv.and(matchesTumourAliquotID));
-		Predicate<? super VcfInfo> isDkfzEmblSNV = isDkfzEmbl.and(isSnv.and(matchesTumourAliquotID));
+		Predicate<? super VcfInfo> isSangerINDEL = this.vcfMatchesTypePipelineTumour(isIndel,isSanger,tumourAliquotID);//isSanger.and(isIndel.and(this.matchesTumour(tumourAliquotID)));
+		Predicate<? super VcfInfo> isBroadINDEL = this.vcfMatchesTypePipelineTumour(isIndel,isBroad,tumourAliquotID);//isBroad.and(isIndel.and(this.matchesTumour(tumourAliquotID)));
+		Predicate<? super VcfInfo> isDkfzEmblINDEL = this.vcfMatchesTypePipelineTumour(isIndel,isDkfzEmbl,tumourAliquotID);//isDkfzEmbl.and(isIndel.and(this.matchesTumour(tumourAliquotID)));
 		
-		Predicate<? super VcfInfo> isSangerINDEL = isSanger.and(isIndel.and(matchesTumourAliquotID));
-		Predicate<? super VcfInfo> isBroadINDEL = isBroad.and(isIndel.and(matchesTumourAliquotID));
-		Predicate<? super VcfInfo> isDkfzEmblINDEL = isDkfzEmbl.and(isIndel.and(matchesTumourAliquotID));
-		
-		Predicate<? super VcfInfo> isSangerSV = isSanger.and(isSv.and(matchesTumourAliquotID));
-		Predicate<? super VcfInfo> isBroadSV = isBroad.and(isSv.and(matchesTumourAliquotID));
-		Predicate<? super VcfInfo> isDkfzEmblSV = isDkfzEmbl.and(isSv.and(matchesTumourAliquotID));
-		
-		Predicate<? super VcfInfo> isMuseSNV = isMuse.and(isSnv.and(matchesTumourAliquotID));
+		Predicate<? super VcfInfo> isSangerSV = this.vcfMatchesTypePipelineTumour(isSv,isSanger,tumourAliquotID);//isSanger.and(isSv.and(this.matchesTumour(tumourAliquotID)));
+		Predicate<? super VcfInfo> isBroadSV = this.vcfMatchesTypePipelineTumour(isSv,isBroad,tumourAliquotID);//isBroad.and(isSv.and(this.matchesTumour(tumourAliquotID)));
+		Predicate<? super VcfInfo> isDkfzEmblSV = this.vcfMatchesTypePipelineTumour(isSv,isDkfzEmbl,tumourAliquotID);//isDkfzEmbl.and(isSv.and(this.matchesTumour(tumourAliquotID)));
 				
-		String sangerSNV = (this.vcfs.stream().filter(isSangerSNV).findFirst().get()).getFileName();
-		String broadSNV = (this.vcfs.stream().filter(isBroadSNV).findFirst().get()).getFileName();
-		String dkfzEmblSNV = (this.vcfs.stream().filter(isDkfzEmblSNV).findFirst().get()).getFileName();
-		String museSNV = (this.vcfs.stream().filter(isMuseSNV).findFirst().get()).getFileName();
+		String sangerSNV = this.getVcfName(isSangerSNV,this.vcfs);
+		String broadSNV = this.getVcfName(isBroadSNV,this.vcfs);
+		String dkfzEmblSNV = this.getVcfName(isDkfzEmblSNV,this.vcfs);
+		String museSNV = this.getVcfName(isMuseSNV,this.vcfs);
 		
-		String normalizedSangerIndel = (this.normalizedIndels.stream().filter(isSangerINDEL).findFirst().get()).getFileName();
-		String normalizedBroadIndel = (this.normalizedIndels.stream().filter(isBroadINDEL).findFirst().get()).getFileName();
-		String normalizedDkfzEmblIndel = (this.normalizedIndels.stream().filter(isDkfzEmblINDEL).findFirst().get()).getFileName();
+		String normalizedSangerIndel = this.getVcfName(isSangerINDEL,this.normalizedIndels);
+		String normalizedBroadIndel = this.getVcfName(isBroadINDEL,this.normalizedIndels);
+		String normalizedDkfzEmblIndel = this.getVcfName(isDkfzEmblINDEL,this.normalizedIndels);
 
-		String sangerSV = (this.vcfs.stream().filter(isSangerSV).findFirst().get()).getFileName();
-		String broadSV = (this.vcfs.stream().filter(isBroadSV).findFirst().get()).getFileName();
-		String dkfzEmblSV = (this.vcfs.stream().filter(isDkfzEmblSV).findFirst().get()).getFileName();
+		String sangerSV = this.getVcfName(isSangerSV,this.vcfs);
+		String broadSV = this.getVcfName(isBroadSV,this.vcfs);
+		String dkfzEmblSV = this.getVcfName(isDkfzEmblSV,this.vcfs);
 
 		
 		//Create symlinks to the files in the proper directory.
@@ -406,10 +403,23 @@ public class OxoGWrapperWorkflow extends BaseOxoGWrapperWorkflow {
 
 		return vcfCombineJob;
 	}
+
+	private String getVcfName(Predicate<? super VcfInfo> vcfPredicate, List<VcfInfo> vcfList) {
+		return (vcfList.stream().filter(vcfPredicate).findFirst().get()).getFileName();
+	}
+	
+	private Predicate<? super VcfInfo> vcfMatchesTypePipelineTumour(Predicate<VcfInfo> vcfPredicate, Predicate<VcfInfo> pipelinePredicate, String tumourAliquotID)
+	{
+		return pipelinePredicate.and(vcfPredicate).and(this.matchesTumour(tumourAliquotID));
+	}
+	
+	private Predicate<? super VcfInfo> matchesTumour(String tumourAliquotID) {
+		return p -> p.getOriginatingTumourAliquotID().equals(tumourAliquotID);
+	}
 	
 	/**
-	 * Runs the OxoG filtering program inside the Broad's OxoG docker container. Output file(s) will be in /datastore/oxog_results/ and the working files will 
-	 * be in /datastore/oxog_workspace
+	 * Runs the OxoG filtering program inside the Broad's OxoG docker container. Output file(s) will be in /datastore/oxog_results/tumour_${tumourAliquotID} and the working files will 
+	 * be in /datastore/oxog_workspace/tumour_${tumourAliquotID}
 	 * @param parent
 	 * @return
 	 */
@@ -421,29 +431,27 @@ public class OxoGWrapperWorkflow extends BaseOxoGWrapperWorkflow {
 		String pathToResults = "/datastore/oxog_results/tumour_"+tumourAliquotID+"/cga/fh/pcawg_pipeline/jobResults_pipette/jobs/"+this.normalAliquotID+"/links_for_gnos/annotate_failed_sites_to_vcfs/";
 		String pathToUploadDir = "/datastore/files_for_upload/";
 		
-		Predicate<? super VcfInfo> matchesTumourAliquotID = p -> p.getOriginatingTumourAliquotID().equals(tumourAliquotID);
+		Predicate<? super VcfInfo> isSangerSNV = this.vcfMatchesTypePipelineTumour(isSnv, isSanger, tumourAliquotID);//isSanger.and(isSnv.and(this.matchesTumour(tumourAliquotID)));
+		Predicate<? super VcfInfo> isBroadSNV = this.vcfMatchesTypePipelineTumour(isSnv, isBroad, tumourAliquotID);//isBroad.and(isSnv.and(this.matchesTumour(tumourAliquotID)));
+		Predicate<? super VcfInfo> isDkfzEmblSNV = this.vcfMatchesTypePipelineTumour(isSnv, isDkfzEmbl, tumourAliquotID);//isDkfzEmbl.and(isSnv.and(this.matchesTumour(tumourAliquotID)));
+		Predicate<? super VcfInfo> isMuseSNV = this.vcfMatchesTypePipelineTumour(isSnv, isMuse, tumourAliquotID);//isMuse.and(isSnv.and(this.matchesTumour(tumourAliquotID)));
 		
-		Predicate<? super VcfInfo> isSangerSNV = isSanger.and(isSnv.and(matchesTumourAliquotID));
-		Predicate<? super VcfInfo> isBroadSNV = isBroad.and(isSnv.and(matchesTumourAliquotID));
-		Predicate<? super VcfInfo> isDkfzEmblSNV = isDkfzEmbl.and(isSnv.and(matchesTumourAliquotID));
-		Predicate<? super VcfInfo> isMuseSNV = isMuse.and(isSnv.and(matchesTumourAliquotID));
-		
-		Predicate<? super VcfInfo> isSangerINDEL = isSanger.and(isIndel.and(matchesTumourAliquotID));
-		Predicate<? super VcfInfo> isBroadINDEL = isBroad.and(isIndel.and(matchesTumourAliquotID));
-		Predicate<? super VcfInfo> isDkfzEmblINDEL = isDkfzEmbl.and(isIndel.and(matchesTumourAliquotID));
+		Predicate<? super VcfInfo> isSangerINDEL = this.vcfMatchesTypePipelineTumour(isIndel,isSanger,tumourAliquotID);//isSanger.and(isIndel.and(this.matchesTumour(tumourAliquotID)));
+		Predicate<? super VcfInfo> isBroadINDEL = this.vcfMatchesTypePipelineTumour(isIndel,isBroad,tumourAliquotID);//isBroad.and(isIndel.and(this.matchesTumour(tumourAliquotID)));
+		Predicate<? super VcfInfo> isDkfzEmblINDEL = this.vcfMatchesTypePipelineTumour(isIndel,isDkfzEmbl,tumourAliquotID);//isDkfzEmbl.and(isIndel.and(this.matchesTumour(tumourAliquotID)));
 				
-		String sangerSNV = (this.vcfs.stream().filter(isSangerSNV).findFirst().get()).getFileName();
-		String broadSNV = (this.vcfs.stream().filter(isBroadSNV).findFirst().get()).getFileName();
-		String dkfzEmblSNV = (this.vcfs.stream().filter(isDkfzEmblSNV).findFirst().get()).getFileName();
-		String museSNV = (this.vcfs.stream().filter(isMuseSNV).findFirst().get()).getFileName();
+		String sangerSNV = this.getVcfName(isSangerSNV,this.vcfs);
+		String broadSNV = this.getVcfName(isBroadSNV,this.vcfs);
+		String dkfzEmblSNV = this.getVcfName(isDkfzEmblSNV,this.vcfs);
+		String museSNV = this.getVcfName(isMuseSNV,this.vcfs);
 		
-		String extractedSangerSNV = (this.extractedSnvsFromIndels.stream().filter(isSangerSNV).findFirst().get()).getFileName();
-		String extractedBroadSNV = (this.extractedSnvsFromIndels.stream().filter(isBroadSNV).findFirst().get()).getFileName();
-		String extractedDkfzEmblSNV = (this.extractedSnvsFromIndels.stream().filter(isDkfzEmblSNV).findFirst().get()).getFileName();
+		String extractedSangerSNV = this.getVcfName(isSangerSNV,this.extractedSnvsFromIndels);//(this.extractedSnvsFromIndels.stream().filter(isSangerSNV).findFirst().get()).getFileName();
+		String extractedBroadSNV = this.getVcfName(isBroadSNV,this.extractedSnvsFromIndels);//(this.extractedSnvsFromIndels.stream().filter(isBroadSNV).findFirst().get()).getFileName();
+		String extractedDkfzEmblSNV = this.getVcfName(isDkfzEmblSNV,this.extractedSnvsFromIndels);//(this.extractedSnvsFromIndels.stream().filter(isDkfzEmblSNV).findFirst().get()).getFileName();
 		
-		String normalizedSangerIndel = (this.normalizedIndels.stream().filter(isSangerINDEL).findFirst().get()).getFileName();
-		String normalizedBroadIndel = (this.normalizedIndels.stream().filter(isBroadINDEL).findFirst().get()).getFileName();
-		String normalizedDkfzEmblIndel = (this.normalizedIndels.stream().filter(isDkfzEmblINDEL).findFirst().get()).getFileName();
+		String normalizedSangerIndel = this.getVcfName(isSangerINDEL,this.normalizedIndels);//(this.normalizedIndels.stream().filter(isSangerINDEL).findFirst().get()).getFileName();
+		String normalizedBroadIndel = this.getVcfName(isBroadINDEL,this.normalizedIndels);//(this.normalizedIndels.stream().filter(isBroadINDEL).findFirst().get()).getFileName();
+		String normalizedDkfzEmblIndel = this.getVcfName(isDkfzEmblINDEL,this.normalizedIndels);//(this.normalizedIndels.stream().filter(isDkfzEmblINDEL).findFirst().get()).getFileName();
 		
 		if (!this.skipOxoG)
 		{
@@ -806,9 +814,9 @@ public class OxoGWrapperWorkflow extends BaseOxoGWrapperWorkflow {
 			//Remember: MUSE files do not get PASS-filtered. Also, there is no INDEL so there cannot be any SNVs extracted from INDELs.
 			String museOxogSNVFileName = this.filesForUpload.stream().filter(p -> p.toUpperCase().contains("MUSE") && p.endsWith(".oxoG.vcf.gz")).findFirst().get();
 			
-			String normalizedBroadIndel = this.normalizedIndels.stream().filter(isBroad.and(p -> p.getOriginatingTumourAliquotID().equals(tumourAliquotID))).findFirst().get().getFileName();
-			String normalizedSangerIndel = this.normalizedIndels.stream().filter(isSanger.and(p -> p.getOriginatingTumourAliquotID().equals(tumourAliquotID))).findFirst().get().getFileName();
-			String normalizedDkfzEmblIndel = this.normalizedIndels.stream().filter(isDkfzEmbl.and(p -> p.getOriginatingTumourAliquotID().equals(tumourAliquotID))).findFirst().get().getFileName();
+			String normalizedBroadIndel = this.normalizedIndels.stream().filter(isBroad.and(matchesTumour(tumourAliquotID))).findFirst().get().getFileName();
+			String normalizedSangerIndel = this.normalizedIndels.stream().filter(isSanger.and(matchesTumour(tumourAliquotID))).findFirst().get().getFileName();
+			String normalizedDkfzEmblIndel = this.normalizedIndels.stream().filter(isDkfzEmbl.and(matchesTumour(tumourAliquotID))).findFirst().get().getFileName();
 			
 			Job broadIndelAnnotatorJob = this.runAnnotator("indel", Pipeline.broad, normalizedBroadIndel, tInf.getTumourMinibamPath(),this.normalMinibamPath, tInf.getAliquotID(), parents);
 			Job dfkzEmblIndelAnnotatorJob = this.runAnnotator("indel", Pipeline.dkfz_embl, normalizedDkfzEmblIndel, tInf.getTumourMinibamPath(), this.normalMinibamPath, tInf.getAliquotID(), broadIndelAnnotatorJob);
