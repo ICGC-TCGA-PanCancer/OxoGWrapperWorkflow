@@ -237,9 +237,9 @@ public class OxoGWrapperWorkflow extends BaseOxoGWrapperWorkflow {
 	 */
 	private Job installTools(Job parent)
 	{
-		Job installTabixJob = this.getWorkflow().createBashJob("install tools: tabix and bgzip");
+		Job installTabixJob = this.getWorkflow().createBashJob("install tools");
 		
-		installTabixJob.setCommand("sudo apt-get install tabix ");
+		installTabixJob.setCommand("sudo apt-get install tabix libstring-random-perl -y ");
 		installTabixJob.addParent(parent);
 		return installTabixJob;
 	}
@@ -347,16 +347,16 @@ public class OxoGWrapperWorkflow extends BaseOxoGWrapperWorkflow {
 		Job prepVCFs = this.getWorkflow().createBashJob("create links to VCFs");
 		String prepCommand = "";
 		prepCommand+="\n ( ( [ -d /datastore/merged_vcfs ] || sudo mkdir /datastore/merged_vcfs/ ) && sudo chmod a+rw /datastore/merged_vcfs && \\\n"
-		+"\n ln -s /datastore/vcf/"+Pipeline.sanger+"/"+this.sangerGnosID+"/"+sangerSNV+" /datastore/vcf/"+Pipeline.sanger+"_snv.vcf && \\\n"
-		+" ln -s /datastore/vcf/"+Pipeline.broad+"/"+this.broadGnosID+"/"+broadSNV+" /datastore/vcf/"+Pipeline.broad+"_snv.vcf && \\\n"
-		+" ln -s /datastore/vcf/"+Pipeline.dkfz_embl+"/"+this.dkfzemblGnosID+"/"+dkfzEmblSNV+" /datastore/vcf/"+Pipeline.dkfz_embl+"_snv.vcf && \\\n"
-		+" ln -s /datastore/vcf/"+Pipeline.muse+"/"+this.museGnosID+"/"+museSNV+" /datastore/vcf/"+Pipeline.muse+"_snv.vcf && \\\n"
-		+" ln -s "+normalizedSangerIndel+" /datastore/vcf/"+Pipeline.sanger+"_indel.vcf && \\\n"
-		+" ln -s "+normalizedBroadIndel+" /datastore/vcf/"+Pipeline.broad+"_indel.vcf && \\\n"
-		+" ln -s "+normalizedDkfzEmblIndel+" /datastore/vcf/"+Pipeline.dkfz_embl+"_indel.vcf && \\\n"
-		+" ln -s /datastore/vcf/"+Pipeline.sanger+"/"+this.sangerGnosID+"/"+sangerSV+" /datastore/vcf/"+Pipeline.sanger+"_sv.vcf && \\\n"
-		+" ln -s /datastore/vcf/"+Pipeline.broad+"/"+this.broadGnosID+"/"+broadSV+" /datastore/vcf/"+Pipeline.broad+"_sv.vcf && \\\n"
-		+" ln -s /datastore/vcf/"+Pipeline.dkfz_embl+"/"+this.dkfzemblGnosID+"/"+dkfzEmblSV+" /datastore/vcf/"+Pipeline.dkfz_embl+"_sv.vcf ) ";
+		+"\n ln -s /datastore/vcf/"+Pipeline.sanger+"/"+this.sangerGnosID+"/"+sangerSNV+" /datastore/vcf/"+tumourAliquotID+"_"+Pipeline.sanger+"_snv.vcf && \\\n"
+		+" ln -s /datastore/vcf/"+Pipeline.broad+"/"+this.broadGnosID+"/"+broadSNV+" /datastore/vcf/"+tumourAliquotID+"_"+Pipeline.broad+"_snv.vcf && \\\n"
+		+" ln -s /datastore/vcf/"+Pipeline.dkfz_embl+"/"+this.dkfzemblGnosID+"/"+dkfzEmblSNV+" /datastore/vcf/"+tumourAliquotID+"_"+Pipeline.dkfz_embl+"_snv.vcf && \\\n"
+		+" ln -s /datastore/vcf/"+Pipeline.muse+"/"+this.museGnosID+"/"+museSNV+" /datastore/vcf/"+tumourAliquotID+"_"+Pipeline.muse+"_snv.vcf && \\\n"
+		+" ln -s "+normalizedSangerIndel+" /datastore/vcf/"+tumourAliquotID+"_"+Pipeline.sanger+"_indel.vcf && \\\n"
+		+" ln -s "+normalizedBroadIndel+" /datastore/vcf/"+tumourAliquotID+"_"+Pipeline.broad+"_indel.vcf && \\\n"
+		+" ln -s "+normalizedDkfzEmblIndel+" /datastore/vcf/"+tumourAliquotID+"_"+Pipeline.dkfz_embl+"_indel.vcf && \\\n"
+		+" ln -s /datastore/vcf/"+Pipeline.sanger+"/"+this.sangerGnosID+"/"+sangerSV+" /datastore/vcf/"+tumourAliquotID+"_"+Pipeline.sanger+"_sv.vcf && \\\n"
+		+" ln -s /datastore/vcf/"+Pipeline.broad+"/"+this.broadGnosID+"/"+broadSV+" /datastore/vcf/"+tumourAliquotID+"_"+Pipeline.broad+"_sv.vcf && \\\n"
+		+" ln -s /datastore/vcf/"+Pipeline.dkfz_embl+"/"+this.dkfzemblGnosID+"/"+dkfzEmblSV+" /datastore/vcf/"+tumourAliquotID+"_"+Pipeline.dkfz_embl+"_sv.vcf ) ";
 		
 		String moveToFailed = GitUtils.gitMoveCommand("running-jobs","failed-jobs",this.JSONlocation + "/" + this.JSONrepoName + "/" + this.JSONfolderName,this.JSONfileName, this.gitMoveTestMode, this.getWorkflowBaseDir() + "/scripts/");
 		prepCommand += (" || " + moveToFailed);
@@ -372,9 +372,9 @@ public class OxoGWrapperWorkflow extends BaseOxoGWrapperWorkflow {
 		
 		//run the merge script, then bgzip and index them all.
 		String combineCommand = "( perl "+this.getWorkflowBaseDir()+"/scripts/vcf_merge_by_type.pl "
-				+ Pipeline.broad+"_snv.vcf "+Pipeline.sanger+"_snv.vcf "+Pipeline.dkfz_embl+"_snv.vcf "+Pipeline.muse+"_snv.vcf "
-				+ Pipeline.broad+"_indel.vcf "+Pipeline.sanger+"_indel.vcf "+Pipeline.dkfz_embl+"_indel.vcf " 
-				+ Pipeline.broad+"_sv.vcf "+Pipeline.sanger+"_sv.vcf "+Pipeline.dkfz_embl+"_sv.vcf "
+				+ tumourAliquotID + "_" + Pipeline.broad + "_snv.vcf "+ tumourAliquotID + "_" + Pipeline.sanger+"_snv.vcf "+ tumourAliquotID + "_" + Pipeline.dkfz_embl+"_snv.vcf "+ tumourAliquotID + "_" + Pipeline.muse+"_snv.vcf "
+				+ tumourAliquotID + "_" + Pipeline.broad+"_indel.vcf "+ tumourAliquotID + "_" + Pipeline.sanger+"_indel.vcf "+ tumourAliquotID + "_" + Pipeline.dkfz_embl+"_indel.vcf " 
+				+ tumourAliquotID + "_" + Pipeline.broad+"_sv.vcf "+ tumourAliquotID + "_" + Pipeline.sanger+"_sv.vcf "+ tumourAliquotID + "_" + Pipeline.dkfz_embl+"_sv.vcf "
 				+ " /datastore/vcf/ /datastore/merged_vcfs/ "
 				//rename the merged VCFs to ensure they contain the correct aliquot IDs.
 				+ " && cd /datastore/merged_vcfs/ "
@@ -537,10 +537,14 @@ public class OxoGWrapperWorkflow extends BaseOxoGWrapperWorkflow {
 		
 		if (!this.skipVariantBam)
 		{
+			String snvVcf = mergedVcfs.stream().filter(isSnv).findFirst().get().getFileName(); 
+			String svVcf = mergedVcfs.stream().filter(isSv).findFirst().get().getFileName();
+			String indelVcf = mergedVcfs.stream().filter(isIndel).findFirst().get().getFileName();
 			String command = TemplateUtils.getRenderedTemplate(Arrays.stream( new String[][] {
 				{ "containerNameSuffix", bamType + (bamType == BAMType.tumour ? "_with_tumour_"+tumourID:"") },
 				{ "minibamName", minibamName+".bam"},  {"snvPadding", String.valueOf(this.snvPadding)}, {"svPadding", String.valueOf(this.svPadding)},
-				{ "indelPadding", String.valueOf(this.indelPadding) }, { "pathToBam", bamPath }
+				{ "indelPadding", String.valueOf(this.indelPadding) }, { "pathToBam", bamPath },
+				{ "snvVcf", snvVcf }, { "svVcf", svVcf }, { "indelVcf", indelVcf }
 			}).collect(this.collectToMap), "runVariantbam.template" );
 			
 			String moveToFailed = GitUtils.gitMoveCommand("running-jobs","failed-jobs",this.JSONlocation + "/" + this.JSONrepoName + "/" + this.JSONfolderName,this.JSONfileName, this.gitMoveTestMode, this.getWorkflowBaseDir() + "/scripts/");
@@ -871,11 +875,11 @@ public class OxoGWrapperWorkflow extends BaseOxoGWrapperWorkflow {
 			Job pullRepo = GitUtils.pullRepo(this.getWorkflow(), this.GITPemFile, this.JSONrepo, this.JSONrepoName, this.JSONlocation);
 			pullRepo.addParent(copy);
 			
-			Job installTabix = this.installTools(copy);
+			Job installTools = this.installTools(copy);
 			
 			// indicate job is in downloading stage.
 			String pathToScripts = this.getWorkflowBaseDir() + "/scripts";
-			Job move2download = GitUtils.gitMove("queued-jobs", "downloading-jobs", this.getWorkflow(), this.JSONlocation, this.JSONrepoName, this.JSONfolderName, this.GITname, this.GITemail, this.gitMoveTestMode, this.JSONfileName, pathToScripts ,installTabix, pullRepo);
+			Job move2download = GitUtils.gitMove("queued-jobs", "downloading-jobs", this.getWorkflow(), this.JSONlocation, this.JSONrepoName, this.JSONfolderName, this.GITname, this.GITemail, this.gitMoveTestMode, this.JSONfileName, pathToScripts ,installTools, pullRepo);
 			Job move2running;
 			if (!skipDownload) {
 				//Download jobs. VCFs downloading serial. Trying to download all in parallel seems to put too great a strain on the system 
@@ -1000,11 +1004,13 @@ public class OxoGWrapperWorkflow extends BaseOxoGWrapperWorkflow {
 			
 			//update all filenames to include ".pass-filtered."
 			Function<String,String> addPassFilteredSuffix = (x) -> { return x.replace(".vcf.gz",".pass-filtered.vcf.gz"); };
-			
-			
 			for (VcfInfo vInfo : this.vcfs)
 			{
-				vInfo.setFileName(addPassFilteredSuffix.apply( vInfo.getFileName() ) );
+				//...except for MUSE filenames.
+				if (vInfo.getOriginatingPipeline()!=Pipeline.muse)
+				{
+					vInfo.setFileName(addPassFilteredSuffix.apply( vInfo.getFileName() ) );
+				}
 			}
 			
 			// OxoG will run after move2running. Move2running will run after all the jobs that perform input file downloads and file preprocessing have finished.
@@ -1014,13 +1020,13 @@ public class OxoGWrapperWorkflow extends BaseOxoGWrapperWorkflow {
 			{
 			
 				Job sangerPreprocessVCF = this.preProcessIndelVCF(sangerPassFilter, Pipeline.sanger,"/"+ this.sangerGnosID +"/"+ this.vcfs.stream().filter(isSanger.and(isIndel))
-																																					.map(m -> m.getFileName()),
+																																					.map(m -> m.getFileName()).findFirst().get(),
 																																this.tumours.get(i).getAliquotID());
 				Job dkfzEmblPreprocessVCF = this.preProcessIndelVCF(dkfzemblPassFilter, Pipeline.dkfz_embl, "/"+ this.dkfzemblGnosID +"/"+ this.vcfs.stream().filter(isDkfzEmbl.and(isIndel))
-																																							.map(m -> m.getFileName()),
+																																							.map(m -> m.getFileName()).findFirst().get(),
 																																this.tumours.get(i).getAliquotID());
 				Job broadPreprocessVCF = this.preProcessIndelVCF(broadPassFilter, Pipeline.broad, "/"+ this.broadGnosID +"/"+ this.vcfs.stream().filter(isBroad.and(isIndel))
-																																				.map(m -> m.getFileName()),
+																																				.map(m -> m.getFileName()).findFirst().get(),
 																																this.tumours.get(i).getAliquotID());
 				preprocessJobs.add(broadPreprocessVCF);
 				preprocessJobs.add(sangerPreprocessVCF);
