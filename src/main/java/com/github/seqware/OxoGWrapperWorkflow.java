@@ -427,6 +427,10 @@ public class OxoGWrapperWorkflow extends BaseOxoGWrapperWorkflow {
 		Predicate<? super VcfInfo> isBroadSNV = isBroad.and(isSnv.and(matchesTumourAliquotID));
 		Predicate<? super VcfInfo> isDkfzEmblSNV = isDkfzEmbl.and(isSnv.and(matchesTumourAliquotID));
 		Predicate<? super VcfInfo> isMuseSNV = isMuse.and(isSnv.and(matchesTumourAliquotID));
+		
+		Predicate<? super VcfInfo> isSangerINDEL = isSanger.and(isIndel.and(matchesTumourAliquotID));
+		Predicate<? super VcfInfo> isBroadINDEL = isBroad.and(isIndel.and(matchesTumourAliquotID));
+		Predicate<? super VcfInfo> isDkfzEmblINDEL = isDkfzEmbl.and(isIndel.and(matchesTumourAliquotID));
 				
 		String sangerSNV = (this.vcfs.stream().filter(isSangerSNV).findFirst().get()).getFileName();
 		String broadSNV = (this.vcfs.stream().filter(isBroadSNV).findFirst().get()).getFileName();
@@ -437,9 +441,9 @@ public class OxoGWrapperWorkflow extends BaseOxoGWrapperWorkflow {
 		String extractedBroadSNV = (this.extractedSnvsFromIndels.stream().filter(isBroadSNV).findFirst().get()).getFileName();
 		String extractedDkfzEmblSNV = (this.extractedSnvsFromIndels.stream().filter(isDkfzEmblSNV).findFirst().get()).getFileName();
 		
-		String normalizedSangerIndel = (this.normalizedIndels.stream().filter(isSangerSNV).findFirst().get()).getFileName();
-		String normalizedBroadIndel = (this.normalizedIndels.stream().filter(isBroadSNV).findFirst().get()).getFileName();
-		String normalizedDkfzEmblIndel = (this.normalizedIndels.stream().filter(isDkfzEmblSNV).findFirst().get()).getFileName();
+		String normalizedSangerIndel = (this.normalizedIndels.stream().filter(isSangerINDEL).findFirst().get()).getFileName();
+		String normalizedBroadIndel = (this.normalizedIndels.stream().filter(isBroadINDEL).findFirst().get()).getFileName();
+		String normalizedDkfzEmblIndel = (this.normalizedIndels.stream().filter(isDkfzEmblINDEL).findFirst().get()).getFileName();
 		
 		if (!this.skipOxoG)
 		{
@@ -796,7 +800,7 @@ public class OxoGWrapperWorkflow extends BaseOxoGWrapperWorkflow {
 			String dkfzEmblOxoGSNVFromIndelFileName = this.filesForUpload.stream().filter(p -> (p.contains(Pipeline.dkfz_embl.toString()) && isExtractedSNV.test(p) )).collect(Collectors.toList()).get(0);
 
 			//Remember: MUSE files do not get PASS-filtered. Also, there is no INDEL so there cannot be any SNVs extracted from INDELs.
-			String museOxogSNVFileName = this.filesForUpload.stream().filter(p -> p.contains("MUSE") && p.endsWith("somatic.snv_mnv.oxoG.vcf.gz")).collect(Collectors.toList()).get(0);
+			String museOxogSNVFileName = this.filesForUpload.stream().filter(p -> p.toUpperCase().contains("MUSE") && p.endsWith(".oxoG.vcf.gz")).findFirst().get();
 			
 			String normalizedBroadIndel = this.normalizedIndels.stream().filter(isBroad.and(p -> p.getOriginatingTumourAliquotID().equals(tumourAliquotID))).findFirst().get().getFileName();
 			String normalizedSangerIndel = this.normalizedIndels.stream().filter(isSanger.and(p -> p.getOriginatingTumourAliquotID().equals(tumourAliquotID))).findFirst().get().getFileName();
