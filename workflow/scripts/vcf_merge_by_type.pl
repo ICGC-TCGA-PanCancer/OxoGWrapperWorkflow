@@ -92,9 +92,9 @@ sub sort_and_index {
   my ($file) = @_;
   my @parts = split /\//, $file;
   my $filename = $parts[-1];
-  
-  my $rnd = random_regex('\w{16}');
-  my $cmd = "sudo docker run --rm --name=sort_merged_vcf_$rnd \\
+  my $rnd = new String::Random;
+  my $randomString = $rnd->randregex('\w{16}');
+  my $cmd = "sudo docker run --rm --name=sort_merged_vcf_$randomString \\
         -v $file.vcf:/input.vcf:rw \\
         -v /datastore/refdata/public:/ref \\
         -v $out_dir:/outdir/:rw \\
