@@ -365,19 +365,21 @@ public class OxoGWrapperWorkflow extends BaseOxoGWrapperWorkflow {
 			prepVCFs.addParent(parent);
 		}
 		
-		Job vcfCombineJob = this.getWorkflow().createBashJob("combining VCFs by type");
+		Job vcfCombineJob = this.getWorkflow().createBashJob("combining VCFs by type for tumour "+tumourAliquotID);
 		
 		//run the merge script, then bgzip and index them all.
-		String combineCommand = "( perl "+this.getWorkflowBaseDir()+"/scripts/vcf_merge_by_type.pl "
+		String combineCommand = "(sudo mkdir -p /datastore/merged_vcfs/"+tumourAliquotID+"/ "
+								+ " && sudo chmod a+rw /datastore/merged_vcfs/"+tumourAliquotID+"/ "
+				+ " && perl "+this.getWorkflowBaseDir()+"/scripts/vcf_merge_by_type.pl "
 				+ tumourAliquotID + "_" + Pipeline.broad + "_snv.vcf "+ tumourAliquotID + "_" + Pipeline.sanger+"_snv.vcf "+ tumourAliquotID + "_" + Pipeline.dkfz_embl+"_snv.vcf "+ tumourAliquotID + "_" + Pipeline.muse+"_snv.vcf "
 				+ tumourAliquotID + "_" + Pipeline.broad+"_indel.vcf "+ tumourAliquotID + "_" + Pipeline.sanger+"_indel.vcf "+ tumourAliquotID + "_" + Pipeline.dkfz_embl+"_indel.vcf " 
 				+ tumourAliquotID + "_" + Pipeline.broad+"_sv.vcf "+ tumourAliquotID + "_" + Pipeline.sanger+"_sv.vcf "+ tumourAliquotID + "_" + Pipeline.dkfz_embl+"_sv.vcf "
-				+ " /datastore/vcf/ /datastore/merged_vcfs/ "
+				+ " /datastore/vcf/ /datastore/merged_vcfs/"+tumourAliquotID+"/"
 				//rename the merged VCFs to ensure they contain the correct aliquot IDs.
-				+ " && cd /datastore/merged_vcfs/ "
-				+ " && mv snv.clean.sorted.vcf snv."+tumourAliquotID+".clean.sorted.vcf "
-				+ " && mv sv.clean.sorted.vcf sv."+tumourAliquotID+".clean.sorted.vcf "
-				+ " && mv indel.clean.sorted.vcf indel."+tumourAliquotID+".clean.sorted.vcf ) || "+moveToFailed;
+				+ " && cd /datastore/merged_vcfs/"+tumourAliquotID+"/ "
+				+ " && cp snv.clean.sorted.vcf ../snv."+tumourAliquotID+".clean.sorted.vcf "
+				+ " && cp sv.clean.sorted.vcf ../sv."+tumourAliquotID+".clean.sorted.vcf "
+				+ " && cp indel.clean.sorted.vcf ../indel."+tumourAliquotID+".clean.sorted.vcf ) || "+moveToFailed;
 
 		vcfCombineJob.setCommand(combineCommand);
 		vcfCombineJob.addParent(prepVCFs);
