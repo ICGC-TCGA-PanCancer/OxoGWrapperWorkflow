@@ -48,7 +48,6 @@
 
 
 ( ([ -d {{ pathToUploadDir }} ] || mkdir -p {{ pathToUploadDir }}) \
-	&& cp /datastore/oxog_results/tumour_{{ tumourID }}/{{ aliquotID }}.gnos_files.tar {{ pathToUploadDir }} \
 	&& cp {{ pathToResults }}/*.vcf.gz  {{ pathToUploadDir }} \
 	&& cp {{ pathToResults }}/*.vcf.gz.tbi   {{ pathToUploadDir }} \
 	&& cp {{ broadNormalizedIndelVCFName }}  {{ pathToUploadDir }} \
