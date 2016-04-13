@@ -1,4 +1,5 @@
 use strict;
+use String::Random;
 
 # this creates a merge VCF by variant type e.g. SNV, indel, SV
 # this produces a very simple VCF and also handles merging multiple variants
@@ -91,7 +92,9 @@ sub sort_and_index {
   my ($file) = @_;
   my @parts = split /\//, $file;
   my $filename = $parts[-1];
-  my $cmd = "sudo docker run --rm --name=sort_merged_vcf \\
+  
+  my $rnd = random_regex('\w{16}');
+  my $cmd = "sudo docker run --rm --name=sort_merged_vcf_$rnd \\
         -v $file.vcf:/input.vcf:rw \\
         -v /datastore/refdata/public:/ref \\
         -v $out_dir:/outdir/:rw \\
