@@ -160,7 +160,7 @@ public class OxoGWrapperWorkflow extends BaseOxoGWrapperWorkflow {
 	 * @return
 	 */
 	private Job getVCF(Job parentJob, DownloadMethod downloadMethod, Pipeline workflowName, String ... objectIDs) {
-		System.out.printf("DEBUG: getVCF: "+downloadMethod + " ; "+ workflowName + " ; %s\n", objectIDs);
+		//System.out.printf("DEBUG: getVCF: "+downloadMethod + " ; "+ workflowName + " ; %s\n", objectIDs);
 		if (objectIDs == null || objectIDs.length == 0)
 		{
 			throw new RuntimeException("Cannot have empty objectIDs!");
@@ -253,7 +253,7 @@ public class OxoGWrapperWorkflow extends BaseOxoGWrapperWorkflow {
 	 */
 	private Job preProcessIndelVCF(Job parent, Pipeline workflowName, String vcfName, String tumourAliquotID )
 	{
-		System.out.println("DEBUG: preProcessIndelVCF: "+workflowName+" ; "+vcfName + " ; "+tumourAliquotID);
+		//System.out.println("DEBUG: preProcessIndelVCF: "+workflowName+" ; "+vcfName + " ; "+tumourAliquotID);
 		String outDir = "/datastore/vcf/"+workflowName;
 		String normalizedINDELName = tumourAliquotID+ "_"+ workflowName+"_somatic.indel.pass-filtered.bcftools-norm.vcf.gz";
 		String extractedSNVVCFName = tumourAliquotID+ "_"+ workflowName+"_somatic.indel.pass-filtered.bcftools-norm.extracted-snvs.vcf";
@@ -928,7 +928,7 @@ public class OxoGWrapperWorkflow extends BaseOxoGWrapperWorkflow {
 				{
 					workflowURLs.put(BAMType.tumour.toString()+"_"+i, tumours.get(i).getTumourBamGNOSRepoURL());
 				}
-				System.out.println("DEBUG: "+workflowObjectIDs);
+				//System.out.println("DEBUG: "+workflowObjectIDs);
 				Function<String,List<String>> chooseObjects = (s) -> 
 				{
 					switch (downloadMethod)
@@ -961,7 +961,7 @@ public class OxoGWrapperWorkflow extends BaseOxoGWrapperWorkflow {
 				
 				//create a list of jobs to download all tumours.
 				List<Job> getTumourJobs = new ArrayList<Job>(this.tumours.size());
-				System.out.println("Tumours : "+this.tumours);
+				//System.out.println("Tumours : "+this.tumours);
 				for (int i = 0 ; i < this.tumours.size(); i++)
 				{	
 					Job downloadTumourBam;
