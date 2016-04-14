@@ -15,7 +15,16 @@ public class INIGenerator {
 								+ "GITemail = denis.yuen+icgc@gmail.com\n" 
 								+ "GITname = icgc-bot\n"
 								+ "GITPemFile = /home/ubuntu/.gnos/git.pem\n"
-								+ "uploadURL = oicr@192.170.233.206:~/incoming/bulk_upload/\n";
+								+ "uploadURL = oicr@192.170.233.206:~/incoming/bulk_upload/\n"
+								+ "downloadMethod = icgcStorageClient\n"
+								+ "uploadKey = /datastore/credentials/rsync.key\n"
+								+ "gnosKey = /datastore/credentials/gnos.key\n"
+								+ "collabToken = /datastore/credentials/collab.token\n"
+								+ "skipDownload = false\n"
+								+ "skipOxoG = false\n"
+								+ "skipVariantBam = false\n"
+								+ "skipAnnotation = false\n"
+								+ "skipUpload = false\n\n";
 
 	private static Map<String, Object> getDataFromJSON(String pathToJSON) {
 		Map<String, Object> inputsFromJSON = JSONUtils.processJSONFile(pathToJSON);
@@ -32,20 +41,20 @@ public class INIGenerator {
 				@SuppressWarnings("unchecked")
 				Map<String, Object> submap = (Map<String, Object>) m.get(k);
 				if (submap.containsKey(JSONUtils.TAG)) {
-					newPrefix = (String) submap.get(JSONUtils.TAG);
+					newPrefix += ( (newPrefix.trim().length()==0?"":"_") + (String) submap.get(JSONUtils.TAG));
 				}
-				else if (k.equals(JSONUtils.DATA) 
-						|| k.equals(JSONUtils.INDEX)
-						|| k.equals(VCFType.sv.toString())
-						|| k.equals(VCFType.sv.toString())
-						|| k.equals(VCFType.indel.toString())
-						|| k.equals(VCFType.snv.toString())) {
+				else if (k.startsWith(JSONUtils.DATA) 
+						|| k.startsWith(JSONUtils.INDEX)
+						|| k.startsWith(VCFType.sv.toString())
+						|| k.startsWith(VCFType.sv.toString())
+						|| k.startsWith(VCFType.indel.toString())
+						|| k.startsWith(VCFType.snv.toString())) {
 					newPrefix += "_" + k;
 				}
 				sb.append(mapToINI(submap, newPrefix));
 			}
 			else {
-				// System.out.println(prefix + " " + m.get(k));
+				//System.out.println(prefix + " " + m.get(k));
 				// Some things *don't* need to be printed
 				if (!(k.equals(JSONUtils.TAG)) && !(k.equals(JSONUtils.NUMBER))) {
 					sb.append(prefix.equals("") ? "" : prefix + "_").append(k).append(" = ").append(m.get(k)).append("\n");
@@ -64,11 +73,10 @@ public class INIGenerator {
 
 			String iniFromJSON = mapToINI(fromJSON, "");
 			sb.append(ini);
-			sb.append(iniFromJSON);
 			String donorID = (String) fromJSON.get(JSONUtils.SUBMITTER_DONOR_ID);
 			String projectCode = (String) fromJSON.get(JSONUtils.PROJECT_CODE);
-			sb.append("JSONfileName = " + projectCode + "." + donorID + ".json");
-
+			sb.append("JSONfileName = " + projectCode + "." + donorID + ".json\n\n");
+			sb.append(iniFromJSON);
 			Files.write(Paths.get("./" + donorID + ".INI"), sb.toString().getBytes());
 			System.out.println("Writing file: " + "./" + donorID + ".INI");
 		} else {

@@ -1,4 +1,5 @@
 use strict;
+use String::Random;
 use Getopt::Long;
 # this creates a merge VCF by variant type e.g. SNV, indel, SV
 # this produces a very simple VCF and also handles merging multiple variants
@@ -37,8 +38,6 @@ my $d = {};
 #                           --de_indel <DKFZ/EMBL INDEL filename> \
 #                           --indir /datastore/path_to_above_VCFs/ \
 #                           --outdir /datastore/output_directory 
-
-
 
 my ($broad_snv, $sanger_snv, $de_snv, $muse_snv,
         $broad_indel, $sanger_indel, $de_indel,
@@ -110,7 +109,9 @@ sub sort_and_index {
   my ($file) = @_;
   my @parts = split /\//, $file;
   my $filename = $parts[-1];
-  my $cmd = "sudo docker run --rm --name=sort_merged_vcf \\
+  my $rnd = new String::Random;
+  my $randomString = $rnd->randregex('\w{16}');
+  my $cmd = "sudo docker run --rm --name=sort_merged_vcf_$randomString \\
         -v $file.vcf:/input.vcf:rw \\
         -v /datastore/refdata/public:/ref \\
         -v $out_dir:/outdir/:rw \\
@@ -127,6 +128,7 @@ sub sort_and_index {
 
   print "Status of sort: $result\n";
 }
+
 
 #Is this sub even used anymore? If not, it should be removed.
 sub parse_info {

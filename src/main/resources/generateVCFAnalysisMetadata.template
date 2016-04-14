@@ -4,7 +4,7 @@ SNV_FROM_INDEL_OXOG=''
 SNV_FROM_INDEL_OXOG_INDEX=''
 SNV_FROM_INDEL_OXOG_MD5=''
 SNV_FROM_INDEL_OXOG_INDEX_MD5=''
-for f in $(ls /datastore/files_for_upload/ | grep -e from_INDELs -e extracted | grep -e gz | grep -v md5) ; do
+for f in $(ls /datastore/files_for_upload/ | grep -v : | grep -e from_INDELs -e extracted | grep -e gz | grep -v md5) ; do
     echo "processing $f"
     f=/datastore/files_for_upload/$f
     md5sum $f | cut -d ' ' -f 1 > $f.md5
@@ -22,10 +22,6 @@ echo "SNV_FROM_INDEL_OXOG_INDEX_MD5 = $SNV_FROM_INDEL_OXOG_INDEX_MD5"
 echo "SNV_FROM_INDEL_OXOG = $SNV_FROM_INDEL_OXOG"
 echo "SNV_FROM_INDEL_OXOG_MD5 = $SNV_FROM_INDEL_OXOG_MD5"
 
-# Now call the docker container to do generate the actual metadata files. 
-
-# tumourMetadataURLs should be populated as:
-# this.tumours.stream().map(t -> t.getTumourMetdataURL()).reduce("", (a,b)->a+=b+"," )
 set -x
 docker run --rm --name=generate_vcf_metadata -v /datastore/vcf-upload-prep/:/vcf/ -v {{ gnosKey }}:/gnos.key -v /datastore/:/datastore/ \
 	pancancer/pancancer_upload_download:1.7 /bin/bash -c "
