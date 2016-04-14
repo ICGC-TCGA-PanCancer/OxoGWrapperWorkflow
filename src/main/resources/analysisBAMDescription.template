@@ -1,0 +1,7 @@
+These are minibams created for donor {{ donorID }} by extracing from WG BAMs reads around variants called by any of the core variant calling workflows.
+Specifically, the window sizes are SNV+/-{{ snvPadding }}bp, indel+/-{{ indelPadding }}bp, SV+/-{{ svPadding }}bp.
+The results consist of one or more BAM files plus optional tar.gz files that contain additional file types.
+This uses the {{ workflowName }} workflow, version {{ workflowVersion }} available at {{ workflowURL }}.
+This workflow can be created from source, see {{ workflowSrcURL }}.
+For a complete change log see {{ changeLogURL }}.
+{{ descriptionSuffix }}
