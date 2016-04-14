@@ -1,0 +1,19 @@
+(
+	( [ -d /datastore/variantbam_results/ ] || mkdir -p /datastore/variantbam_results ) && sudo chmod a+rw -R /datastore/variantbam_results/ && \
+	docker run  --rm  --name="oxog_variantbam_{{ containerNameSuffix }}" \
+			-v /datastore/merged_vcfs/{{ snvVcf }}:/snv.vcf \
+			-v /datastore/merged_vcfs/{{ svVcf }}:/sv.vcf \
+			-v /datastore/merged_vcfs/{{ indelVcf }}:/indel.vcf \
+			-v /datastore/variantbam_results/:/outdir/ \
+			-v /datastore/padding_rules.txt:/rules.txt \
+			-v {{ pathToBam }}:/input.bam \
+		oxog:160329 /bin/bash -c "
+			/cga/fh/pcawg_pipeline/modules/VariantBam/variant \
+				-o /outdir/{{ minibamName }} \
+				-i /input.bam  \
+				-l /snv.vcf  \
+				-l /sv.vcf  \
+				-l /indel.vcf  \
+				-r 'pad[{{ svPadding }}];mlregion@/sv.vcf%pad[{{ snvPadding }}];mlregion@/snv.vcf%pad[{{ indelPadding }}]mlregion@/indel.vcf' \
+			&& samtools index  /outdir/{{ minibamName }} "
+)

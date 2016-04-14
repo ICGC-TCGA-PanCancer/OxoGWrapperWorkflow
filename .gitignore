@@ -23,3 +23,7 @@ target/*
 # files created while testing workflow: INI files and json files that exist in the ROOT directory of the project
 /*.INI
 /*.json
+Workflow_Bundle*.zip
+.pmd
+.*.md.html
+*.swp

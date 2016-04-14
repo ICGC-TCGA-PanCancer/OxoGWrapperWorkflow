@@ -1,35 +1,70 @@
 # OxoG Wrapper Workflow
 
-This workflow is a wrapper around the OxoG component. It will download VCFs (from all three workflows: Sanger, DKFZ/EMBL, Broad) and BAM files (tumour and normal), run OxoG on them, and then upload the results via rsync.
+## Overview
+This workflow will download all VCF (SNV, SV, INDEL) files for all analysis pipelines (Broad, DKFZ/EMBL, Muse, Sanger) and all BAM files (normal and all tumour BAMs) to
+perform the various analysis tasks.
 
-The VCF input files will be processed using `bcftools norm` on the indel VCF, and then `vcfcombine` will be used to combine them all into a single VCF.
+This workflow will perform three tasks:
+ - OxoG filtering
+ - Mini-bam generation
+ - Annotation
+
+### OxoG Filtering
+This is a component by the Broad institute that will perform filtering on VCF files.
+
+### Mini-bam generation
+Mini-bam files are produced by a program called variantbam.
+
+### Annotation
+This is Jonathan Dursi's Annotator. See:
+ - https://hub.docker.com/r/ljdursi/pcawg-annotate/ 
+ - https://github.com/ljdursi/sga-annotate-docker
 
 ## Building
 
-This will build both the Docker image *and* the workflow inside.
+This will just compile and package the Java portion of the workflow:
 
-    docker build -t pancancer/pcawg-oxog-merge-workflow:1.0 .
+    mvn clean package
 
-## Building Just the Workflow
+To produce a SeqWare bundle:
 
-This will just build the Java portion of the workflow and not the Docker image.
+	seqware bundle package --dir target/Workflow_Bundle_OxoGWrapper_*_SeqWare_1.1.2
 
-    mvn clean install
-
-## Usage
+### Usage
 
 1. Ensure that you have a valid Collaboratory token in `~/.gnos`.
 2. Ensure that you have a valid git pem file in `~/.gnos`.
 3. Call the workflow like this:
 
 ```
+	docker run --rm -v /datastore/:/datastore/ \
+		-v /workflows/Workflow_Bundle_OxoGWrapper_2.0.0_SeqWare_1.1.2/:/workflow/ \
+		-v /var/run/docker.sock:/var/run/docker.sock \
+		-v /home/ubuntu/.gnos/:/home/ubuntu/.gnos/ \
+		-v /home/ubuntu/SomeIniFile.INI:/ini \
+		pancancer/seqware_whitestar_pancancer:1.1.2-actual-java8 \
+			/bin/bash -c "seqware bundle launch --dir /workflow --ini /ini --no-metadata --engine whitestar-parallel"
+```
+
+## Building as a docker image
+
+This will build a new image which contains the workflow as a SeqWare bundle:
+
+    docker build -t pancancer/pcawg-oxog-wrapper-workflow:x.x.x .
+
+### Usage
+
+1. Ensure that you have a valid Collaboratory token in `~/.gnos`.
+2. Ensure that you have a valid git pem file in `~/.gnos`.
+3. Call the workflow like this (note: you do not have to mount the workflows directory in this case, because the workflow is already inside the container):
+
+```
 sudo docker run --rm -v /datastore:/datastore \
-					-v /workflows/Workflow_Bundle_OxoGWrapper_1.0_SeqWare_1.1.2/:/workflow/ \
-					-v /var/run/docker.sock:/var/run/docker.sock \
-					-v /home/ubuntu/MyINIFile.INI:/ini \
-					-v /home/ubuntu/.gnos/:/home/seqware/.gnos \
-		pancancer/seqware_whitestar_pancancer:1.1.2 \
-	seqware bundle launch --dir /workflow --ini /ini --no-metadata --engine whitestar-parallel
+		-v /var/run/docker.sock:/var/run/docker.sock \
+		-v /home/ubuntu/MyINIFile.INI:/ini \
+		-v /home/ubuntu/.gnos/:/home/seqware/.gnos \
+	pancancer/pcawg-oxog-wrapper-workflow:x.x.x \
+		seqware bundle launch --dir /workflow --ini /ini --no-metadata --engine whitestar-parallel
 ```
 
 ### INIs
@@ -48,13 +83,45 @@ Other fields that are useful to populate in the INI:
  - storageSource - This tells the ICGC storage client where to download from. Options are `aws` or `collab`.
  - skipDownload - Set to `true` to skip file downloading. Useful if you can set up the environment with the files ahead of time.
  - skipUpload - Set to `true` to skip the upload process.
- - refFile - Specify the reference fasta file to use in the workflow. Must be in a directory _relative_ to `/datastore/refdata/`. Defaults to `public/Homo_sapiens_assembly19.fasta`.
- - uploadKey - The path to the key that will be used when uploading to the rsync server.
- - gnosKey - The path to the key that will be used when talking to GNOS to generate gto files and metadata.
  - skipOxoG - Skip the OxoG filtering process. Useful if OxoG has already run on this data.
  - skipVariantBam - Skip running variant to produce the minibams. Useful if you do not need to run this step.
  - skipAnnotation - Skip running the annotation process. Useful if you have already run this step.
+ - refFile - Specify the reference fasta file to use in the workflow. Must be in a directory _relative_ to `/datastore/refdata/`. Defaults to `public/Homo_sapiens_assembly19.fasta`.
+ - uploadKey - The path to the key that will be used when uploading to the rsync server.
+ - gnosKey - The path to the key that will be used when talking to GNOS to generate gto files and metadata.
+ - rsyncKey - The path to the key that will be used when the results are rsynced.
+ - uploadURL - The URL to use in the rsync command at the end of the workflow, such as: `someUser@10.10.10.10:~/incoming/oxog_results/`
+ - downloadMethod - Which method to use to download files. Default will be to use the icgc storage client (`icgcStorageClient`), but you can also specify `gtdownload` or `s3` (which will use `aws s3`).
+ - storageSource - Where to download files from, if the `downloadMethod` is `icgcStorageClient`. Defaults to `collab` but if you are using the icgc storage client in AWS, you will want to specify `aws`.
 
+### Download Methods
+There are three tools that this workflow can download files:
+ - icgc-storage-client
+ - gtdownload
+ - aws CLI
+ 
+#### icgc-storage-client
+This is the **default** download method.
+To use this download method, specify `downloadMethod=icgcStorageClient` in the INI file.
+You must have a `collab.token` file that is in the `~/.gnos` directory of the machine that will run the workflow.
+
+#### gtdownload
+This will use the gtdownload tool, as found in the docker container `pancancer/pancancer_upload_download`.
+To use this download method, specify `downloadMethod=gtdownload` in the INI file.
+You must have your GNOS key files available in the `~/.gnos` directory. This workflow allows you to specify separate keys for BAMs and VCFs in case they are located on different servers with different credentials.
+You  must reference the GNOS key files in the INI file like this:
+
+    gtDownloadBamKey=/home/ubuntu/.gnos/bamDownloadKey.key
+    gtDownloadVcfKey=/home/ubuntu/.gnos/VCFDownloadKey.key
+
+You must also ensure that your INI file contains GNOS repos for each file set you wish to download. The INI Generator that is packaged with this workflow should do this for you, if the information is already available in its input JSON file. It should look something like this:
+
+    sanger_download_url=https://gtrepo-osdc-icgc.annailabs.com/cghub/data/analysis/download/some-long-uuid-here
+
+#### s3
+This will use Amazon's AWS CLI tool to download from an S3 URL. Currently, it can only download from the OICR Collaboratory buckets in S3. 
+To use this download method, specify `downloadMethod=s3` in the INI file.
+You must have valid credentials to download from this location. Place your `credentials` file in `~/.gnos` so that the workflow can have access to it when it downloads.
 
 ### Flow Control
 
@@ -67,20 +134,28 @@ When the main processes have finished and the upload is in progress, the file wi
 If the workflow fails, the file may be moved to the `failed-jobs` directory. If you re-run a workflow on a worker manually, be aware that you'll have to move the JSON file back to the directory that the workflow expects it to be in.
   
 
-### Downloads
+### Inputs
 
-The inputs are 1) all the variant calling workflow outputs (Sanger, DKFZ/EMBL, EMBL, Muse) and
-2) the BAM files for normal and tumour(s). 
+The inputs to this wrapper workflow are VCFs and BAMs.
 
-These are downloaded from either AWS S3 or the Collaboratory using the ICGC Storage Client.
+VCFs and VCF index files must be located in `/datastore/vcf/${workflowName}` where `${workflowName}` name can be one of:
+ - broad
+ - sanger
+ - dkfz_embl
+ - muse
+ 
+BAMs and BAIs must be located in `/datastore/bam/${bamType}/${gnosID}/` where `${bamType}` must be either `tumour` or `normal` and `${gnosID}` is the GNOS ID of the BAM file.
 
-See TODO for more information.
+### Outputs
+#### OxoG
+The OxoG workspace will be located in `/datastore/oxog_workspace`. This directory will contain files such as logs produced by OxoG. These can be useful when debugging an OxoG failure.
+The OxoG results will be located in `/datastore/oxog_results/tumour_${tumourGnosID}`, where `${tumourGnosID}` is the GNOS ID of a specific tumour. When there are multiple tumours, there will be multiple OxoG results, as OxoG must be run on each normal-tumour BAM pair.
 
-### Uploads
+#### Variantbam
+The outputs of variantbam will be located in `/datastore/variantbam_results/`. There will be one mini-bam and BAI for each input BAM.
 
-Uploads are 1) the merged/normalized/OxoG filtered variant calls, specifics depend on the
-variant type. 2) the mini-bams for normal and tumour(s).
+#### Other files
+The VCF files that will be rsynced at the end of this wrapper workflow can be found in `/datastore/files_for_upload/tumour_${tumourGnosID}`, where `${tumourGnosID}` is the GNOS ID of a specific tumour. These directories contain the pass-filtered VCFs, normalized INDEL VCFs, extracted SNV-from-INDEL VCFs, OxoG VCFs, OxoG call-stats, annotated OxoG VCFs, and the index files for all VCFs.
+BAM files are rsynced directly from `/datastore/variantbam_results/`.
 
-## TODO
-
-* need support for inputs from (tentatively) 1) local file paths and 2) GNOS directly (specifically CGHub for TCGA donors that aren't on S3 or Collaboratory)
+Metadata files are generated for later submission to GNOS (which happens as a separate process, after the results are rsynced). These files can be found under `/datastore/vcf-upload-prep/` and `/datastore/bam-upload-prep/`.   
