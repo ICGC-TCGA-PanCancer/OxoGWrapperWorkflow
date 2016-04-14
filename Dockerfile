@@ -1,14 +1,14 @@
 FROM pancancer/seqware_whitestar_pancancer:1.1.2-actual-java8
 MAINTAINER Solomon Shorser <solomon.shorser@oicr.on.ca>
 
-ENV OXOG_WRAPPER_IMAGE_VERSION 2.0.0-beta
+ENV OXOG_WRAPPER_IMAGE_VERSION 2.0.0
 LABEL OXOG_WRAPPER_IMAGE_VERSION $OXOG_WRAPPER_IMAGE_VERSION
 # For the storage client.
 ENV STORAGE_PROFILE=collab
 
 # OxoG Workflow needs tabix, bgzip and samtools
 RUN sudo apt-get update && \
-	sudo apt-get install -y tabix samtools 
+	sudo apt-get install -y tabix samtools libstring-random-perl 
 
 USER root
 

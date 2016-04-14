@@ -38,7 +38,7 @@ To produce a SeqWare bundle:
 
 ```
 	docker run --rm -v /datastore/:/datastore/ \
-		-v /workflows/Workflow_Bundle_OxoGWrapper_2.0.0-beta_SeqWare_1.1.2/:/workflow/ \
+		-v /workflows/Workflow_Bundle_OxoGWrapper_2.0.0_SeqWare_1.1.2/:/workflow/ \
 		-v /var/run/docker.sock:/var/run/docker.sock \
 		-v /home/ubuntu/.gnos/:/home/ubuntu/.gnos/ \
 		-v /home/ubuntu/SomeIniFile.INI:/ini \
