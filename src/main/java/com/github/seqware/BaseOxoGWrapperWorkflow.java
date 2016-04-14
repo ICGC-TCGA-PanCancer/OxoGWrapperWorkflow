@@ -234,16 +234,16 @@ public abstract class BaseOxoGWrapperWorkflow extends AbstractWorkflowDataModel 
 						else
 						{
 							VcfInfo vInfo = new VcfInfo();
-							vInfo.setObjectID(this.getMandatoryProperty(JSONUtils.lookUpKeyGenerator(p, v, "data", "object_id_"+i)));
-							vInfo.setIndexObjectID(this.getMandatoryProperty(JSONUtils.lookUpKeyGenerator(p, v, "index", "object_id_"+i)));
-							vInfo.setFileName(this.getMandatoryProperty(JSONUtils.lookUpKeyGenerator(p, v, "data", "file_name_"+i)));
-							vInfo.setIndexFileName(this.getMandatoryProperty(JSONUtils.lookUpKeyGenerator(p, v, "index", "file_name_"+i)));
-							vInfo.setOriginatingTumourAliquotID(this.getMandatoryProperty((JSONUtils.TUMOUR_ALIQUOT_ID+"_"+i)));
+							vInfo.setObjectID( setBasedOnAllowMissingFiles.apply(JSONUtils.lookUpKeyGenerator(p, v, "data", "object_id_"+i)));
+							vInfo.setIndexObjectID( setBasedOnAllowMissingFiles.apply(JSONUtils.lookUpKeyGenerator(p, v, "index", "object_id_"+i)));
+							vInfo.setFileName( setBasedOnAllowMissingFiles.apply(JSONUtils.lookUpKeyGenerator(p, v, "data", "file_name_"+i)));
+							vInfo.setIndexFileName( setBasedOnAllowMissingFiles.apply(JSONUtils.lookUpKeyGenerator(p, v, "index", "file_name_"+i)));
+							vInfo.setOriginatingTumourAliquotID( setBasedOnAllowMissingFiles.apply(JSONUtils.TUMOUR_ALIQUOT_ID+"_"+i));
 							vInfo.setVcfType(v);
 							vInfo.setOriginatingPipeline(p);
 							
-							this.objectToFilenames.put(vInfo.getObjectID(),vInfo.getFileName());
-							this.objectToFilenames.put(vInfo.getIndexObjectID(),vInfo.getIndexFileName());
+							putIntoMapIfSet.accept(vInfo.getObjectID(),vInfo.getFileName());
+							putIntoMapIfSet.accept(vInfo.getIndexObjectID(),vInfo.getIndexFileName());
 							switch (p)
 							{
 								case broad:
@@ -259,8 +259,11 @@ public abstract class BaseOxoGWrapperWorkflow extends AbstractWorkflowDataModel 
 									vInfo.setPipelineGnosID(this.museGnosID);
 									break;
 							}
-							
-							this.vcfs.add(vInfo);
+							//Only add this object if there is an actual file name present.
+							if (vInfo.getFileName()!=null && !vInfo.getFileName().trim().equals(""))
+							{
+								this.vcfs.add(vInfo);
+							}
 						}
 					}
 				}
