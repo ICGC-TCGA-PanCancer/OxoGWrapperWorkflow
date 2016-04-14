@@ -330,14 +330,22 @@ public class OxoGWrapperWorkflow extends BaseOxoGWrapperWorkflow {
 		String prepCommand = "";
 		prepCommand+="\n ( ( [ -d /datastore/merged_vcfs ] || sudo mkdir /datastore/merged_vcfs/ ) && sudo chmod a+rw /datastore/merged_vcfs && \\\n";
 		
+		String combineVcfArgs = "";
+		
 		for (VcfInfo vcfInfo : this.vcfs.stream().filter(p -> p.getVcfType()!=VCFType.indel).collect(Collectors.toList()))
 		{
-			prepCommand += " ln -s /datastore/vcf/"+vcfInfo.getOriginatingPipeline().toString()+"/"+vcfInfo.getOriginatingTumourAliquotID()+"/"+vcfInfo.getFileName()+" /datastore/vcf/"+tumourAliquotID+"_"+vcfInfo.getOriginatingPipeline().toString()+"_"+vcfInfo.getVcfType().toString()+".vcf && \\\n"; 
+			prepCommand += " ln -s /datastore/vcf/"+vcfInfo.getOriginatingPipeline().toString()+"/"+vcfInfo.getOriginatingTumourAliquotID()+"/"+vcfInfo.getFileName()+""
+								+ " /datastore/vcf/"+tumourAliquotID+"_"+vcfInfo.getOriginatingPipeline().toString()+"_"+vcfInfo.getVcfType().toString()+".vcf && \\\n";
+			combineVcfArgs += " --" + vcfInfo.getOriginatingPipeline().toString() + "_" + vcfInfo.getVcfType().toString()+
+								" "+vcfInfo.getOriginatingTumourAliquotID() + "_" + vcfInfo.getOriginatingPipeline().toString() + "_"+vcfInfo.getVcfType().toString()+".vcf ";
 		}
 
 		for (VcfInfo vcfInfo : this.normalizedIndels)
 		{
-			prepCommand += " ln -s /datastore/vcf/"+vcfInfo.getOriginatingPipeline().toString()+"/"+vcfInfo.getOriginatingTumourAliquotID()+"/"+vcfInfo.getFileName()+" /datastore/vcf/"+tumourAliquotID+"_"+vcfInfo.getOriginatingPipeline().toString()+"_"+vcfInfo.getVcfType().toString()+".vcf && \\\n"; 
+			prepCommand += " ln -s /datastore/vcf/"+vcfInfo.getOriginatingPipeline().toString()+"/"+vcfInfo.getOriginatingTumourAliquotID()+"/"+vcfInfo.getFileName()+""
+								+ " /datastore/vcf/"+tumourAliquotID+"_"+vcfInfo.getOriginatingPipeline().toString()+"_"+vcfInfo.getVcfType().toString()+".vcf && \\\n";
+			combineVcfArgs += " --" + vcfInfo.getOriginatingPipeline().toString() + "_" + vcfInfo.getVcfType().toString()+
+								" "+vcfInfo.getOriginatingTumourAliquotID() + "_" + vcfInfo.getOriginatingPipeline().toString() + "_"+vcfInfo.getVcfType().toString()+".vcf ";
 		}
 
 //		+"\n ln -s /datastore/vcf/"+Pipeline.sanger+"/"+this.sangerGnosID+"/"+sangerSNV+" /datastore/vcf/"+tumourAliquotID+"_"+Pipeline.sanger+"_snv.vcf && \\\n"
@@ -366,10 +374,11 @@ public class OxoGWrapperWorkflow extends BaseOxoGWrapperWorkflow {
 		//run the merge script, then bgzip and index them all.
 		String combineCommand = "(sudo mkdir -p /datastore/merged_vcfs/"+tumourAliquotID+"/ "
 								+ " && sudo chmod a+rw /datastore/merged_vcfs/"+tumourAliquotID+"/ "
-				+ " && perl "+this.getWorkflowBaseDir()+"/scripts/vcf_merge_by_type.pl "
+				+ " && perl "/*+this.getWorkflowBaseDir()+"/scripts/vcf_merge_by_type.pl "
 				+ tumourAliquotID + "_" + Pipeline.broad + "_snv.vcf "+ tumourAliquotID + "_" + Pipeline.sanger+"_snv.vcf "+ tumourAliquotID + "_" + Pipeline.dkfz_embl+"_snv.vcf "+ tumourAliquotID + "_" + Pipeline.muse+"_snv.vcf "
 				+ tumourAliquotID + "_" + Pipeline.broad+"_indel.vcf "+ tumourAliquotID + "_" + Pipeline.sanger+"_indel.vcf "+ tumourAliquotID + "_" + Pipeline.dkfz_embl+"_indel.vcf " 
-				+ tumourAliquotID + "_" + Pipeline.broad+"_sv.vcf "+ tumourAliquotID + "_" + Pipeline.sanger+"_sv.vcf "+ tumourAliquotID + "_" + Pipeline.dkfz_embl+"_sv.vcf "
+				+ tumourAliquotID + "_" + Pipeline.broad+"_sv.vcf "+ tumourAliquotID + "_" + Pipeline.sanger+"_sv.vcf "+ tumourAliquotID + "_" + Pipeline.dkfz_embl+"_sv.vcf "*/
+				+ combineVcfArgs
 				+ " /datastore/vcf/ /datastore/merged_vcfs/"+tumourAliquotID+"/"
 				//rename the merged VCFs to ensure they contain the correct aliquot IDs.
 				+ " && cd /datastore/merged_vcfs/"+tumourAliquotID+"/ "
