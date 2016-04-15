@@ -8,16 +8,6 @@ use Getopt::Long;
 my $info = {};
 my $d = {};
 
-# TODO: parameterize file inputs! 
-#my @snv = ('broad-brian/a76d7d7a-6f19-4ae9-a152-7b909130946c/35a74e53-16ff-4764-8397-6a9b02dfe733.broad-mutect.20151216.somatic.snv_mnv.vcf.gz',
-#'sanger-brian/0bac6371-e554-44b6-acb1-64e452db583f/35a74e53-16ff-4764-8397-6a9b02dfe733.svcp_1-0-5.20150707.somatic.snv_mnv.vcf.gz',
-#'dkfz-brian/f72d245f-9340-4adf-8863-4ede9a7afbe4/35a74e53-16ff-4764-8397-6a9b02dfe733.dkfz-snvCalling_1-0-132-1.20150731.somatic.snv_mnv.vcf.gz');
-#my @indel = ('broad-brian/a76d7d7a-6f19-4ae9-a152-7b909130946c/35a74e53-16ff-4764-8397-6a9b02dfe733.broad-snowman.20151216.somatic.indel.vcf.gz',
-#'sanger-brian/0bac6371-e554-44b6-acb1-64e452db583f/35a74e53-16ff-4764-8397-6a9b02dfe733.svcp_1-0-5.20150707.somatic.indel.vcf.gz',
-#'dkfz-brian/f72d245f-9340-4adf-8863-4ede9a7afbe4/35a74e53-16ff-4764-8397-6a9b02dfe733.dkfz-indelCalling_1-0-132-1.20150731.somatic.indel.vcf.gz');
-#my @sv = ('broad-brian/a76d7d7a-6f19-4ae9-a152-7b909130946c/35a74e53-16ff-4764-8397-6a9b02dfe733.broad-dRanger_snowman.20151216.somatic.sv.vcf.gz',
-#'sanger-brian/0bac6371-e554-44b6-acb1-64e452db583f/35a74e53-16ff-4764-8397-6a9b02dfe733.svcp_1-0-5.20150707.somatic.sv.vcf.gz',
-#'dkfz-brian/f72d245f-9340-4adf-8863-4ede9a7afbe4/35a74e53-16ff-4764-8397-6a9b02dfe733.embl-delly_1-3-0-preFilter.20150731.somatic.sv.vcf.gz');
 
 # Inputs: the filenames for SNVs for Broad, Sanger, DKFZ/EMBL;
 # the filenames for INDELs for Broad, Sanger, DKFZ/EMBL;

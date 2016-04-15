@@ -298,32 +298,6 @@ public class OxoGWrapperWorkflow extends BaseOxoGWrapperWorkflow {
 	 */
 	private Job combineVCFsByType(String tumourAliquotID, Job ... parents)
 	{
-//		Predicate<? super VcfInfo> isSangerSNV = this.vcfMatchesTypePipelineTumour(isSnv,isSanger,tumourAliquotID);//isSanger.and(isSnv.and(this.matchesTumour(tumourAliquotID)));
-//		Predicate<? super VcfInfo> isBroadSNV = this.vcfMatchesTypePipelineTumour(isSnv,isBroad,tumourAliquotID);//isBroad.and(isSnv.and(this.matchesTumour(tumourAliquotID)));
-//		Predicate<? super VcfInfo> isDkfzEmblSNV = this.vcfMatchesTypePipelineTumour(isSnv,isDkfzEmbl,tumourAliquotID);//isDkfzEmbl.and(isSnv.and(this.matchesTumour(tumourAliquotID)));
-//		Predicate<? super VcfInfo> isMuseSNV = this.vcfMatchesTypePipelineTumour(isSnv,isMuse,tumourAliquotID);//isMuse.and(isSnv.and(this.matchesTumour(tumourAliquotID)));
-//		
-//		Predicate<? super VcfInfo> isSangerINDEL = this.vcfMatchesTypePipelineTumour(isIndel,isSanger,tumourAliquotID);//isSanger.and(isIndel.and(this.matchesTumour(tumourAliquotID)));
-//		Predicate<? super VcfInfo> isBroadINDEL = this.vcfMatchesTypePipelineTumour(isIndel,isBroad,tumourAliquotID);//isBroad.and(isIndel.and(this.matchesTumour(tumourAliquotID)));
-//		Predicate<? super VcfInfo> isDkfzEmblINDEL = this.vcfMatchesTypePipelineTumour(isIndel,isDkfzEmbl,tumourAliquotID);//isDkfzEmbl.and(isIndel.and(this.matchesTumour(tumourAliquotID)));
-//		
-//		Predicate<? super VcfInfo> isSangerSV = this.vcfMatchesTypePipelineTumour(isSv,isSanger,tumourAliquotID);//isSanger.and(isSv.and(this.matchesTumour(tumourAliquotID)));
-//		Predicate<? super VcfInfo> isBroadSV = this.vcfMatchesTypePipelineTumour(isSv,isBroad,tumourAliquotID);//isBroad.and(isSv.and(this.matchesTumour(tumourAliquotID)));
-//		Predicate<? super VcfInfo> isDkfzEmblSV = this.vcfMatchesTypePipelineTumour(isSv,isDkfzEmbl,tumourAliquotID);//isDkfzEmbl.and(isSv.and(this.matchesTumour(tumourAliquotID)));
-				
-//		String sangerSNV = this.getVcfName(isSangerSNV,this.vcfs);
-//		String broadSNV = this.getVcfName(isBroadSNV,this.vcfs);
-//		String dkfzEmblSNV = this.getVcfName(isDkfzEmblSNV,this.vcfs);
-//		String museSNV = this.getVcfName(isMuseSNV,this.vcfs);
-//		
-//		String normalizedSangerIndel = this.getVcfName(isSangerINDEL,this.normalizedIndels);
-//		String normalizedBroadIndel = this.getVcfName(isBroadINDEL,this.normalizedIndels);
-//		String normalizedDkfzEmblIndel = this.getVcfName(isDkfzEmblINDEL,this.normalizedIndels);
-//
-//		String sangerSV = this.getVcfName(isSangerSV,this.vcfs);
-//		String broadSV = this.getVcfName(isBroadSV,this.vcfs);
-//		String dkfzEmblSV = this.getVcfName(isDkfzEmblSV,this.vcfs);
-
 		
 		//Create symlinks to the files in the proper directory.
 		Job prepVCFs = this.getWorkflow().createBashJob("create links to VCFs");
@@ -347,17 +321,6 @@ public class OxoGWrapperWorkflow extends BaseOxoGWrapperWorkflow {
 			combineVcfArgs += " --" + vcfInfo.getOriginatingPipeline().toString() + "_" + vcfInfo.getVcfType().toString()+
 								" "+vcfInfo.getOriginatingTumourAliquotID() + "_" + vcfInfo.getOriginatingPipeline().toString() + "_"+vcfInfo.getVcfType().toString()+".vcf ";
 		}
-
-//		+"\n ln -s /datastore/vcf/"+Pipeline.sanger+"/"+this.sangerGnosID+"/"+sangerSNV+" /datastore/vcf/"+tumourAliquotID+"_"+Pipeline.sanger+"_snv.vcf && \\\n"
-//		+" ln -s /datastore/vcf/"+Pipeline.broad+"/"+this.broadGnosID+"/"+broadSNV+" /datastore/vcf/"+tumourAliquotID+"_"+Pipeline.broad+"_snv.vcf && \\\n"
-//		+" ln -s /datastore/vcf/"+Pipeline.dkfz_embl+"/"+this.dkfzemblGnosID+"/"+dkfzEmblSNV+" /datastore/vcf/"+tumourAliquotID+"_"+Pipeline.dkfz_embl+"_snv.vcf && \\\n"
-//		+" ln -s /datastore/vcf/"+Pipeline.muse+"/"+this.museGnosID+"/"+museSNV+" /datastore/vcf/"+tumourAliquotID+"_"+Pipeline.muse+"_snv.vcf && \\\n"
-//		+" ln -s "+normalizedSangerIndel+" /datastore/vcf/"+tumourAliquotID+"_"+Pipeline.sanger+"_indel.vcf && \\\n"
-//		+" ln -s "+normalizedBroadIndel+" /datastore/vcf/"+tumourAliquotID+"_"+Pipeline.broad+"_indel.vcf && \\\n"
-//		+" ln -s "+normalizedDkfzEmblIndel+" /datastore/vcf/"+tumourAliquotID+"_"+Pipeline.dkfz_embl+"_indel.vcf && \\\n"
-//		+" ln -s /datastore/vcf/"+Pipeline.sanger+"/"+this.sangerGnosID+"/"+sangerSV+" /datastore/vcf/"+tumourAliquotID+"_"+Pipeline.sanger+"_sv.vcf && \\\n"
-//		+" ln -s /datastore/vcf/"+Pipeline.broad+"/"+this.broadGnosID+"/"+broadSV+" /datastore/vcf/"+tumourAliquotID+"_"+Pipeline.broad+"_sv.vcf && \\\n"
-//		+" ln -s /datastore/vcf/"+Pipeline.dkfz_embl+"/"+this.dkfzemblGnosID+"/"+dkfzEmblSV+" /datastore/vcf/"+tumourAliquotID+"_"+Pipeline.dkfz_embl+"_sv.vcf ) ";
 		
 		String moveToFailed = GitUtils.gitMoveCommand("running-jobs","failed-jobs",this.JSONlocation + "/" + this.JSONrepoName + "/" + this.JSONfolderName,this.JSONfileName, this.gitMoveTestMode, this.getWorkflowBaseDir() + "/scripts/");
 		prepCommand += (" || " + moveToFailed);
@@ -374,10 +337,7 @@ public class OxoGWrapperWorkflow extends BaseOxoGWrapperWorkflow {
 		//run the merge script, then bgzip and index them all.
 		String combineCommand = "(sudo mkdir -p /datastore/merged_vcfs/"+tumourAliquotID+"/ "
 								+ " && sudo chmod a+rw /datastore/merged_vcfs/"+tumourAliquotID+"/ "
-				+ " && perl "/*+this.getWorkflowBaseDir()+"/scripts/vcf_merge_by_type.pl "
-				+ tumourAliquotID + "_" + Pipeline.broad + "_snv.vcf "+ tumourAliquotID + "_" + Pipeline.sanger+"_snv.vcf "+ tumourAliquotID + "_" + Pipeline.dkfz_embl+"_snv.vcf "+ tumourAliquotID + "_" + Pipeline.muse+"_snv.vcf "
-				+ tumourAliquotID + "_" + Pipeline.broad+"_indel.vcf "+ tumourAliquotID + "_" + Pipeline.sanger+"_indel.vcf "+ tumourAliquotID + "_" + Pipeline.dkfz_embl+"_indel.vcf " 
-				+ tumourAliquotID + "_" + Pipeline.broad+"_sv.vcf "+ tumourAliquotID + "_" + Pipeline.sanger+"_sv.vcf "+ tumourAliquotID + "_" + Pipeline.dkfz_embl+"_sv.vcf "*/
+				+ " && perl "
 				+ combineVcfArgs
 				+ " /datastore/vcf/ /datastore/merged_vcfs/"+tumourAliquotID+"/"
 				//rename the merged VCFs to ensure they contain the correct aliquot IDs.
