@@ -308,22 +308,22 @@ public class OxoGWrapperWorkflow extends BaseOxoGWrapperWorkflow {
 		
 		String combineVcfArgs = "";
 		
-		for (VcfInfo vcfInfo : this.vcfs.stream().filter(isIndel.negate()).collect(Collectors.toList()))
+		for (VcfInfo vcfInfo : this.vcfs.stream().filter(p -> p.getOriginatingTumourAliquotID().equals(tumourAliquotID) && isIndel.negate().test(p)).collect(Collectors.toList()))
 		{
-			prepCommand += " ln -s /datastore/vcf/"+vcfInfo.getOriginatingPipeline().toString()+"/"+vcfInfo.getOriginatingTumourAliquotID()+"/"+vcfInfo.getFileName()+""
-								+ " /datastore/vcf/"+tumourAliquotID+"_"+vcfInfo.getOriginatingPipeline().toString()+"_"+vcfInfo.getVcfType().toString()+".vcf && \\\n";
+			prepCommand += " ln -s /datastore/vcf/"+vcfInfo.getOriginatingPipeline().toString()+"/"+vcfInfo.getFileName()+" "
+								+ " /datastore/vcf/"+vcfInfo.getOriginatingTumourAliquotID()+"_"+vcfInfo.getOriginatingPipeline().toString()+"_"+vcfInfo.getVcfType().toString()+".vcf && \\\n";
 			combineVcfArgs += " --" + vcfInfo.getOriginatingPipeline().toString() + "_" + vcfInfo.getVcfType().toString()+
-								" "+vcfInfo.getOriginatingTumourAliquotID() + "_" + vcfInfo.getOriginatingPipeline().toString() + "_"+vcfInfo.getVcfType().toString()+".vcf ";
+								" "+vcfInfo.getOriginatingTumourAliquotID() + "_" + vcfInfo.getOriginatingPipeline().toString() + "_"+vcfInfo.getVcfType().toString()+".vcf \\\n";
 		}
 
-		for (VcfInfo vcfInfo : this.normalizedIndels)
+		for (VcfInfo vcfInfo : this.normalizedIndels.stream().filter(p -> p.getOriginatingTumourAliquotID().equals(tumourAliquotID)).collect(Collectors.toList()))
 		{
-			prepCommand += " ln -s /datastore/vcf/"+vcfInfo.getOriginatingPipeline().toString()+"/"+vcfInfo.getOriginatingTumourAliquotID()+"/"+vcfInfo.getFileName()+""
-								+ " /datastore/vcf/"+tumourAliquotID+"_"+vcfInfo.getOriginatingPipeline().toString()+"_"+vcfInfo.getVcfType().toString()+".vcf && \\\n";
+			prepCommand += " ln -s /datastore/vcf/"+vcfInfo.getOriginatingPipeline().toString()+"/"+vcfInfo.getFileName()+" "
+								+ " /datastore/vcf/"+vcfInfo.getOriginatingTumourAliquotID()+"_"+vcfInfo.getOriginatingPipeline().toString()+"_"+vcfInfo.getVcfType().toString()+".vcf && \\\n";
 			combineVcfArgs += " --" + vcfInfo.getOriginatingPipeline().toString() + "_" + vcfInfo.getVcfType().toString()+
-								" "+vcfInfo.getOriginatingTumourAliquotID() + "_" + vcfInfo.getOriginatingPipeline().toString() + "_"+vcfInfo.getVcfType().toString()+".vcf ";
+								" "+vcfInfo.getOriginatingTumourAliquotID() + "_" + vcfInfo.getOriginatingPipeline().toString() + "_"+vcfInfo.getVcfType().toString()+".vcf \\\n";
 		}
-		prepCommand.substring(0,prepCommand.lastIndexOf("&&"));
+		prepCommand = prepCommand.substring(0,prepCommand.lastIndexOf("&&"));
 		String moveToFailed = GitUtils.gitMoveCommand("running-jobs","failed-jobs",this.JSONlocation + "/" + this.JSONrepoName + "/" + this.JSONfolderName,this.JSONfileName, this.gitMoveTestMode, this.getWorkflowBaseDir() + "/scripts/");
 		prepCommand += (") || " + moveToFailed);
 		
@@ -339,7 +339,7 @@ public class OxoGWrapperWorkflow extends BaseOxoGWrapperWorkflow {
 		//run the merge script, then bgzip and index them all.
 		String combineCommand = "(sudo mkdir -p /datastore/merged_vcfs/"+tumourAliquotID+"/ "
 								+ " && sudo chmod a+rw /datastore/merged_vcfs/"+tumourAliquotID+"/ "
-				+ " && perl "
+				+ " && perl "+this.getWorkflowBaseDir()+"/scripts/vcf_merge_by_type.pl "
 				+ combineVcfArgs
 				+ " /datastore/vcf/ /datastore/merged_vcfs/"+tumourAliquotID+"/"
 				//rename the merged VCFs to ensure they contain the correct aliquot IDs.
