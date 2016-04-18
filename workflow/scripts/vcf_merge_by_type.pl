@@ -36,14 +36,14 @@ my ($broad_snv, $sanger_snv, $de_snv, $muse_snv,
 
 GetOptions ("broad_snv=s" => \$broad_snv,
 			"sanger_snv=s" => \$sanger_snv,
-			"de_snv=s" => \$de_snv,
+			"dkfz_embl_snv=s" => \$de_snv,
 			"muse_snv=s" => \$muse_snv,
 			"broad_sv=s" => \$broad_sv,
 			"sanger_sv=s" => \$sanger_sv,
-			"de_sv=s" => \$de_sv,
+			"dkfz_embl_sv=s" => \$de_sv,
 			"broad_indel=s" => \$broad_indel,
 			"sanger_indel=s" => \$sanger_indel,
-			"de_indel=s" => \$de_indel,
+			"dkfz_embl_indel=s" => \$de_indel,
 			"indir=s" => \$in_dir,
 			"outdir=s" => \$out_dir);
 
