@@ -27,7 +27,7 @@ public class OxoGWrapperWorkflow extends BaseOxoGWrapperWorkflow {
 	private Predicate<VcfInfo> isDkfzEmbl = p -> p.getOriginatingPipeline() == Pipeline.dkfz_embl;
 	private Predicate<VcfInfo> isMuse = p -> p.getOriginatingPipeline() == Pipeline.muse;
 	
-	private Predicate<VcfInfo> isIndel = p -> p.getVcfType() == VCFType.indel; 
+	private Predicate<VcfInfo> isIndel = p -> p.getVcfType() == VCFType.indel;
 	private Predicate<VcfInfo> isSnv = p -> p.getVcfType() == VCFType.snv;
 	private Predicate<VcfInfo> isSv = p -> p.getVcfType() == VCFType.sv;
 	
@@ -302,11 +302,11 @@ public class OxoGWrapperWorkflow extends BaseOxoGWrapperWorkflow {
 		//Create symlinks to the files in the proper directory.
 		Job prepVCFs = this.getWorkflow().createBashJob("create links to VCFs");
 		String prepCommand = "";
-		prepCommand+="\n ( ( [ -d /datastore/merged_vcfs ] || sudo mkdir /datastore/merged_vcfs/ ) && sudo chmod a+rw /datastore/merged_vcfs && \\\n";
+		prepCommand+="\n ( ( [ -d /datastore/merged_vcfs ] || sudo mkdir -p /datastore/merged_vcfs/ ) && sudo chmod a+rw /datastore/merged_vcfs && \\\n";
 		
 		String combineVcfArgs = "";
 		
-		for (VcfInfo vcfInfo : this.vcfs.stream().filter(p -> p.getVcfType()!=VCFType.indel).collect(Collectors.toList()))
+		for (VcfInfo vcfInfo : this.vcfs.stream().filter(isIndel.negate()).collect(Collectors.toList()))
 		{
 			prepCommand += " ln -s /datastore/vcf/"+vcfInfo.getOriginatingPipeline().toString()+"/"+vcfInfo.getOriginatingTumourAliquotID()+"/"+vcfInfo.getFileName()+""
 								+ " /datastore/vcf/"+tumourAliquotID+"_"+vcfInfo.getOriginatingPipeline().toString()+"_"+vcfInfo.getVcfType().toString()+".vcf && \\\n";
@@ -886,7 +886,6 @@ public class OxoGWrapperWorkflow extends BaseOxoGWrapperWorkflow {
 				workflowObjectIDs.put(Pipeline.dkfz_embl.toString(), dkfzEmblList);
 				workflowObjectIDs.put(Pipeline.muse.toString(), museList);
 				workflowObjectIDs.put(BAMType.normal.toString(), normalList);
-				//workflowObjectIDs.put(BAMType.tumour.toString(), tumourList);
 				for (int i = 0; i < this.tumours.size() ; i ++)
 				{
 					TumourInfo tInfo = this.tumours.get(i);
@@ -894,7 +893,6 @@ public class OxoGWrapperWorkflow extends BaseOxoGWrapperWorkflow {
 					tumourIDs.add(tInfo.getBamTumourIndexObjectID());
 					tumourIDs.add(tInfo.getBamTumourObjectID());
 					workflowObjectIDs.put(BAMType.tumour+"_"+tInfo.getAliquotID(), tumourIDs);
-					//tumourList.add(tumourIDs);
 				}
 				
 				Map<String,String> workflowURLs = new HashMap<String,String>(6);
@@ -921,7 +919,6 @@ public class OxoGWrapperWorkflow extends BaseOxoGWrapperWorkflow {
 							//directory named with the GNOS ID.
 							List<String> objects = workflowObjectIDs.get(s);
 							List<String> s3Mappings = objects.stream().map(t -> t + ":" + this.workflowNamestoGnosIds.get(s) + "/" + this.objectToFilenames.get(t) ).collect(Collectors.toList());
-							//List<String> s3Mappings = objectIDs.stream().map(s ->  s+":"+this.workflowNamestoGnosIds.get(workflowName)+"/"+this.objectToFilenames.get(s)).collect(Collectors.toList() );
 							return s3Mappings;
 						case gtdownload:
 							// gtdownloader - look up the GNOS URL, return as list with single item. 
