@@ -145,7 +145,8 @@ public abstract class BaseOxoGWrapperWorkflow extends AbstractWorkflowDataModel 
 	private String getOptionalProperty(String propName)
 	{
 		boolean hasPropertyAndNotNull = hasPropertyAndNotNull(propName);
-		if (hasPropertyAndNotNull) {
+		if (hasPropertyAndNotNull)
+		{
 			try
 			{
 				return getProperty(propName);
@@ -199,7 +200,7 @@ public abstract class BaseOxoGWrapperWorkflow extends AbstractWorkflowDataModel 
 			if (hasPropertyAndNotNull("allowMissingFiles")) {
 				this.allowMissingFiles = Boolean.valueOf(getProperty("allowMissingFiles"));
 			}
-			
+			System.out.println("DEBUG: allowMissingFiles: "+allowMissingFiles);
 			for (int i = 0; i < tumourCount; i++)
 			{
 				System.out.println("reading tumour "+i);

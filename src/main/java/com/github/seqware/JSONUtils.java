@@ -34,41 +34,41 @@ public abstract class JSONUtils {
 	// ugh... so many constants. There's probably a more elegant way to do this,
 	// seeing as most of them follow a pattern. Just don't have time to fix that
 	// right now.
-	static final String BROAD_SNV_VCF_OBJECT_ID = "broad_snv_data_object_id";
-	static final String BROAD_SNV_VCF_NAME = "broad_snv_data_file_name";
-	static final String DKFZEMBL_SNV_VCF_OBJECT_ID = "dkfz_embl_snv_data_object_id";
-	static final String DKFZEMBL_SNV_VCF_NAME = "dkfz_embl_snv_data_file_name";
-	static final String SANGER_SNV_VCF_OBJECT_ID = "sanger_snv_data_object_id";
-	static final String SANGER_SNV_VCF_NAME = "sanger_snv_data_file_name";
-	static final String MUSE_VCF_OBJECT_ID = "muse_snv_data_object_id";
-	static final String MUSE_VCF_NAME = "muse_snv_data_file_name";
-
-	static final String BROAD_SV_VCF_OBJECT_ID = "broad_sv_data_object_id";
-	static final String BROAD_SV_VCF_NAME = "broad_sv_data_file_name";
-	static final String DKFZEMBL_SV_VCF_OBJECT_ID = "dkfz_embl_sv_data_object_id";
-	static final String DKFZEMBL_SV_VCF_NAME = "dkfz_embl_sv_data_file_name";
-	static final String SANGER_SV_VCF_OBJECT_ID = "sanger_sv_data_object_id";
-	static final String SANGER_SV_VCF_NAME = "sanger_sv_data_file_name";
-
-	static final String BROAD_INDEL_VCF_OBJECT_ID = "broad_indel_data_object_id";
-	static final String BROAD_INDEL_VCF_NAME = "broad_indel_data_file_name";
-	static final String DKFZEMBL_INDEL_VCF_OBJECT_ID = "dkfz_embl_indel_data_object_id";
-	static final String DKFZEMBL_INDEL_VCF_NAME = "dkfz_embl_indel_data_file_name";
-	static final String SANGER_INDEL_VCF_OBJECT_ID = "sanger_indel_data_object_id";
-	static final String SANGER_INDEL_VCF_NAME = "sanger_indel_data_file_name";
-
-	static final String SANGER_SNV_INDEX_OBJECT_ID = "sanger_snv_index_object_id";
-	static final String BROAD_SNV_INDEX_OBJECT_ID = "broad_snv_index_object_id";
-	static final String DKFZEMBL_SNV_INDEX_OBJECT_ID = "dkfz_embl_snv_index_object_id";
-	static final String MUSE_SNV_INDEX_OBJECT_ID = "muse_snv_index_object_id";
-
-	static final String SANGER_SV_INDEX_OBJECT_ID = "sanger_sv_index_object_id";
-	static final String BROAD_SV_INDEX_OBJECT_ID = "broad_sv_index_object_id";
-	static final String DKFZEMBL_SV_INDEX_OBJECT_ID = "dkfz_embl_sv_index_object_id";
-
-	static final String SANGER_INDEL_INDEX_OBJECT_ID = "sanger_indel_index_object_id";
-	static final String BROAD_INDEL_INDEX_OBJECT_ID = "broad_indel_index_object_id";
-	static final String DKFZEMBL_INDEL_INDEX_OBJECT_ID = "dkfz_embl_indel_index_object_id";
+//	static final String BROAD_SNV_VCF_OBJECT_ID = "broad_snv_data_object_id";
+//	static final String BROAD_SNV_VCF_NAME = "broad_snv_data_file_name";
+//	static final String DKFZEMBL_SNV_VCF_OBJECT_ID = "dkfz_embl_snv_data_object_id";
+//	static final String DKFZEMBL_SNV_VCF_NAME = "dkfz_embl_snv_data_file_name";
+//	static final String SANGER_SNV_VCF_OBJECT_ID = "sanger_snv_data_object_id";
+//	static final String SANGER_SNV_VCF_NAME = "sanger_snv_data_file_name";
+//	static final String MUSE_VCF_OBJECT_ID = "muse_snv_data_object_id";
+//	static final String MUSE_VCF_NAME = "muse_snv_data_file_name";
+//
+//	static final String BROAD_SV_VCF_OBJECT_ID = "broad_sv_data_object_id";
+//	static final String BROAD_SV_VCF_NAME = "broad_sv_data_file_name";
+//	static final String DKFZEMBL_SV_VCF_OBJECT_ID = "dkfz_embl_sv_data_object_id";
+//	static final String DKFZEMBL_SV_VCF_NAME = "dkfz_embl_sv_data_file_name";
+//	static final String SANGER_SV_VCF_OBJECT_ID = "sanger_sv_data_object_id";
+//	static final String SANGER_SV_VCF_NAME = "sanger_sv_data_file_name";
+//
+//	static final String BROAD_INDEL_VCF_OBJECT_ID = "broad_indel_data_object_id";
+//	static final String BROAD_INDEL_VCF_NAME = "broad_indel_data_file_name";
+//	static final String DKFZEMBL_INDEL_VCF_OBJECT_ID = "dkfz_embl_indel_data_object_id";
+//	static final String DKFZEMBL_INDEL_VCF_NAME = "dkfz_embl_indel_data_file_name";
+//	static final String SANGER_INDEL_VCF_OBJECT_ID = "sanger_indel_data_object_id";
+//	static final String SANGER_INDEL_VCF_NAME = "sanger_indel_data_file_name";
+//
+//	static final String SANGER_SNV_INDEX_OBJECT_ID = "sanger_snv_index_object_id";
+//	static final String BROAD_SNV_INDEX_OBJECT_ID = "broad_snv_index_object_id";
+//	static final String DKFZEMBL_SNV_INDEX_OBJECT_ID = "dkfz_embl_snv_index_object_id";
+//	static final String MUSE_SNV_INDEX_OBJECT_ID = "muse_snv_index_object_id";
+//
+//	static final String SANGER_SV_INDEX_OBJECT_ID = "sanger_sv_index_object_id";
+//	static final String BROAD_SV_INDEX_OBJECT_ID = "broad_sv_index_object_id";
+//	static final String DKFZEMBL_SV_INDEX_OBJECT_ID = "dkfz_embl_sv_index_object_id";
+//
+//	static final String SANGER_INDEL_INDEX_OBJECT_ID = "sanger_indel_index_object_id";
+//	static final String BROAD_INDEL_INDEX_OBJECT_ID = "broad_indel_index_object_id";
+//	static final String DKFZEMBL_INDEL_INDEX_OBJECT_ID = "dkfz_embl_indel_index_object_id";
 
 	static final String BAM_NORMAL_OBJECT_ID = "normal_data_object_id";
 	static final String BAM_NORMAL_FILE_NAME = "normal_data_file_name";
@@ -118,16 +118,16 @@ public abstract class JSONUtils {
 	
 	static final String NORMAL_BAM_INDEX_FILE_NAME = "normal_index_file_name";
 	static final String TUMOUR_BAM_INDEX_FILE_NAME = "tumour_index_file_name";
-	static final String SANGER_SNV_INDEX_FILE_NAME = "sanger_snv_index_file_name";
-	static final String SANGER_SV_INDEX_FILE_NAME = "sanger_sv_index_file_name";
-	static final String SANGER_INDEL_INDEX_FILE_NAME = "sanger_indel_index_file_name";
-	static final String BROAD_SNV_INDEX_FILE_NAME = "broad_snv_index_file_name";
-	static final String BROAD_SV_INDEX_FILE_NAME = "broad_sv_index_file_name";
-	static final String BROAD_INDEL_INDEX_FILE_NAME = "broad_indel_index_file_name";
-	static final String DKFZ_EMBL_SNV_INDEX_FILE_NAME = "dkfz_embl_snv_index_file_name";
-	static final String DKFZ_EMBL_SV_INDEX_FILE_NAME = "dkfz_embl_sv_index_file_name";
-	static final String DKFZ_EMBL_INDEL_INDEX_FILE_NAME = "dkfz_embl_indel_index_file_name";
-	static final String MUSE_SNV_INDEX_FILE_NAME = "muse_snv_index_file_name";
+//	static final String SANGER_SNV_INDEX_FILE_NAME = "sanger_snv_index_file_name";
+//	static final String SANGER_SV_INDEX_FILE_NAME = "sanger_sv_index_file_name";
+//	static final String SANGER_INDEL_INDEX_FILE_NAME = "sanger_indel_index_file_name";
+//	static final String BROAD_SNV_INDEX_FILE_NAME = "broad_snv_index_file_name";
+//	static final String BROAD_SV_INDEX_FILE_NAME = "broad_sv_index_file_name";
+//	static final String BROAD_INDEL_INDEX_FILE_NAME = "broad_indel_index_file_name";
+//	static final String DKFZ_EMBL_SNV_INDEX_FILE_NAME = "dkfz_embl_snv_index_file_name";
+//	static final String DKFZ_EMBL_SV_INDEX_FILE_NAME = "dkfz_embl_sv_index_file_name";
+//	static final String DKFZ_EMBL_INDEL_INDEX_FILE_NAME = "dkfz_embl_indel_index_file_name";
+//	static final String MUSE_SNV_INDEX_FILE_NAME = "muse_snv_index_file_name";
 	static final String TUMOUR_COUNT = "tumourCount";
 	static final String TUMOUR_ALIQUOT_ID = "tumour_aliquot_id";
 
@@ -153,73 +153,75 @@ public abstract class JSONUtils {
 		
 		Function<? super Entry<String, String>, ? extends String> keyMapper = e->e.getKey()+"_"+String.valueOf(index);
 		
-//		Comparator<Entry<String,String>> comparator = new Comparator<Entry<String,String>>() {
-//
-//			@Override
-//			public int compare(Entry<String,String> o1, Entry<String,String> o2) {
-//				return o1.getKey().compareTo(o2.getKey());
-//			}
-//		};
-
-		
 		DocumentContext parsedJSON = JsonPath.using(jsonPathConfig).parse(jsonFile);
 		
 		Map<String, Object> info = new TreeMap<String, Object>();
+		
 		// SNV
-		Map<String, String> snvVCFInfo = ((Map<String, String>) (parsedJSON.read("$." + workflowNameInJson + ".files[?(@.file_name=~/"+tumourAliquotID+".*\\.somatic\\.snv_mnv\\.vcf\\.gz/)]", List.class)).get(0))
-																	.entrySet()
-																	.stream()
-																	.collect(Collectors.toMap( keyMapper, Entry::getValue ) );
-		Map<String, String> snvVCFIndexInfo = ((Map<String, String>) (parsedJSON.read("$." + workflowNameInJson+ ".files[?(@.file_name=~/("+tumourAliquotID+".*\\.somatic\\.snv_mnv\\.vcf\\.gz)(\\.tbi|\\.idx)/)]", List.class)).get(0))
-																	.entrySet()
-																	.stream()
-																	.collect(Collectors.toMap( keyMapper, Entry::getValue ) );
-		// get GNOS ID
-		String gnosID = (String) (parsedJSON.read("$." + workflowNameInJson + ".gnos_id", String.class));
-
-		if (!workflowNameInJson.equals("muse")) {
-			// INDEL
-			Map<String, String> indelVCFInfo = ((Map<String, String>) (parsedJSON.read("$." + workflowNameInJson + ".files[?(@.file_name=~/"+tumourAliquotID+".*\\.somatic\\.indel\\.vcf\\.gz/)]",List.class)).get(0))
-																			.entrySet()
-																			.stream()
-																			.collect(Collectors.toMap( keyMapper, Entry::getValue ) );
-			
-			Map<String, String> indelVCFIndexInfo = ((Map<String, String>) (parsedJSON.read("$." + workflowNameInJson + ".files[?(@.file_name=~/("+tumourAliquotID+".*\\.somatic\\.indel\\.vcf\\.gz)(\\.tbi|\\.idx)/)]", List.class)).get(0))
-																			.entrySet()
-																			.stream()
-																			.collect(Collectors.toMap( keyMapper, Entry::getValue ) );
-			// SV
-			Map<String, String> svVCFInfo = ((Map<String, String>) (parsedJSON.read("$." + workflowNameInJson + ".files[?(@.file_name=~/"+tumourAliquotID+".*\\.somatic\\.sv\\.vcf\\.gz/)]", List.class)).get(0))
-																			.entrySet()
-																			.stream()
-																			.collect(Collectors.toMap( keyMapper, Entry::getValue ) );
-			Map<String, String> svVCFIndexInfo = ((Map<String, String>) (parsedJSON.read("$." + workflowNameInJson + ".files[?(@.file_name=~/("+tumourAliquotID+".*\\.somatic\\.sv\\.vcf\\.gz)(\\.tbi|\\.idx)/)]", List.class)).get(0))
-																			.entrySet()
-																			.stream()
-																			.collect(Collectors.toMap( keyMapper, Entry::getValue ) );
-
-			Map<String, Object> indelInfo = new TreeMap<String, Object>();
-			indelInfo.put(DATA, indelVCFInfo);
-			indelInfo.put(INDEX, indelVCFIndexInfo);
-			indelInfo.put(NUMBER, index);
-			indelInfo.put(TAG, "indel");
-			info.put(VCFType.indel.toString()+"_"+index, indelInfo);
-			Map<String, Object> svInfo = new TreeMap<String, Object>();
-			svInfo.put(DATA, svVCFInfo);
-			svInfo.put(INDEX, svVCFIndexInfo);
-			svInfo.put(NUMBER, index);
-			svInfo.put(TAG, "sv");
-			info.put(VCFType.sv.toString()+"_"+index, svInfo);
-
-		}
 		Map<String, Object> snvInfo = new TreeMap<String, Object>();
-		snvInfo.put(DATA, snvVCFInfo);
-		snvInfo.put(INDEX, snvVCFIndexInfo);
+		List<?> dataFromJSON = parsedJSON.read("$." + workflowNameInJson + ".files[?(@.file_name=~/"+tumourAliquotID+".*\\.somatic\\.snv_mnv\\.vcf\\.gz/)]", List.class);
+		if (dataFromJSON != null && dataFromJSON.size()>0)
+		{
+			Map<String, String> snvVCFInfo = ((Map<String, String>) (dataFromJSON).get(0)).entrySet().stream().collect(Collectors.toMap( keyMapper, Entry::getValue ) );
+			snvInfo.put(DATA, snvVCFInfo);
+		}
+		
+		dataFromJSON = parsedJSON.read("$." + workflowNameInJson+ ".files[?(@.file_name=~/("+tumourAliquotID+".*\\.somatic\\.snv_mnv\\.vcf\\.gz)(\\.tbi|\\.idx)/)]", List.class); 
+		if (dataFromJSON != null && dataFromJSON.size()>0)
+		{
+			Map<String, String> snvVCFIndexInfo = ((Map<String, String>) (dataFromJSON).get(0)).entrySet().stream().collect(Collectors.toMap( keyMapper, Entry::getValue ) );
+			snvInfo.put(INDEX, snvVCFIndexInfo);
+		}
 		snvInfo.put(NUMBER, index);
 		snvInfo.put(TAG, "snv");
 		info.put(VCFType.snv.toString()+"_"+index, snvInfo);
-		info.put(TAG, workflowNameInJson);
+
+		
+		if (!workflowNameInJson.equals("muse")) {
+			dataFromJSON = parsedJSON.read("$." + workflowNameInJson + ".files[?(@.file_name=~/"+tumourAliquotID+".*\\.somatic\\.indel\\.vcf\\.gz/)]",List.class);	
+
+			// INDEL
+			Map<String, Object> indelInfo = new TreeMap<String, Object>();
+			if (dataFromJSON != null && dataFromJSON.size()>0)
+			{
+				Map<String, String> indelVCFInfo = ((Map<String, String>) dataFromJSON.get(0)).entrySet().stream().collect(Collectors.toMap( keyMapper, Entry::getValue ) );
+				indelInfo.put(DATA, indelVCFInfo);
+			}
+			
+			dataFromJSON = parsedJSON.read("$." + workflowNameInJson + ".files[?(@.file_name=~/("+tumourAliquotID+".*\\.somatic\\.indel\\.vcf\\.gz)(\\.tbi|\\.idx)/)]", List.class); 
+			if (dataFromJSON != null && dataFromJSON.size()>0)
+			{
+				Map<String, String> indelVCFIndexInfo = ((Map<String, String>) (dataFromJSON).get(0)).entrySet().stream().collect(Collectors.toMap( keyMapper, Entry::getValue ) );
+				indelInfo.put(INDEX, indelVCFIndexInfo);
+			}
+			indelInfo.put(NUMBER, index);
+			indelInfo.put(TAG, "indel");
+			info.put(VCFType.indel.toString()+"_"+index, indelInfo);
+			
+			// SV
+			Map<String, Object> svInfo = new TreeMap<String, Object>();
+			dataFromJSON = parsedJSON.read("$." + workflowNameInJson + ".files[?(@.file_name=~/"+tumourAliquotID+".*\\.somatic\\.sv\\.vcf\\.gz/)]", List.class);
+			if (dataFromJSON != null && dataFromJSON.size()>0)
+			{
+				Map<String, String> svVCFInfo = ((Map<String, String>) (dataFromJSON).get(0)).entrySet().stream().collect(Collectors.toMap( keyMapper, Entry::getValue ) );
+				svInfo.put(DATA, svVCFInfo);
+			}
+			
+			dataFromJSON = parsedJSON.read("$." + workflowNameInJson + ".files[?(@.file_name=~/("+tumourAliquotID+".*\\.somatic\\.sv\\.vcf\\.gz)(\\.tbi|\\.idx)/)]", List.class);
+			if (dataFromJSON != null && dataFromJSON.size()>0)
+			{
+				Map<String, String> svVCFIndexInfo = ((Map<String, String>) (dataFromJSON).get(0)).entrySet().stream().collect(Collectors.toMap( keyMapper, Entry::getValue ) );
+				svInfo.put(INDEX, svVCFIndexInfo);
+			}
+			svInfo.put(NUMBER, index);
+			svInfo.put(TAG, "sv");
+			info.put(VCFType.sv.toString()+"_"+index, svInfo);
+		}
+		
+		// get GNOS ID
+		String gnosID = (String) (parsedJSON.read("$." + workflowNameInJson + ".gnos_id", String.class));
 		info.put(GNOS_ID, gnosID);
+		info.put(TAG, workflowNameInJson);
 
 		return info;
 	}
