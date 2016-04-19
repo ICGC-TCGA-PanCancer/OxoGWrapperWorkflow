@@ -13,6 +13,7 @@ import java.util.stream.Collector;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
+import com.github.seqware.VariantBamJobGenerator.UpdateBamForUpload;
 import com.github.seqware.downloaders.DownloaderBuilder;
 import com.github.seqware.downloaders.GNOSDownloader;
 import com.github.seqware.downloaders.ICGCStorageDownloader;
@@ -433,7 +434,11 @@ public class OxoGWrapperWorkflow extends BaseOxoGWrapperWorkflow {
 		oxogJobGenerator.setNormalizedDkfzEmblIndel(this.getVcfName(isDkfzEmblINDEL,this.normalizedIndels));
 		
 		Consumer<String> updateFilesToUpload = (s) -> this.filesForUpload.add(s);
-		Job runOxoGWorkflow = oxogJobGenerator.doOxoG(this, pathToTumour, updateFilesToUpload , parents);
+		Job runOxoGWorkflow = this.getWorkflow().createBashJob("run OxoG Filter for tumour "+tumourAliquotID);
+		if (!this.skipOxoG)
+		{
+			runOxoGWorkflow = oxogJobGenerator.doOxoG(this, pathToTumour, updateFilesToUpload , parents);
+		}
 		
 		return runOxoGWorkflow;
 		
@@ -454,54 +459,45 @@ public class OxoGWrapperWorkflow extends BaseOxoGWrapperWorkflow {
 	 */
 	private Job doVariantBam(BAMType bamType, String bamPath, String tumourBAMFileName, String tumourID, Job ...parents) {
 		Job runVariantbam = this.getWorkflow().createBashJob("run "+bamType+(bamType==BAMType.tumour?"_"+tumourID+"_":"")+" variantbam");
-
-		String minibamName = "";
-		if (bamType == BAMType.normal)
-		{
-			minibamName = this.normalBAMFileName.replace(".bam", "_minibam");
-			this.normalMinibamPath = "/datastore/variantbam_results/"+minibamName+".bam";
-			this.filesForUpload.add(this.normalMinibamPath);
-			this.filesForUpload.add(this.normalMinibamPath+".bai");
-		}
-		else
-		{
-			minibamName = tumourBAMFileName.replace(".bam", "_minibam");
-			String tumourMinibamPath = "/datastore/variantbam_results/"+minibamName+".bam";
-			
-			for (int i = 0; i < this.tumours.size(); i++ )
-			{
-				if (this.tumours.get(i).getAliquotID().equals(tumourID))
-				{
-					this.tumours.get(i).setTumourMinibamPath(tumourMinibamPath);
-				}
-			}
-			
-			this.filesForUpload.add(tumourMinibamPath);
-			this.filesForUpload.add(tumourMinibamPath+".bai");
-		}
 		
 		if (!this.skipVariantBam)
 		{
-			String snvVcf = mergedVcfs.stream().filter(isSnv).findFirst().get().getFileName(); 
-			String svVcf = mergedVcfs.stream().filter(isSv).findFirst().get().getFileName();
-			String indelVcf = mergedVcfs.stream().filter(isIndel).findFirst().get().getFileName();
-			String command = TemplateUtils.getRenderedTemplate(Arrays.stream( new String[][] {
-				{ "containerNameSuffix", bamType + (bamType == BAMType.tumour ? "_with_tumour_"+tumourID:"") },
-				{ "minibamName", minibamName+".bam"},  {"snvPadding", String.valueOf(this.snvPadding)}, {"svPadding", String.valueOf(this.svPadding)},
-				{ "indelPadding", String.valueOf(this.indelPadding) }, { "pathToBam", bamPath },
-				{ "snvVcf", snvVcf }, { "svVcf", svVcf }, { "indelVcf", indelVcf }
-			}).collect(this.collectToMap), "runVariantbam.template" );
+			VariantBamJobGenerator variantBamJobGenerator = new VariantBamJobGenerator();
+			variantBamJobGenerator.setGitMoveTestMode(this.gitMoveTestMode);
+			variantBamJobGenerator.setIndelPadding(String.valueOf(this.indelPadding));
+			variantBamJobGenerator.setSnvPadding(String.valueOf(this.snvPadding));
+			variantBamJobGenerator.setSvPadding(String.valueOf(this.svPadding));
+			variantBamJobGenerator.setJSONfileName(this.JSONfileName);
+			variantBamJobGenerator.setJSONfolderName(this.JSONfolderName);
+			variantBamJobGenerator.setJSONlocation(this.JSONlocation);
+			variantBamJobGenerator.setJSONrepoName(this.JSONrepoName);
+			variantBamJobGenerator.setTumourAliquotID(tumourID);
+			variantBamJobGenerator.setSnvVcf(mergedVcfs.stream().filter(isSnv).findFirst().get().getFileName());
+			variantBamJobGenerator.setSvVcf(mergedVcfs.stream().filter(isSv).findFirst().get().getFileName());
+			variantBamJobGenerator.setIndelVcf(mergedVcfs.stream().filter(isIndel).findFirst().get().getFileName());
 			
-			String moveToFailed = GitUtils.gitMoveCommand("running-jobs","failed-jobs",this.JSONlocation + "/" + this.JSONrepoName + "/" + this.JSONfolderName,this.JSONfileName, this.gitMoveTestMode, this.getWorkflowBaseDir() + "/scripts/");
-			command += (" || " + moveToFailed);
-			runVariantbam.setCommand(command);
+			UpdateBamForUpload<String, String> updateFilesForUpload = (path, id) -> {
+				if (id==null || id.trim().equals(""))
+				{
+					this.normalMinibamPath = path;
+					this.filesForUpload.add(path);
+				}
+				else
+				{
+					for (TumourInfo tInfo : this.tumours)
+					{
+						if (tInfo.getAliquotID().equals(id))
+						{
+							tInfo.setTumourMinibamPath(path);
+							filesForUpload.add(path);
+						}
+					}
+				}
+			};
+			
+			String bamName = ( bamType == BAMType.normal ? this.normalBAMFileName : tumourBAMFileName);
+			runVariantbam = variantBamJobGenerator.doVariantBam(this, bamType, bamName, bamPath, tumourBAMFileName, tumourID, updateFilesForUpload, parents);
 		}
-		for (Job parent : parents)
-		{
-			runVariantbam.addParent(parent);
-		}
-		
-		//Job getLogs = this.getOxoGLogs(runOxoGWorkflow);
 		return runVariantbam;
 	}
 	
