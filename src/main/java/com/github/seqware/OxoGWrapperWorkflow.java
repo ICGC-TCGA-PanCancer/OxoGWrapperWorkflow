@@ -310,7 +310,7 @@ public class OxoGWrapperWorkflow extends BaseOxoGWrapperWorkflow {
 		
 		for (VcfInfo vcfInfo : this.vcfs.stream().filter(p -> p.getOriginatingTumourAliquotID().equals(tumourAliquotID) && isIndel.negate().test(p)).collect(Collectors.toList()))
 		{
-			prepCommand += " ln -s /datastore/vcf/"+vcfInfo.getOriginatingPipeline().toString()+"/"+vcfInfo.getFileName()+" "
+			prepCommand += " ln -s /datastore/vcf/"+vcfInfo.getOriginatingPipeline().toString()+"/"+vcfInfo.getPipelineGnosID()+"/"+vcfInfo.getFileName()+" "
 								+ " /datastore/vcf/"+vcfInfo.getOriginatingTumourAliquotID()+"_"+vcfInfo.getOriginatingPipeline().toString()+"_"+vcfInfo.getVcfType().toString()+".vcf && \\\n";
 			combineVcfArgs += " --" + vcfInfo.getOriginatingPipeline().toString() + "_" + vcfInfo.getVcfType().toString()+
 								" "+vcfInfo.getOriginatingTumourAliquotID() + "_" + vcfInfo.getOriginatingPipeline().toString() + "_"+vcfInfo.getVcfType().toString()+".vcf \\\n";
@@ -318,8 +318,7 @@ public class OxoGWrapperWorkflow extends BaseOxoGWrapperWorkflow {
 
 		for (VcfInfo vcfInfo : this.normalizedIndels.stream().filter(p -> p.getOriginatingTumourAliquotID().equals(tumourAliquotID)).collect(Collectors.toList()))
 		{
-			prepCommand += " ln -s /datastore/vcf/"+vcfInfo.getOriginatingPipeline().toString()+"/"+vcfInfo.getFileName()+" "
-								+ " /datastore/vcf/"+vcfInfo.getOriginatingTumourAliquotID()+"_"+vcfInfo.getOriginatingPipeline().toString()+"_"+vcfInfo.getVcfType().toString()+".vcf && \\\n";
+			prepCommand += " ln -s "+vcfInfo.getFileName()+" /datastore/vcf/"+vcfInfo.getOriginatingTumourAliquotID()+"_"+vcfInfo.getOriginatingPipeline().toString()+"_"+vcfInfo.getVcfType().toString()+".vcf && \\\n";
 			combineVcfArgs += " --" + vcfInfo.getOriginatingPipeline().toString() + "_" + vcfInfo.getVcfType().toString()+
 								" "+vcfInfo.getOriginatingTumourAliquotID() + "_" + vcfInfo.getOriginatingPipeline().toString() + "_"+vcfInfo.getVcfType().toString()+".vcf \\\n";
 		}
@@ -341,12 +340,12 @@ public class OxoGWrapperWorkflow extends BaseOxoGWrapperWorkflow {
 								+ " && sudo chmod a+rw /datastore/merged_vcfs/"+tumourAliquotID+"/ "
 				+ " && perl "+this.getWorkflowBaseDir()+"/scripts/vcf_merge_by_type.pl "
 				+ combineVcfArgs
-				+ " /datastore/vcf/ /datastore/merged_vcfs/"+tumourAliquotID+"/"
+				+ " --indir /datastore/vcf/ --outdir /datastore/merged_vcfs/"+tumourAliquotID+"/ \\\n"
 				//rename the merged VCFs to ensure they contain the correct aliquot IDs.
-				+ " && cd /datastore/merged_vcfs/"+tumourAliquotID+"/ "
-				+ " && cp snv.clean.sorted.vcf ../snv."+tumourAliquotID+".clean.sorted.vcf "
-				+ " && cp sv.clean.sorted.vcf ../sv."+tumourAliquotID+".clean.sorted.vcf "
-				+ " && cp indel.clean.sorted.vcf ../indel."+tumourAliquotID+".clean.sorted.vcf ) || "+moveToFailed;
+				+ " && cd /datastore/merged_vcfs/"+tumourAliquotID+"/ \\\n"
+				+ " && cp snv.clean.sorted.vcf ../snv."+tumourAliquotID+".clean.sorted.vcf \\\n"
+				+ " && cp sv.clean.sorted.vcf ../sv."+tumourAliquotID+".clean.sorted.vcf \\\n"
+				+ " && cp indel.clean.sorted.vcf ../indel."+tumourAliquotID+".clean.sorted.vcf \\\n) || "+moveToFailed;
 
 		vcfCombineJob.setCommand(combineCommand);
 		vcfCombineJob.addParent(prepVCFs);
