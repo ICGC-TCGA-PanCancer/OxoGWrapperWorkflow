@@ -665,6 +665,11 @@ public class OxoGWrapperWorkflow extends BaseOxoGWrapperWorkflow {
 		{
 			PcawgAnnotatorJobGenerator pcawgAnnotatorJobGenerator = new PcawgAnnotatorJobGenerator();
 			Consumer<String> updateFilesForUpload = (s) -> this.filesForUpload.add(s);
+			pcawgAnnotatorJobGenerator.setGitMoveTestMode(this.gitMoveTestMode);
+			pcawgAnnotatorJobGenerator.setJSONfileName(this.JSONfileName);
+			pcawgAnnotatorJobGenerator.setJSONfolderName(this.JSONfolderName);
+			pcawgAnnotatorJobGenerator.setJSONlocation(this.JSONlocation);
+			pcawgAnnotatorJobGenerator.setJSONrepoName(this.JSONrepoName);
 			annotatorJob = pcawgAnnotatorJobGenerator.runAnnotator(this, inputType, workflowName, vcfPath, tumourBamPath, normalBamPath, tumourAliquotID, updateFilesForUpload, parents);
 		}
 		
