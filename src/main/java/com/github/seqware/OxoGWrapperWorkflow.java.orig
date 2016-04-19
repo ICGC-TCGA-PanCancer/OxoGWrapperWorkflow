@@ -21,17 +21,18 @@ import net.sourceforge.seqware.pipeline.workflowV2.model.Job;
 
 public class OxoGWrapperWorkflow extends BaseOxoGWrapperWorkflow {
 
-	private Collector<String[], ?, Map<String, Object>> collectToMap = Collectors.toMap(kv -> kv[0], kv -> kv[1]);;
+	private Collector<String[], ?, Map<String, Object>> collectToMap = Collectors.toMap(kv -> kv[0], kv -> kv[1]);
 
 	private Predicate<VcfInfo> isSanger = p -> p.getOriginatingPipeline() == Pipeline.sanger;
 	private Predicate<VcfInfo> isBroad = p -> p.getOriginatingPipeline() == Pipeline.broad;
 	private Predicate<VcfInfo> isDkfzEmbl = p -> p.getOriginatingPipeline() == Pipeline.dkfz_embl;
 	private Predicate<VcfInfo> isMuse = p -> p.getOriginatingPipeline() == Pipeline.muse;
 	
-	private Predicate<VcfInfo> isIndel = p -> p.getVcfType() == VCFType.indel; 
+	private Predicate<VcfInfo> isIndel = p -> p.getVcfType() == VCFType.indel;
 	private Predicate<VcfInfo> isSnv = p -> p.getVcfType() == VCFType.snv;
 	private Predicate<VcfInfo> isSv = p -> p.getVcfType() == VCFType.sv;
 	
+	Supplier<? extends String> emptyStringWhenMissingFilesAllowed = () -> this.allowMissingFiles ? "" : null;
 	/**
 	 * The types of VCF files there are:
 	 * <ul>
@@ -241,7 +242,6 @@ public class OxoGWrapperWorkflow extends BaseOxoGWrapperWorkflow {
 	 */
 	private Job preProcessIndelVCF(Job parent, Pipeline workflowName, String vcfName, String tumourAliquotID )
 	{
-		//System.out.println("DEBUG: preProcessIndelVCF: "+workflowName+" ; "+vcfName + " ; "+tumourAliquotID);
 		String outDir = "/datastore/vcf/"+workflowName;
 		String normalizedINDELName = tumourAliquotID+ "_"+ workflowName+"_somatic.indel.pass-filtered.bcftools-norm.vcf.gz";
 		String extractedSNVVCFName = tumourAliquotID+ "_"+ workflowName+"_somatic.indel.pass-filtered.bcftools-norm.extracted-snvs.vcf";
@@ -289,7 +289,6 @@ public class OxoGWrapperWorkflow extends BaseOxoGWrapperWorkflow {
 		normalizedIndel.setVcfType(VCFType.indel);
 		normalizedIndel.setOriginatingTumourAliquotID(tumourAliquotID);
 		this.normalizedIndels.add(normalizedIndel);
-
 		return extractSNVFromIndel;
 	}
 	
@@ -301,15 +300,20 @@ public class OxoGWrapperWorkflow extends BaseOxoGWrapperWorkflow {
 	 */
 	private Job combineVCFsByType(String tumourAliquotID, Job ... parents)
 	{
-
 		
 		//Create symlinks to the files in the proper directory.
 		Job prepVCFs = this.getWorkflow().createBashJob("create links to VCFs");
 		String prepCommand = "";
 		prepCommand+="\n ( ( [ -d /datastore/merged_vcfs ] || sudo mkdir -p /datastore/merged_vcfs/ ) && sudo chmod a+rw /datastore/merged_vcfs && \\\n";
+<<<<<<< HEAD
 		
 		String combineVcfArgs = "";
 		
+=======
+		
+		String combineVcfArgs = "";
+		
+>>>>>>> feature/allow_missing_files
 		for (VcfInfo vcfInfo : this.vcfs.stream().filter(p -> p.getOriginatingTumourAliquotID().equals(tumourAliquotID) && isIndel.negate().test(p)).collect(Collectors.toList()))
 		{
 			prepCommand += " ln -s /datastore/vcf/"+vcfInfo.getOriginatingPipeline().toString()+"/"+vcfInfo.getPipelineGnosID()+"/"+vcfInfo.getFileName()+" "
@@ -408,16 +412,26 @@ public class OxoGWrapperWorkflow extends BaseOxoGWrapperWorkflow {
 	 */
 	private Job doOxoG(String pathToTumour, String tumourAliquotID, Job ...parents) {
 		
+<<<<<<< HEAD
 //		String moveToFailed = GitUtils.gitMoveCommand("running-jobs","failed-jobs",this.JSONlocation + "/" + this.JSONrepoName + "/" + this.JSONfolderName,this.JSONfileName, this.gitMoveTestMode, this.getWorkflowBaseDir() + "/scripts/");
 //		Job runOxoGWorkflow = this.getWorkflow().createBashJob("run OxoG Filter for tumour "+tumourAliquotID); 
 //		Function<String,String> getFileName = (s) -> {  return s.substring(s.lastIndexOf("/")); };
 //		String pathToResults = "/datastore/oxog_results/tumour_"+tumourAliquotID+"/cga/fh/pcawg_pipeline/jobResults_pipette/jobs/"+this.normalAliquotID+"/links_for_gnos/annotate_failed_sites_to_vcfs/";
 //		String pathToUploadDir = "/datastore/files_for_upload/";
 //		
+=======
+		String moveToFailed = GitUtils.gitMoveCommand("running-jobs","failed-jobs",this.JSONlocation + "/" + this.JSONrepoName + "/" + this.JSONfolderName,this.JSONfileName, this.gitMoveTestMode, this.getWorkflowBaseDir() + "/scripts/");
+		Job runOxoGWorkflow = this.getWorkflow().createBashJob("run OxoG Filter for tumour "+tumourAliquotID); 
+		Function<String,String> getFileName = (s) -> {  return s.substring(s.lastIndexOf("/")); };
+		String pathToResults = "/datastore/oxog_results/tumour_"+tumourAliquotID+"/cga/fh/pcawg_pipeline/jobResults_pipette/jobs/"+this.normalAliquotID+"/links_for_gnos/annotate_failed_sites_to_vcfs/";
+		String pathToUploadDir = "/datastore/files_for_upload/";
+		
+>>>>>>> feature/allow_missing_files
 		Predicate<? super VcfInfo> isSangerSNV = this.vcfMatchesTypePipelineTumour(isSnv, isSanger, tumourAliquotID);
 		Predicate<? super VcfInfo> isBroadSNV = this.vcfMatchesTypePipelineTumour(isSnv, isBroad, tumourAliquotID);
 		Predicate<? super VcfInfo> isDkfzEmblSNV = this.vcfMatchesTypePipelineTumour(isSnv, isDkfzEmbl, tumourAliquotID);
 		Predicate<? super VcfInfo> isMuseSNV = this.vcfMatchesTypePipelineTumour(isSnv, isMuse, tumourAliquotID);
+<<<<<<< HEAD
 		
 		Predicate<? super VcfInfo> isSangerINDEL = this.vcfMatchesTypePipelineTumour(isIndel,isSanger,tumourAliquotID);
 		Predicate<? super VcfInfo> isBroadINDEL = this.vcfMatchesTypePipelineTumour(isIndel,isBroad,tumourAliquotID);
@@ -432,10 +446,68 @@ public class OxoGWrapperWorkflow extends BaseOxoGWrapperWorkflow {
 		oxogJobGenerator.setExtractedSangerSNV(this.getVcfName(isSangerSNV,this.extractedSnvsFromIndels));
 		oxogJobGenerator.setExtractedBroadSNV(this.getVcfName(isBroadSNV,this.extractedSnvsFromIndels));
 		oxogJobGenerator.setExtractedDkfzEmblSNV(this.getVcfName(isDkfzEmblSNV,this.extractedSnvsFromIndels));
+=======
 		
-		String extractedSangerSNV = this.getVcfName(isSangerSNV,this.extractedSnvsFromIndels);//(this.extractedSnvsFromIndels.stream().filter(isSangerSNV).findFirst().get()).getFileName();
-		String extractedBroadSNV = this.getVcfName(isBroadSNV,this.extractedSnvsFromIndels);//(this.extractedSnvsFromIndels.stream().filter(isBroadSNV).findFirst().get()).getFileName();
-		String extractedDkfzEmblSNV = this.getVcfName(isDkfzEmblSNV,this.extractedSnvsFromIndels);//(this.extractedSnvsFromIndels.stream().filter(isDkfzEmblSNV).findFirst().get()).getFileName();
+		Predicate<? super VcfInfo> isSangerINDEL = this.vcfMatchesTypePipelineTumour(isIndel,isSanger,tumourAliquotID);
+		Predicate<? super VcfInfo> isBroadINDEL = this.vcfMatchesTypePipelineTumour(isIndel,isBroad,tumourAliquotID);
+		Predicate<? super VcfInfo> isDkfzEmblINDEL = this.vcfMatchesTypePipelineTumour(isIndel,isDkfzEmbl,tumourAliquotID);
+				
+		String sangerSNV = this.getVcfName(isSangerSNV,this.vcfs);
+		String broadSNV = this.getVcfName(isBroadSNV,this.vcfs);
+		String dkfzEmblSNV = this.getVcfName(isDkfzEmblSNV,this.vcfs);
+		String museSNV = this.getVcfName(isMuseSNV,this.vcfs);
+		
+		String extractedSangerSNV = this.getVcfName(isSangerSNV,this.extractedSnvsFromIndels);
+		String extractedBroadSNV = this.getVcfName(isBroadSNV,this.extractedSnvsFromIndels);
+		String extractedDkfzEmblSNV = this.getVcfName(isDkfzEmblSNV,this.extractedSnvsFromIndels);
+		
+		String normalizedSangerIndel = this.getVcfName(isSangerINDEL,this.normalizedIndels);
+		String normalizedBroadIndel = this.getVcfName(isBroadINDEL,this.normalizedIndels);
+		String normalizedDkfzEmblIndel = this.getVcfName(isDkfzEmblINDEL,this.normalizedIndels);
+		
+		if (!this.skipOxoG)
+		{
+			String runOxoGCommand = TemplateUtils.getRenderedTemplate(Arrays.stream(new String[][] {
+					{ "sangerExtractedSNVVCFPath", extractedSangerSNV }, { "sangerWorkflow", Pipeline.sanger.toString() }, { "sangerExtractedSNVVCF", getFileName.apply(extractedSangerSNV) },
+					{ "broadExtractedSNVVCFPath", extractedBroadSNV }, { "broadWorkflow", Pipeline.broad.toString() }, { "broadExtractedSNVVCF", getFileName.apply(extractedBroadSNV) },
+					{ "dkfzEmblExtractedSNVVCFPath", extractedDkfzEmblSNV }, { "dkfzEmblWorkflow", Pipeline.dkfz_embl.toString() }, { "dkfzEmblExtractedSNVVCF", getFileName.apply(extractedDkfzEmblSNV) },
+					{ "tumourID", tumourAliquotID }, { "aliquotID", this.normalAliquotID }, { "oxoQScore", this.oxoQScore }, { "museWorkflow", Pipeline.muse.toString() },
+					{ "pathToTumour", pathToTumour }, { "normalBamGnosID", this.normalBamGnosID }, { "normalBAMFileName", this.normalBAMFileName } ,
+					{ "broadGnosID", this.broadGnosID }, { "sangerGnosID", this.sangerGnosID }, { "dkfzemblGnosID", this.dkfzemblGnosID }, { "museGnosID", this.museGnosID },
+					{ "sangerSNVName", sangerSNV}, { "broadSNVName", broadSNV }, { "dkfzEmblSNVName", dkfzEmblSNV }, { "museSNVName", museSNV },
+					{ "pathToResults", pathToResults}, { "pathToUploadDir", pathToUploadDir },
+					{ "broadNormalizedIndelVCFName",normalizedBroadIndel }, { "sangerNormalizedIndelVCFName",normalizedSangerIndel },
+					{ "dkfzEmblNormalizedIndelVCFName",normalizedDkfzEmblIndel }
+				} ).collect(this.collectToMap), "runOxoGFilter.template");
+			runOxoGWorkflow.setCommand("( "+runOxoGCommand+" ) || "+ moveToFailed);
+		}
+		for (Job parent : parents)
+		{
+			runOxoGWorkflow.addParent(parent);
+		}
+
+		
+		Function<String,String> changeToOxoGSuffix = (s) -> {return pathToUploadDir + s.replace(".vcf.gz", ".oxoG.vcf.gz"); };
+		Function<String,String> changeToOxoGTBISuffix = changeToOxoGSuffix.andThen((s) -> s+=".tbi"); 
+		//regular VCFs
+		this.filesForUpload.add(changeToOxoGSuffix.apply(broadSNV));
+		this.filesForUpload.add(changeToOxoGSuffix.apply(dkfzEmblSNV));
+		this.filesForUpload.add(changeToOxoGSuffix.apply(sangerSNV));
+		this.filesForUpload.add(changeToOxoGSuffix.apply(museSNV));
+		//index files
+		this.filesForUpload.add(changeToOxoGTBISuffix.apply(broadSNV));
+		this.filesForUpload.add(changeToOxoGTBISuffix.apply(dkfzEmblSNV));
+		this.filesForUpload.add(changeToOxoGTBISuffix.apply(sangerSNV));
+		this.filesForUpload.add(changeToOxoGTBISuffix.apply(museSNV));
+		//Extracted SNVs
+		this.filesForUpload.add(changeToOxoGSuffix.apply(getFileName.apply(extractedSangerSNV)));
+		this.filesForUpload.add(changeToOxoGSuffix.apply(getFileName.apply(extractedBroadSNV)));
+		this.filesForUpload.add(changeToOxoGSuffix.apply(getFileName.apply(extractedDkfzEmblSNV)));
+		//index files
+		this.filesForUpload.add(changeToOxoGTBISuffix.apply(getFileName.apply(extractedSangerSNV)));
+		this.filesForUpload.add(changeToOxoGTBISuffix.apply(getFileName.apply(extractedBroadSNV)));
+		this.filesForUpload.add(changeToOxoGTBISuffix.apply(getFileName.apply(extractedDkfzEmblSNV)));
+>>>>>>> feature/allow_missing_files
 		
 //				
 //		String sangerSNV = this.getVcfName(isSangerSNV,this.vcfs);
@@ -911,7 +983,6 @@ public class OxoGWrapperWorkflow extends BaseOxoGWrapperWorkflow {
 						this.vcfs.stream().filter(isMuse).map(m -> m.getIndexObjectID())
 					).collect(Collectors.toList()) ;
 				List<String> normalList = Arrays.asList( this.bamNormalIndexObjectID,this.bamNormalObjectID);
-
 				//System.out.println("DEBUG: sangerList: "+sangerList.toString());
 				Map<String,List<String>> workflowObjectIDs = new HashMap<String,List<String>>(6);
 				workflowObjectIDs.put(Pipeline.broad.toString(), broadList);
@@ -1007,6 +1078,7 @@ public class OxoGWrapperWorkflow extends BaseOxoGWrapperWorkflow {
 			Job dkfzemblPassFilter = this.passFilterWorkflow(Pipeline.dkfz_embl, statFiles);
 			// No, we're not going to filter the Muse SNV file.
 			
+
 			//update all filenames to include ".pass-filtered."
 			Function<String,String> addPassFilteredSuffix = (x) -> { return x.replace(".vcf.gz",".pass-filtered.vcf.gz"); };
 			for (VcfInfo vInfo : this.vcfs)
@@ -1048,7 +1120,7 @@ public class OxoGWrapperWorkflow extends BaseOxoGWrapperWorkflow {
 			for (int i = 0 ; i < this.tumours.size(); i++)
 			{
 				TumourInfo tInf = this.tumours.get(i);
-				Job oxoG; 
+				Job oxoG;
 				if (i>0)
 				{
 					//OxoG jobs can put a heavy CPU load on the system (in bursts) so probably better to run them in sequence.
