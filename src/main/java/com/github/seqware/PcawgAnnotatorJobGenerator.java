@@ -1,5 +1,5 @@
 package com.github.seqware;
 
-public class PcawgAnnotatorUtils {
+public class PcawgAnnotatorJobGenerator {
 
 }
