@@ -25,7 +25,7 @@ public class PcawgAnnotatorJobGenerator extends JobGeneratorBase {
 	private String dkfzEmblOxoGSNVFromIndelFileName;
 	private String sangerOxoGSNVFromIndelFileName;
 
-	List<Job> doAnnotations(AbstractWorkflowDataModel workflow, String tumourAliquotID, String tumourMinibamPath, String normalMinibamPath, Consumer<String> updateFilesForUpload, Job ... parents)
+	public List<Job> doAnnotations(AbstractWorkflowDataModel workflow, String tumourAliquotID, String tumourMinibamPath, String normalMinibamPath, Consumer<String> updateFilesForUpload, Job ... parents)
 	{
 		List<Job> annotatorJobs = new ArrayList<Job>(3);
 		

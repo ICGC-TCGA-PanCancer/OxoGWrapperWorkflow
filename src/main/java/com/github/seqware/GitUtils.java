@@ -3,7 +3,7 @@ package com.github.seqware;
 import net.sourceforge.seqware.pipeline.workflowV2.model.Job;
 import net.sourceforge.seqware.pipeline.workflowV2.model.Workflow;
 
-class GitUtils {
+public class GitUtils {
 	static Job gitConfig(Workflow workflow, String GitName, String GitEmail)
 	{
 		Job configJob = workflow.createBashJob("set git name and email");
@@ -83,7 +83,7 @@ class GitUtils {
 		return gitMove;
 	}
 	
-	static String gitMoveCommand(String src, String dst, String pathToRootDir, String filename, boolean testMode, String pathToScriptDir)
+	public static String gitMoveCommand(String src, String dst, String pathToRootDir, String filename, boolean testMode, String pathToScriptDir)
 	{
 		//String getIPCommand = "IP=$(ifconfig eth0 | grep \"inet addr\" | sed 's/.*inet addr:\\(.*\\) Bcast:.*/\\1/') ";
 		String testModeStr = (String.valueOf(testMode)).substring(0,1).toUpperCase() + (String.valueOf(testMode)).substring(1);

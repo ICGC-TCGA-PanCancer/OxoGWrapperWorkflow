@@ -46,7 +46,7 @@ public class OxoGJobGenerator extends JobGeneratorBase {
 	 * @param parent
 	 * @return
 	 */
-	Job doOxoG(AbstractWorkflowDataModel workflow, String pathToTumour, Consumer<String> updateFilesToUpload, Job ...parents) {
+	public Job doOxoG(AbstractWorkflowDataModel workflow, String pathToTumour, Consumer<String> updateFilesToUpload, Job ...parents) {
 		
 		String moveToFailed = GitUtils.gitMoveCommand("running-jobs","failed-jobs",this.JSONlocation + "/" + this.JSONrepoName + "/" + this.JSONfolderName,this.JSONfileName, this.gitMoveTestMode, workflow.getWorkflowBaseDir() + "/scripts/");
 		Job runOxoGWorkflow = workflow.getWorkflow().createBashJob("run OxoG Filter for tumour "+this.tumourAliquotID); 

@@ -28,7 +28,7 @@ public class PreprocessJobGenerator extends JobGeneratorBase {
 	 * @param parents List of parent jobs.
 	 * @return
 	 */
-	Job passFilterWorkflow(AbstractWorkflowDataModel workflow, Pipeline workflowName, Job ... parents)
+	public Job passFilterWorkflow(AbstractWorkflowDataModel workflow, Pipeline workflowName, Job ... parents)
 	{
 		Job passFilter = workflow.getWorkflow().createBashJob("pass filter "+workflowName);
 		String moveToFailed = GitUtils.gitMoveCommand("running-jobs","failed-jobs",this.JSONlocation + "/" + this.JSONrepoName + "/" + this.JSONfolderName,this.JSONfileName, this.gitMoveTestMode, workflow.getWorkflowBaseDir() + "/scripts/");
@@ -58,7 +58,7 @@ public class PreprocessJobGenerator extends JobGeneratorBase {
 	 * @param vcfName The name of the INDEL VCF to normalize.
 	 * @return
 	 */
-	Job preProcessIndelVCF(AbstractWorkflowDataModel workflow, Job parent, Pipeline workflowName, String vcfName, String refFile, Consumer<String> updateFilesForUpload, Consumer<VcfInfo> updateExtractedSNVs, Consumer<VcfInfo> updateNormalizedINDELs)
+	public Job preProcessIndelVCF(AbstractWorkflowDataModel workflow, Job parent, Pipeline workflowName, String vcfName, String refFile, Consumer<String> updateFilesForUpload, Consumer<VcfInfo> updateExtractedSNVs, Consumer<VcfInfo> updateNormalizedINDELs)
 	{
 		//System.out.println("DEBUG: preProcessIndelVCF: "+workflowName+" ; "+vcfName + " ; "+tumourAliquotID);
 		String outDir = "/datastore/vcf/"+workflowName;
@@ -118,7 +118,7 @@ public class PreprocessJobGenerator extends JobGeneratorBase {
 	 * @param parents
 	 * @return
 	 */
-	Job combineVCFsByType(AbstractWorkflowDataModel workflow, List<VcfInfo> nonIndels, List<VcfInfo> indels, Consumer<VcfInfo> updateMergedVCFs, Job ... parents)
+	public Job combineVCFsByType(AbstractWorkflowDataModel workflow, List<VcfInfo> nonIndels, List<VcfInfo> indels, Consumer<VcfInfo> updateMergedVCFs, Job ... parents)
 	{
 
 		

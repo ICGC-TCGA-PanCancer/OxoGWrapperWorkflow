@@ -49,7 +49,7 @@ public class OxoGWrapperWorkflow extends BaseOxoGWrapperWorkflow {
 	 * @author sshorser
 	 *
 	 */
-	enum VCFType{
+	public enum VCFType{
 		sv, snv, indel
 	}
 	
@@ -64,7 +64,7 @@ public class OxoGWrapperWorkflow extends BaseOxoGWrapperWorkflow {
 	 * @author sshorser
 	 *
 	 */
-	enum Pipeline {
+	public enum Pipeline {
 		sanger, dkfz_embl, broad, muse
 	}
 	
@@ -74,7 +74,7 @@ public class OxoGWrapperWorkflow extends BaseOxoGWrapperWorkflow {
 	 * @author sshorser
 	 *
 	 */
-	enum BAMType{
+	public enum BAMType{
 		normal,tumour
 	}
 	

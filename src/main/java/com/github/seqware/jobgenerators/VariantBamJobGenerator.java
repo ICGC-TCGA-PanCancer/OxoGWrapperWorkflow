@@ -28,7 +28,7 @@ public class VariantBamJobGenerator extends JobGeneratorBase{
 	private String svVcf;
 	private String indelVcf;
 	
-	Job doVariantBam(AbstractWorkflowDataModel workflow,BAMType bamType, String bamName, String bamPath, String tumourBAMFileName, String tumourID, UpdateBamForUpload<String,String> updateFilesForUpload, Job ...parents)
+	public Job doVariantBam(AbstractWorkflowDataModel workflow,BAMType bamType, String bamName, String bamPath, String tumourBAMFileName, String tumourID, UpdateBamForUpload<String,String> updateFilesForUpload, Job ...parents)
 	{
 		Job runVariantbam = workflow.getWorkflow().createBashJob("run "+bamType+(bamType==BAMType.tumour?"_"+tumourID+"_":"")+" variantbam");
 
