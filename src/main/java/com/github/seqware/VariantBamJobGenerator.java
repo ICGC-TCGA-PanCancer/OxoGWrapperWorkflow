@@ -1,16 +1,13 @@
 package com.github.seqware;
 
 import java.util.Arrays;
-import java.util.Map;
-import java.util.stream.Collector;
-import java.util.stream.Collectors;
 
 import com.github.seqware.OxoGWrapperWorkflow.BAMType;
 
 import net.sourceforge.seqware.pipeline.workflowV2.AbstractWorkflowDataModel;
 import net.sourceforge.seqware.pipeline.workflowV2.model.Job;
 
-public class VariantBamJobGenerator {
+public class VariantBamJobGenerator extends JobGeneratorBase{
 
 	@FunctionalInterface
 	public interface UpdateBamForUpload<S,T>
@@ -18,7 +15,7 @@ public class VariantBamJobGenerator {
 		public void accept(S s, T t);
 	}
 	
-	private Collector<String[], ?, Map<String, Object>> collectToMap = Collectors.toMap(kv -> kv[0], kv -> kv[1]);
+	
 
 	private String tumourAliquotID;
 	private String snvPadding;
@@ -27,11 +24,6 @@ public class VariantBamJobGenerator {
 	private String snvVcf;
 	private String svVcf;
 	private String indelVcf;
-	private String JSONlocation;
-	private String JSONrepoName;
-	private String JSONfolderName;
-	private String JSONfileName;
-	private boolean gitMoveTestMode;
 	
 	Job doVariantBam(AbstractWorkflowDataModel workflow,BAMType bamType, String bamName, String bamPath, String tumourBAMFileName, String tumourID, UpdateBamForUpload<String,String> updateFilesForUpload, Job ...parents)
 	{
@@ -128,43 +120,4 @@ public class VariantBamJobGenerator {
 		this.indelVcf = indelVcf;
 	}
 
-	public String getJSONlocation() {
-		return this.JSONlocation;
-	}
-
-	public void setJSONlocation(String jSONlocation) {
-		this.JSONlocation = jSONlocation;
-	}
-
-	public String getJSONrepoName() {
-		return this.JSONrepoName;
-	}
-
-	public void setJSONrepoName(String jSONrepoName) {
-		this.JSONrepoName = jSONrepoName;
-	}
-
-	public String getJSONfolderName() {
-		return this.JSONfolderName;
-	}
-
-	public void setJSONfolderName(String jSONfolderName) {
-		this.JSONfolderName = jSONfolderName;
-	}
-
-	public String getJSONfileName() {
-		return this.JSONfileName;
-	}
-
-	public void setJSONfileName(String jSONfileName) {
-		this.JSONfileName = jSONfileName;
-	}
-
-	public boolean isGitMoveTestMode() {
-		return this.gitMoveTestMode;
-	}
-
-	public void setGitMoveTestMode(boolean gitMoveTestMode) {
-		this.gitMoveTestMode = gitMoveTestMode;
-	}
 }

@@ -1,24 +1,19 @@
 package com.github.seqware;
 
 import java.util.Arrays;
-import java.util.Map;
 import java.util.function.Consumer;
 import java.util.function.Function;
-import java.util.stream.Collector;
-import java.util.stream.Collectors;
 
 import com.github.seqware.OxoGWrapperWorkflow.Pipeline;
 
 import net.sourceforge.seqware.pipeline.workflowV2.AbstractWorkflowDataModel;
 import net.sourceforge.seqware.pipeline.workflowV2.model.Job;
 
-public class OxoGJobGenerator {
+public class OxoGJobGenerator extends JobGeneratorBase {
 
 	private String tumourAliquotID;
 	private String normalAliquotID;
-	private String JSONlocation;
-	private String JSONrepoName;
-	private String JSONfolderName;
+
 	private String extractedSangerSNV;
 	private String extractedBroadSNV;
 	private String extractedDkfzEmblSNV;
@@ -36,10 +31,6 @@ public class OxoGJobGenerator {
 	private String normalizedSangerIndel;
 	private String normalizedDkfzEmblIndel;
 	private String museGnosID;
-	private String JSONfileName;
-	private boolean gitMoveTestMode;
-	
-	private Collector<String[], ?, Map<String, Object>> collectToMap = Collectors.toMap(kv -> kv[0], kv -> kv[1]);
 	
 	public OxoGJobGenerator(String tumourAliquotID, String normalAliquotID)
 	{
@@ -105,30 +96,6 @@ public class OxoGJobGenerator {
 		
 		return runOxoGWorkflow;
 		
-	}
-
-	public String getJSONlocation() {
-		return this.JSONlocation;
-	}
-
-	public void setJSONlocation(String jSONlocation) {
-		this.JSONlocation = jSONlocation;
-	}
-
-	public String getJSONrepoName() {
-		return this.JSONrepoName;
-	}
-
-	public void setJSONrepoName(String jSONrepoName) {
-		this.JSONrepoName = jSONrepoName;
-	}
-
-	public String getJSONfolderName() {
-		return this.JSONfolderName;
-	}
-
-	public void setJSONfolderName(String jSONfolderName) {
-		this.JSONfolderName = jSONfolderName;
 	}
 
 	public String getExtractedSangerSNV() {
@@ -265,29 +232,5 @@ public class OxoGJobGenerator {
 
 	public void setMuseGnosID(String museGnosID) {
 		this.museGnosID = museGnosID;
-	}
-
-	public String getJSONfileName() {
-		return this.JSONfileName;
-	}
-
-	public void setJSONfileName(String jSONfileName) {
-		this.JSONfileName = jSONfileName;
-	}
-
-	public boolean isGitMoveTestMode() {
-		return this.gitMoveTestMode;
-	}
-
-	public void setGitMoveTestMode(boolean gitMoveTestMode) {
-		this.gitMoveTestMode = gitMoveTestMode;
-	}
-
-	public Collector<String[], ?, Map<String, Object>> getCollectToMap() {
-		return this.collectToMap;
-	}
-
-	public void setCollectToMap(Collector<String[], ?, Map<String, Object>> collectToMap) {
-		this.collectToMap = collectToMap;
 	}
 }

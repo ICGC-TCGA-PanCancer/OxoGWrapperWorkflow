@@ -9,14 +9,9 @@ import com.github.seqware.OxoGWrapperWorkflow.Pipeline;
 import net.sourceforge.seqware.pipeline.workflowV2.AbstractWorkflowDataModel;
 import net.sourceforge.seqware.pipeline.workflowV2.model.Job;
 
-public class PcawgAnnotatorJobGenerator {
+public class PcawgAnnotatorJobGenerator extends JobGeneratorBase {
 	
 	
-	private String JSONlocation;
-	private String JSONrepoName;
-	private String JSONfolderName;
-	private String JSONfileName;
-	private boolean gitMoveTestMode;
 	private String normalizedBroadIndel;
 	private String normalizedDkfzEmblIndel;
 	private String normalizedSangerIndel;
@@ -114,47 +109,6 @@ public class PcawgAnnotatorJobGenerator {
 		}
 		return annotatorJob;
 	}
-
-	public String getJSONlocation() {
-		return this.JSONlocation;
-	}
-
-	public void setJSONlocation(String jSONlocation) {
-		this.JSONlocation = jSONlocation;
-	}
-
-	public String getJSONrepoName() {
-		return this.JSONrepoName;
-	}
-
-	public void setJSONrepoName(String jSONrepoName) {
-		this.JSONrepoName = jSONrepoName;
-	}
-
-	public String getJSONfolderName() {
-		return this.JSONfolderName;
-	}
-
-	public void setJSONfolderName(String jSONfolderName) {
-		this.JSONfolderName = jSONfolderName;
-	}
-
-	public String getJSONfileName() {
-		return this.JSONfileName;
-	}
-
-	public void setJSONfileName(String jSONfileName) {
-		this.JSONfileName = jSONfileName;
-	}
-
-	public boolean isGitMoveTestMode() {
-		return this.gitMoveTestMode;
-	}
-
-	public void setGitMoveTestMode(boolean gitMoveTestMode) {
-		this.gitMoveTestMode = gitMoveTestMode;
-	}
-
 
 	public String getNormalizedBroadIndel() {
 		return this.normalizedBroadIndel;
