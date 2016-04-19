@@ -33,6 +33,16 @@ public class OxoGJobGenerator extends JobGeneratorBase {
 	private String normalizedSangerIndel;
 	private String normalizedDkfzEmblIndel;
 	private String museGnosID;
+
+	public OxoGJobGenerator(String JSONlocation, String JSONrepoName, String JSONfolderName, String JSONfileName, String tumourAliquotID, String normalAliquotID) {
+		super(JSONlocation, JSONrepoName, JSONfolderName, JSONfileName);
+		this.tumourAliquotID = tumourAliquotID;
+		this.normalAliquotID = normalAliquotID;
+	}
+	
+	public OxoGJobGenerator(String JSONlocation, String JSONrepoName, String JSONfolderName, String JSONfileName) {
+		super(JSONlocation, JSONrepoName, JSONfolderName, JSONfileName);
+	}
 	
 	public OxoGJobGenerator(String tumourAliquotID, String normalAliquotID)
 	{

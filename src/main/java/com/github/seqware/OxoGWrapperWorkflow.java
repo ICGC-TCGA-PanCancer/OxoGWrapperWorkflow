@@ -207,8 +207,7 @@ public class OxoGWrapperWorkflow extends BaseOxoGWrapperWorkflow {
 	{
 		Job passFilter = this.getWorkflow().createBashJob("pass filter "+workflowName);
 
-		PreprocessJobGenerator generator = new PreprocessJobGenerator();
-		generator.setJSONFileInfo(this.JSONlocation, this.JSONrepoName, this.JSONfolderName, this.JSONfileName);
+		PreprocessJobGenerator generator = new PreprocessJobGenerator(this.JSONlocation, this.JSONrepoName, this.JSONfolderName, this.JSONfileName);
 		passFilter = generator.passFilterWorkflow(this, workflowName, parents);
 		
 		return passFilter;
@@ -236,8 +235,7 @@ public class OxoGWrapperWorkflow extends BaseOxoGWrapperWorkflow {
 	 */
 	private Job preProcessIndelVCF(Job parent, Pipeline workflowName, String vcfName, String tumourAliquotID )
 	{
-		PreprocessJobGenerator generator = new PreprocessJobGenerator();
-		generator.setJSONFileInfo(this.JSONlocation, this.JSONrepo, this.JSONfolderName, this.JSONfileName);
+		PreprocessJobGenerator generator = new PreprocessJobGenerator(this.JSONlocation, this.JSONrepo, this.JSONfolderName, this.JSONfileName);
 		generator.setTumourAliquotID(tumourAliquotID);
 		Consumer<VcfInfo> updateExtractedSNVs = (v) -> this.extractedSnvsFromIndels.add(v);
 		Consumer<VcfInfo> updateNormalizedINDELs = (v) -> this.normalizedIndels.add(v);
@@ -255,8 +253,7 @@ public class OxoGWrapperWorkflow extends BaseOxoGWrapperWorkflow {
 	private Job combineVCFsByType(String tumourAliquotID, Job ... parents)
 	{
 		
-		PreprocessJobGenerator generator = new PreprocessJobGenerator();
-		generator.setJSONFileInfo(this.JSONlocation, this.JSONrepo, this.JSONfolderName, this.JSONfileName);
+		PreprocessJobGenerator generator = new PreprocessJobGenerator(this.JSONlocation, this.JSONrepo, this.JSONfolderName, this.JSONfileName);
 
 		List<VcfInfo> nonIndels =this.vcfs.stream().filter(p -> p.getOriginatingTumourAliquotID().equals(tumourAliquotID) && isIndel.negate().test(p)).collect(Collectors.toList());
 		List<VcfInfo> indels = this.normalizedIndels.stream().filter(p -> p.getOriginatingTumourAliquotID().equals(tumourAliquotID)).collect(Collectors.toList());
@@ -309,7 +306,7 @@ public class OxoGWrapperWorkflow extends BaseOxoGWrapperWorkflow {
 		Predicate<? super VcfInfo> isBroadINDEL = this.vcfMatchesTypePipelineTumour(isIndel,isBroad,tumourAliquotID);
 		Predicate<? super VcfInfo> isDkfzEmblINDEL = this.vcfMatchesTypePipelineTumour(isIndel,isDkfzEmbl,tumourAliquotID);
 		
-		OxoGJobGenerator oxogJobGenerator = new OxoGJobGenerator(tumourAliquotID, this.normalAliquotID);
+		OxoGJobGenerator oxogJobGenerator = new OxoGJobGenerator(this.JSONlocation, this.JSONrepoName, this.JSONfolderName, this.JSONfileName, tumourAliquotID, this.normalAliquotID);
 		oxogJobGenerator.setBroadGnosID(this.broadGnosID);
 		oxogJobGenerator.setSangerSNV(this.getVcfName(isSangerSNV,this.vcfs));
 		oxogJobGenerator.setBroadSNV(this.getVcfName(isBroadSNV,this.vcfs));
@@ -321,7 +318,6 @@ public class OxoGWrapperWorkflow extends BaseOxoGWrapperWorkflow {
 		oxogJobGenerator.setNormalizedSangerIndel(this.getVcfName(isSangerINDEL,this.normalizedIndels));
 		oxogJobGenerator.setNormalizedBroadIndel(this.getVcfName(isBroadINDEL,this.normalizedIndels));
 		oxogJobGenerator.setNormalizedDkfzEmblIndel(this.getVcfName(isDkfzEmblINDEL,this.normalizedIndels));
-		oxogJobGenerator.setJSONFileInfo(this.JSONlocation, this.JSONrepoName, this.JSONfolderName, this.JSONfileName);
 		oxogJobGenerator.setGitMoveTestMode(this.gitMoveTestMode);
 		
 		Consumer<String> updateFilesToUpload = (s) -> this.filesForUpload.add(s);
@@ -353,12 +349,11 @@ public class OxoGWrapperWorkflow extends BaseOxoGWrapperWorkflow {
 		
 		if (!this.skipVariantBam)
 		{
-			VariantBamJobGenerator variantBamJobGenerator = new VariantBamJobGenerator();
+			VariantBamJobGenerator variantBamJobGenerator = new VariantBamJobGenerator(this.JSONlocation, this.JSONrepoName, this.JSONfolderName, this.JSONfileName);
 			variantBamJobGenerator.setGitMoveTestMode(this.gitMoveTestMode);
 			variantBamJobGenerator.setIndelPadding(String.valueOf(this.indelPadding));
 			variantBamJobGenerator.setSnvPadding(String.valueOf(this.snvPadding));
 			variantBamJobGenerator.setSvPadding(String.valueOf(this.svPadding));
-			variantBamJobGenerator.setJSONFileInfo(this.JSONlocation, this.JSONrepoName, this.JSONfolderName, this.JSONfileName);
 			variantBamJobGenerator.setGitMoveTestMode(this.gitMoveTestMode);
 			variantBamJobGenerator.setTumourAliquotID(tumourID);
 			variantBamJobGenerator.setSnvVcf(mergedVcfs.stream().filter(isSnv).findFirst().get().getFileName());
@@ -561,10 +556,8 @@ public class OxoGWrapperWorkflow extends BaseOxoGWrapperWorkflow {
 		{
 			TumourInfo tInf = this.tumours.get(i);
 			String tumourAliquotID = tInf.getAliquotID();
-			PcawgAnnotatorJobGenerator generator = new PcawgAnnotatorJobGenerator();
-			//Consumer<String> updateFilesForUpload = (s) -> this.filesForUpload.add(s);
+			PcawgAnnotatorJobGenerator generator = new PcawgAnnotatorJobGenerator(this.JSONlocation, this.JSONrepoName, this.JSONfolderName, this.JSONfileName);
 			generator.setGitMoveTestMode(this.gitMoveTestMode);
-			generator.setJSONFileInfo(this.JSONlocation, this.JSONrepoName, this.JSONfolderName, this.JSONfileName);
 			
 			generator.setBroadOxogSNVFileName(this.filesForUpload.stream().filter(p -> ((p.contains(tumourAliquotID) && p.contains("broad-mutect") && p.endsWith(passFilteredOxoGSuffix)))).findFirst().orElseGet(emptyStringWhenMissingFilesAllowed));
 			generator.setBroadOxoGSNVFromIndelFileName(this.filesForUpload.stream().filter(p -> (p.contains(Pipeline.broad.toString()) && isExtractedSNV.test(p) )).findFirst().orElseGet(emptyStringWhenMissingFilesAllowed));

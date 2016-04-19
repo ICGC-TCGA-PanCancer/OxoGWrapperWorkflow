@@ -7,11 +7,10 @@ import java.util.Map;
 import java.util.function.Consumer;
 
 import com.github.seqware.GitUtils;
-import com.github.seqware.OxoGWrapperWorkflow;
-import com.github.seqware.TemplateUtils;
-import com.github.seqware.VcfInfo;
 import com.github.seqware.OxoGWrapperWorkflow.Pipeline;
 import com.github.seqware.OxoGWrapperWorkflow.VCFType;
+import com.github.seqware.TemplateUtils;
+import com.github.seqware.VcfInfo;
 
 import net.sourceforge.seqware.pipeline.workflowV2.AbstractWorkflowDataModel;
 import net.sourceforge.seqware.pipeline.workflowV2.model.Job;
@@ -20,6 +19,10 @@ public class PreprocessJobGenerator extends JobGeneratorBase {
 
 	private String tumourAliquotID;
 
+	public PreprocessJobGenerator(String JSONlocation, String JSONrepoName, String JSONfolderName, String JSONfileName) {
+		super(JSONlocation, JSONrepoName, JSONfolderName, JSONfileName);
+	}
+	
 	/**
 	 * Perform filtering on all VCF files for a given workflow.
 	 * Filtering involves removing lines that are not "PASS" or "."

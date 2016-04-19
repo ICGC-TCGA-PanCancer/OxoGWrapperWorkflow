@@ -3,9 +3,8 @@ package com.github.seqware.jobgenerators;
 import java.util.Arrays;
 
 import com.github.seqware.GitUtils;
-import com.github.seqware.OxoGWrapperWorkflow;
-import com.github.seqware.TemplateUtils;
 import com.github.seqware.OxoGWrapperWorkflow.BAMType;
+import com.github.seqware.TemplateUtils;
 
 import net.sourceforge.seqware.pipeline.workflowV2.AbstractWorkflowDataModel;
 import net.sourceforge.seqware.pipeline.workflowV2.model.Job;
@@ -18,6 +17,9 @@ public class VariantBamJobGenerator extends JobGeneratorBase{
 		public void accept(S s, T t);
 	}
 	
+	public VariantBamJobGenerator(String JSONlocation, String JSONrepoName, String JSONfolderName, String JSONfileName) {
+		super(JSONlocation, JSONrepoName, JSONfolderName, JSONfileName);
+	}
 	
 
 	private String tumourAliquotID;

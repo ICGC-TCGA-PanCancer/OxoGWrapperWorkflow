@@ -4,6 +4,8 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.function.Consumer;
 
+import org.mockito.cglib.core.Local;
+
 import com.github.seqware.GitUtils;
 import com.github.seqware.OxoGWrapperWorkflow;
 import com.github.seqware.OxoGWrapperWorkflow.Pipeline;
@@ -24,6 +26,10 @@ public class PcawgAnnotatorJobGenerator extends JobGeneratorBase {
 	private String broadOxoGSNVFromIndelFileName;
 	private String dkfzEmblOxoGSNVFromIndelFileName;
 	private String sangerOxoGSNVFromIndelFileName;
+
+	public PcawgAnnotatorJobGenerator(String JSONlocation, String JSONrepoName, String JSONfolderName, String JSONfileName) {
+		super(JSONlocation, JSONrepoName, JSONfolderName, JSONfileName);
+	}
 
 	public List<Job> doAnnotations(AbstractWorkflowDataModel workflow, String tumourAliquotID, String tumourMinibamPath, String normalMinibamPath, Consumer<String> updateFilesForUpload, Job ... parents)
 	{
