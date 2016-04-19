@@ -40,8 +40,6 @@ public class VariantBamJobGenerator {
 		String minibamName = "";
 		if (bamType == BAMType.normal)
 		{
-			//minibamName = this.normalBAMFileName.replace(".bam", "_minibam");
-			//this.normalMinibamPath = "/datastore/variantbam_results/"+minibamName+".bam";
 			minibamName = bamName.replace(".bam", "_minibam");
 			String normalMinibamPath = "/datastore/variantbam_results/"+minibamName+".bam";
 			updateFilesForUpload.accept(normalMinibamPath,null);
@@ -51,39 +49,26 @@ public class VariantBamJobGenerator {
 		{
 			minibamName = tumourBAMFileName.replace(".bam", "_minibam");
 			String tumourMinibamPath = "/datastore/variantbam_results/"+minibamName+".bam";
-//			for (int i = 0; i < this.tumours.size(); i++ )
-//			{
-//				if (this.tumours.get(i).getAliquotID().equals(tumourID))
-//				{
-//					this.tumours.get(i).setTumourMinibamPath(tumourMinibamPath);
-//				}
-//			}
 			updateFilesForUpload.accept(tumourMinibamPath,tumourAliquotID);
 			updateFilesForUpload.accept(tumourMinibamPath+".bai",tumourAliquotID);
 		}
 		
-//		if (!this.skipVariantBam)
-		{
-//			String snvVcf = mergedVcfs.stream().filter(isSnv).findFirst().get().getFileName(); 
-//			String svVcf = mergedVcfs.stream().filter(isSv).findFirst().get().getFileName();
-//			String indelVcf = mergedVcfs.stream().filter(isIndel).findFirst().get().getFileName();
-			String command = TemplateUtils.getRenderedTemplate(Arrays.stream( new String[][] {
-				{ "containerNameSuffix", bamType + (bamType == BAMType.tumour ? "_with_tumour_"+tumourID:"") },
-				{ "minibamName", minibamName+".bam"},  {"snvPadding", String.valueOf(this.snvPadding)}, {"svPadding", String.valueOf(this.svPadding)},
-				{ "indelPadding", String.valueOf(this.indelPadding) }, { "pathToBam", bamPath },
-				{ "snvVcf", snvVcf }, { "svVcf", svVcf }, { "indelVcf", indelVcf }
-			}).collect(this.collectToMap), "runVariantbam.template" );
-			
-			String moveToFailed = GitUtils.gitMoveCommand("running-jobs","failed-jobs",this.JSONlocation + "/" + this.JSONrepoName + "/" + this.JSONfolderName,this.JSONfileName, this.gitMoveTestMode, workflow.getWorkflowBaseDir() + "/scripts/");
-			command += (" || " + moveToFailed);
-			runVariantbam.setCommand(command);
-		}
+		String command = TemplateUtils.getRenderedTemplate(Arrays.stream( new String[][] {
+			{ "containerNameSuffix", bamType + (bamType == BAMType.tumour ? "_with_tumour_"+tumourID:"") },
+			{ "minibamName", minibamName+".bam"},  {"snvPadding", String.valueOf(this.snvPadding)}, {"svPadding", String.valueOf(this.svPadding)},
+			{ "indelPadding", String.valueOf(this.indelPadding) }, { "pathToBam", bamPath },
+			{ "snvVcf", snvVcf }, { "svVcf", svVcf }, { "indelVcf", indelVcf }
+		}).collect(this.collectToMap), "runVariantbam.template" );
+		
+		String moveToFailed = GitUtils.gitMoveCommand("running-jobs","failed-jobs",this.JSONlocation + "/" + this.JSONrepoName + "/" + this.JSONfolderName,this.JSONfileName, this.gitMoveTestMode, workflow.getWorkflowBaseDir() + "/scripts/");
+		command += (" || " + moveToFailed);
+		runVariantbam.setCommand(command);
+
 		for (Job parent : parents)
 		{
 			runVariantbam.addParent(parent);
 		}
 		
-		//Job getLogs = this.getOxoGLogs(runOxoGWorkflow);
 		return runVariantbam;
 	}
 
