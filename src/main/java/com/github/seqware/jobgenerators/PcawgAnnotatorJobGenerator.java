@@ -4,10 +4,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.function.Consumer;
 
-import org.mockito.cglib.core.Local;
-
 import com.github.seqware.GitUtils;
-import com.github.seqware.OxoGWrapperWorkflow;
 import com.github.seqware.OxoGWrapperWorkflow.Pipeline;
 
 import net.sourceforge.seqware.pipeline.workflowV2.AbstractWorkflowDataModel;

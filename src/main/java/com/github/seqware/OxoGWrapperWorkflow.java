@@ -5,6 +5,7 @@ import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.function.BiFunction;
 import java.util.function.Consumer;
 import java.util.function.Function;
 import java.util.function.Predicate;
@@ -558,19 +559,14 @@ public class OxoGWrapperWorkflow extends BaseOxoGWrapperWorkflow {
 			String tumourAliquotID = tInf.getAliquotID();
 			PcawgAnnotatorJobGenerator generator = new PcawgAnnotatorJobGenerator(this.JSONlocation, this.JSONrepoName, this.JSONfolderName, this.JSONfileName);
 			generator.setGitMoveTestMode(this.gitMoveTestMode);
-			
 			generator.setBroadOxogSNVFileName(this.filesForUpload.stream().filter(p -> ((p.contains(tumourAliquotID) && p.contains("broad-mutect") && p.endsWith(passFilteredOxoGSuffix)))).findFirst().orElseGet(emptyStringWhenMissingFilesAllowed));
 			generator.setBroadOxoGSNVFromIndelFileName(this.filesForUpload.stream().filter(p -> (p.contains(Pipeline.broad.toString()) && isExtractedSNV.test(p) )).findFirst().orElseGet(emptyStringWhenMissingFilesAllowed));
-			
 			generator.setSangerOxogSNVFileName(this.filesForUpload.stream().filter(p -> ((p.contains(tumourAliquotID) && p.contains("svcp_") && p.endsWith(passFilteredOxoGSuffix)))).findFirst().orElseGet(emptyStringWhenMissingFilesAllowed));
 			generator.setSangerOxoGSNVFromIndelFileName(this.filesForUpload.stream().filter(p -> (p.contains(Pipeline.sanger.toString()) && isExtractedSNV.test(p) )).findFirst().orElseGet(emptyStringWhenMissingFilesAllowed));
-
 			generator.setDkfzEmbleOxogSNVFileName(this.filesForUpload.stream().filter(p -> ((p.contains(tumourAliquotID) && p.contains("dkfz-snvCalling") && p.endsWith(passFilteredOxoGSuffix)))).findFirst().orElseGet(emptyStringWhenMissingFilesAllowed));
 			generator.setDkfzEmblOxoGSNVFromIndelFileName(this.filesForUpload.stream().filter(p -> (p.contains(Pipeline.dkfz_embl.toString()) && isExtractedSNV.test(p) )).findFirst().orElseGet(emptyStringWhenMissingFilesAllowed));
-
 			//Remember: MUSE files do not get PASS-filtered. Also, there is no INDEL so there cannot be any SNVs extracted from INDELs.
 			generator.setMuseOxogSNVFileName(this.filesForUpload.stream().filter(p -> p.toUpperCase().contains("MUSE") && p.endsWith(".oxoG.vcf.gz")).findFirst().orElseGet(emptyStringWhenMissingFilesAllowed));
-			
 			generator.setNormalizedBroadIndel(this.normalizedIndels.stream().filter(isBroad.and(matchesTumour(tumourAliquotID))).findFirst().get().getFileName());
 			generator.setNormalizedDkfzEmblIndel(this.normalizedIndels.stream().filter(isDkfzEmbl.and(matchesTumour(tumourAliquotID))).findFirst().get().getFileName());
 			generator.setNormalizedSangerIndel(this.normalizedIndels.stream().filter(isSanger.and(matchesTumour(tumourAliquotID))).findFirst().get().getFileName());
@@ -710,14 +706,16 @@ public class OxoGWrapperWorkflow extends BaseOxoGWrapperWorkflow {
 				{	
 					Job downloadTumourBam;
 					//download the tumours sequentially.
+					Job downloadTumourBamParent;
 					if (i==0)
 					{
-						downloadTumourBam = this.getBAM(downloadNormalBam, downloadMethod, BAMType.tumour,chooseObjects.apply( BAMType.tumour.toString()+"_"+this.tumours.get(i).getAliquotID() ) );
+						downloadTumourBamParent = downloadNormalBam;
 					}
 					else
 					{
-						downloadTumourBam = this.getBAM(getTumourJobs.get(i-1), downloadMethod, BAMType.tumour,chooseObjects.apply( BAMType.tumour.toString()+"_"+this.tumours.get(i).getAliquotID() ) );
+						downloadTumourBamParent = getTumourJobs.get(i-1);
 					}
+					downloadTumourBam = this.getBAM(downloadTumourBamParent, downloadMethod, BAMType.tumour,chooseObjects.apply( BAMType.tumour.toString()+"_"+this.tumours.get(i).getAliquotID() ) );
 					getTumourJobs.add(downloadTumourBam);
 				}
 				
@@ -740,7 +738,7 @@ public class OxoGWrapperWorkflow extends BaseOxoGWrapperWorkflow {
 			Job sangerPassFilter = this.passFilterWorkflow(Pipeline.sanger, statFiles);
 			Job broadPassFilter = this.passFilterWorkflow(Pipeline.broad, statFiles);
 			Job dkfzemblPassFilter = this.passFilterWorkflow(Pipeline.dkfz_embl, statFiles);
-			// No, we're not going to filter the Muse SNV file.
+			// ...No, we're not going to filter the Muse SNV file.
 			
 			//update all filenames to include ".pass-filtered."
 			Function<String,String> addPassFilteredSuffix = (x) -> { return x.replace(".vcf.gz",".pass-filtered.vcf.gz"); };
@@ -758,16 +756,12 @@ public class OxoGWrapperWorkflow extends BaseOxoGWrapperWorkflow {
 			List<Job> preprocessJobs = new ArrayList<Job>(this.tumours.size() * 3);
 			for (int i =0; i < this.tumours.size(); i++)
 			{
-			
-				Job sangerPreprocessVCF = this.preProcessIndelVCF(sangerPassFilter, Pipeline.sanger,"/"+ this.sangerGnosID +"/"+ this.vcfs.stream().filter(isSanger.and(isIndel))
-																																					.map(m -> m.getFileName()).findFirst().get(),
-																																this.tumours.get(i).getAliquotID());
-				Job dkfzEmblPreprocessVCF = this.preProcessIndelVCF(dkfzemblPassFilter, Pipeline.dkfz_embl, "/"+ this.dkfzemblGnosID +"/"+ this.vcfs.stream().filter(isDkfzEmbl.and(isIndel))
-																																							.map(m -> m.getFileName()).findFirst().get(),
-																																this.tumours.get(i).getAliquotID());
-				Job broadPreprocessVCF = this.preProcessIndelVCF(broadPassFilter, Pipeline.broad, "/"+ this.broadGnosID +"/"+ this.vcfs.stream().filter(isBroad.and(isIndel))
-																																				.map(m -> m.getFileName()).findFirst().get(),
-																																this.tumours.get(i).getAliquotID());
+				BiFunction<String, Predicate<VcfInfo>, String> generateVcfName = (s,p) -> "/"+ s +"/"+ this.vcfs.stream().filter(p.and(isIndel)).map(m -> m.getFileName()).findFirst().get();
+				
+				Job sangerPreprocessVCF = this.preProcessIndelVCF(sangerPassFilter, Pipeline.sanger,generateVcfName.apply(this.sangerGnosID, isSanger), this.tumours.get(i).getAliquotID());
+				Job dkfzEmblPreprocessVCF = this.preProcessIndelVCF(dkfzemblPassFilter, Pipeline.dkfz_embl, generateVcfName.apply(this.dkfzemblGnosID, isDkfzEmbl), this.tumours.get(i).getAliquotID());
+				Job broadPreprocessVCF = this.preProcessIndelVCF(broadPassFilter, Pipeline.broad, generateVcfName.apply(this.broadGnosID, isBroad), this.tumours.get(i).getAliquotID());
+
 				preprocessJobs.add(broadPreprocessVCF);
 				preprocessJobs.add(sangerPreprocessVCF);
 				preprocessJobs.add(dkfzEmblPreprocessVCF);
