@@ -432,6 +432,8 @@ public class OxoGWrapperWorkflow extends BaseOxoGWrapperWorkflow {
 		oxogJobGenerator.setNormalizedSangerIndel(this.getVcfName(isSangerINDEL,this.normalizedIndels));
 		oxogJobGenerator.setNormalizedBroadIndel(this.getVcfName(isBroadINDEL,this.normalizedIndels));
 		oxogJobGenerator.setNormalizedDkfzEmblIndel(this.getVcfName(isDkfzEmblINDEL,this.normalizedIndels));
+		oxogJobGenerator.setJSONFileInfo(this.JSONlocation, this.JSONrepoName, this.JSONfolderName, this.JSONfileName);
+		oxogJobGenerator.setGitMoveTestMode(this.gitMoveTestMode);
 		
 		Consumer<String> updateFilesToUpload = (s) -> this.filesForUpload.add(s);
 		Job runOxoGWorkflow = this.getWorkflow().createBashJob("run OxoG Filter for tumour "+tumourAliquotID);
@@ -467,10 +469,8 @@ public class OxoGWrapperWorkflow extends BaseOxoGWrapperWorkflow {
 			variantBamJobGenerator.setIndelPadding(String.valueOf(this.indelPadding));
 			variantBamJobGenerator.setSnvPadding(String.valueOf(this.snvPadding));
 			variantBamJobGenerator.setSvPadding(String.valueOf(this.svPadding));
-			variantBamJobGenerator.setJSONfileName(this.JSONfileName);
-			variantBamJobGenerator.setJSONfolderName(this.JSONfolderName);
-			variantBamJobGenerator.setJSONlocation(this.JSONlocation);
-			variantBamJobGenerator.setJSONrepoName(this.JSONrepoName);
+			variantBamJobGenerator.setJSONFileInfo(this.JSONlocation, this.JSONrepoName, this.JSONfolderName, this.JSONfileName);
+			variantBamJobGenerator.setGitMoveTestMode(this.gitMoveTestMode);
 			variantBamJobGenerator.setTumourAliquotID(tumourID);
 			variantBamJobGenerator.setSnvVcf(mergedVcfs.stream().filter(isSnv).findFirst().get().getFileName());
 			variantBamJobGenerator.setSvVcf(mergedVcfs.stream().filter(isSv).findFirst().get().getFileName());
@@ -675,10 +675,7 @@ public class OxoGWrapperWorkflow extends BaseOxoGWrapperWorkflow {
 			PcawgAnnotatorJobGenerator generator = new PcawgAnnotatorJobGenerator();
 			Consumer<String> updateFilesForUpload = (s) -> this.filesForUpload.add(s);
 			generator.setGitMoveTestMode(this.gitMoveTestMode);
-			generator.setJSONfileName(this.JSONfileName);
-			generator.setJSONfolderName(this.JSONfolderName);
-			generator.setJSONlocation(this.JSONlocation);
-			generator.setJSONrepoName(this.JSONrepoName);
+			generator.setJSONFileInfo(this.JSONlocation, this.JSONrepoName, this.JSONfolderName, this.JSONfileName);
 			
 			generator.setBroadOxogSNVFileName(this.filesForUpload.stream().filter(p -> ((p.contains(tumourAliquotID) && p.contains("broad-mutect") && p.endsWith(passFilteredOxoGSuffix)))).findFirst().orElseGet(emptyStringWhenMissingFilesAllowed));
 			generator.setBroadOxoGSNVFromIndelFileName(this.filesForUpload.stream().filter(p -> (p.contains(Pipeline.broad.toString()) && isExtractedSNV.test(p) )).findFirst().orElseGet(emptyStringWhenMissingFilesAllowed));

@@ -13,6 +13,14 @@ public class JobGeneratorBase {
 	protected String JSONfileName;
 	protected boolean gitMoveTestMode;
 
+	public void setJSONFileInfo(String location, String repoName, String folderName, String fileName)
+	{
+		this.setJSONlocation(location);
+		this.setJSONrepoName(repoName);
+		this.setJSONfolderName(folderName);
+		this.setJSONfileName(fileName);
+	}
+	
 	public JobGeneratorBase() {
 		super();
 	}
