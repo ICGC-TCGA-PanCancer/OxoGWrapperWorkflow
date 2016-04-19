@@ -636,22 +636,15 @@ public class OxoGWrapperWorkflow extends BaseOxoGWrapperWorkflow {
 				//since the icgc-storage-client can make full use of all cores on a multi-core system. 
 				DownloadMethod downloadMethod = DownloadMethod.valueOf(this.downloadMethod);
 				
-				List<String> sangerList =  Stream.concat(
-						this.vcfs.stream().filter(isSanger).map(m -> m.getObjectID()), 
-						this.vcfs.stream().filter(isSanger).map(m -> m.getIndexObjectID())
-					).collect(Collectors.toList()) ;
-				List<String> broadList = Stream.concat(
-						this.vcfs.stream().filter(isBroad).map(m -> m.getObjectID()), 
-						this.vcfs.stream().filter(isBroad).map(m -> m.getIndexObjectID())
-					).collect(Collectors.toList()) ;
-				List<String> dkfzEmblList = Stream.concat(
-						this.vcfs.stream().filter(isDkfzEmbl).map(m -> m.getObjectID()), 
-						this.vcfs.stream().filter(isDkfzEmbl).map(m -> m.getIndexObjectID())
-					).collect(Collectors.toList()) ;
-				List<String> museList = Stream.concat(
-						this.vcfs.stream().filter(isMuse).map(m -> m.getObjectID()), 
-						this.vcfs.stream().filter(isMuse).map(m -> m.getIndexObjectID())
-					).collect(Collectors.toList()) ;
+				Function<Predicate<VcfInfo>, List<String>> buildVcfListByPredicate = (p) -> Stream.concat(
+						this.vcfs.stream().filter(p).map(m -> m.getObjectID()), 
+						this.vcfs.stream().filter(p).map(m -> m.getIndexObjectID())
+					).collect(Collectors.toList()) ; 
+				
+				List<String> sangerList =  buildVcfListByPredicate.apply(isSanger);
+				List<String> broadList = buildVcfListByPredicate.apply(isBroad);
+				List<String> dkfzEmblList = buildVcfListByPredicate.apply(isDkfzEmbl);
+				List<String> museList = buildVcfListByPredicate.apply(isMuse);
 				List<String> normalList = Arrays.asList( this.bamNormalIndexObjectID,this.bamNormalObjectID);
 
 				//System.out.println("DEBUG: sangerList: "+sangerList.toString());
