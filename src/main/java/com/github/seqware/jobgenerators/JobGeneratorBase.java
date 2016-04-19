@@ -1,4 +1,4 @@
-package com.github.seqware;
+package com.github.seqware.jobgenerators;
 
 import java.util.Map;
 import java.util.stream.Collector;

@@ -1,4 +1,4 @@
-package com.github.seqware;
+package com.github.seqware.jobgenerators;
 
 import java.util.Arrays;
 import java.util.HashMap;
@@ -6,6 +6,10 @@ import java.util.List;
 import java.util.Map;
 import java.util.function.Consumer;
 
+import com.github.seqware.GitUtils;
+import com.github.seqware.OxoGWrapperWorkflow;
+import com.github.seqware.TemplateUtils;
+import com.github.seqware.VcfInfo;
 import com.github.seqware.OxoGWrapperWorkflow.Pipeline;
 import com.github.seqware.OxoGWrapperWorkflow.VCFType;
 

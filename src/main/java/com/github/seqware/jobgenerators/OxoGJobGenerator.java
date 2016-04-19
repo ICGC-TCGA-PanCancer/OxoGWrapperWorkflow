@@ -1,9 +1,11 @@
-package com.github.seqware;
+package com.github.seqware.jobgenerators;
 
 import java.util.Arrays;
 import java.util.function.Consumer;
 import java.util.function.Function;
 
+import com.github.seqware.GitUtils;
+import com.github.seqware.TemplateUtils;
 import com.github.seqware.OxoGWrapperWorkflow.Pipeline;
 
 import net.sourceforge.seqware.pipeline.workflowV2.AbstractWorkflowDataModel;

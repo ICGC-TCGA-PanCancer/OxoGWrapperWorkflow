@@ -13,11 +13,15 @@ import java.util.stream.Collector;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
-import com.github.seqware.VariantBamJobGenerator.UpdateBamForUpload;
 import com.github.seqware.downloaders.DownloaderBuilder;
 import com.github.seqware.downloaders.GNOSDownloader;
 import com.github.seqware.downloaders.ICGCStorageDownloader;
 import com.github.seqware.downloaders.S3Downloader;
+import com.github.seqware.jobgenerators.OxoGJobGenerator;
+import com.github.seqware.jobgenerators.PcawgAnnotatorJobGenerator;
+import com.github.seqware.jobgenerators.PreprocessJobGenerator;
+import com.github.seqware.jobgenerators.VariantBamJobGenerator;
+import com.github.seqware.jobgenerators.VariantBamJobGenerator.UpdateBamForUpload;
 
 import net.sourceforge.seqware.pipeline.workflowV2.model.Job;
 
