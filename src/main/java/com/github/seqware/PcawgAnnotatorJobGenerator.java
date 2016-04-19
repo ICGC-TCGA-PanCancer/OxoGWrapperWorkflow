@@ -1,5 +1,7 @@
 package com.github.seqware;
 
+import java.util.ArrayList;
+import java.util.List;
 import java.util.function.Consumer;
 
 import com.github.seqware.OxoGWrapperWorkflow.Pipeline;
@@ -15,8 +17,69 @@ public class PcawgAnnotatorJobGenerator {
 	private String JSONfolderName;
 	private String JSONfileName;
 	private boolean gitMoveTestMode;
+	private String normalizedBroadIndel;
+	private String normalizedDkfzEmblIndel;
+	private String normalizedSangerIndel;
+	private String broadOxogSNVFileName;
+	private String dkfzEmbleOxogSNVFileName;
+	private String sangerOxogSNVFileName;
+	private String museOxogSNVFileName;
+	private String broadOxoGSNVFromIndelFileName;
+	private String dkfzEmblOxoGSNVFromIndelFileName;
+	private String sangerOxoGSNVFromIndelFileName;
 
-	Job runAnnotator(AbstractWorkflowDataModel workflow,String inputType, Pipeline workflowName, String vcfPath, String tumourBamPath, String normalBamPath, String tumourAliquotID, Consumer<String> updateFilesForUpload, Job ...parents)
+	List<Job> doAnnotations(AbstractWorkflowDataModel workflow, String tumourAliquotID, String tumourMinibamPath, String normalMinibamPath, Consumer<String> updateFilesForUpload, Job ... parents)
+	{
+		List<Job> annotatorJobs = new ArrayList<Job>(3);
+		
+//		Predicate<String> isExtractedSNV = p -> p.contains("extracted-snv") && p.endsWith(".vcf.gz");
+//		final String passFilteredOxoGSuffix = ".pass-filtered.oxoG.vcf.gz";
+		//list filtering should only ever produce one result.
+		
+//		for (int i = 0; i < this.tumours.size(); i++)
+		{
+//			TumourInfo tInf = this.tumours.get(i);
+//			String tumourAliquotID = tInf.getAliquotID();
+//			String broadOxogSNVFileName = this.filesForUpload.stream().filter(p -> ((p.contains(tumourAliquotID) && p.contains("broad-mutect") && p.endsWith(passFilteredOxoGSuffix)))).findFirst().orElseGet(emptyStringWhenMissingFilesAllowed);
+//			String broadOxoGSNVFromIndelFileName = this.filesForUpload.stream().filter(p -> (p.contains(Pipeline.broad.toString()) && isExtractedSNV.test(p) )).findFirst().orElseGet(emptyStringWhenMissingFilesAllowed);
+//			
+//			
+//			String sangerOxogSNVFileName = this.filesForUpload.stream().filter(p -> ((p.contains(tumourAliquotID) && p.contains("svcp_") && p.endsWith(passFilteredOxoGSuffix)))).findFirst().orElseGet(emptyStringWhenMissingFilesAllowed);
+//			String sangerOxoGSNVFromIndelFileName = this.filesForUpload.stream().filter(p -> (p.contains(Pipeline.sanger.toString()) && isExtractedSNV.test(p) )).findFirst().orElseGet(emptyStringWhenMissingFilesAllowed);
+//			
+//			String dkfzEmbleOxogSNVFileName = this.filesForUpload.stream().filter(p -> ((p.contains(tumourAliquotID) && p.contains("dkfz-snvCalling") && p.endsWith(passFilteredOxoGSuffix)))).findFirst().orElseGet(emptyStringWhenMissingFilesAllowed);
+//			String dkfzEmblOxoGSNVFromIndelFileName = this.filesForUpload.stream().filter(p -> (p.contains(Pipeline.dkfz_embl.toString()) && isExtractedSNV.test(p) )).findFirst().orElseGet(emptyStringWhenMissingFilesAllowed);
+//
+//			//Remember: MUSE files do not get PASS-filtered. Also, there is no INDEL so there cannot be any SNVs extracted from INDELs.
+//			String museOxogSNVFileName = this.filesForUpload.stream().filter(p -> p.toUpperCase().contains("MUSE") && p.endsWith(".oxoG.vcf.gz")).findFirst().orElseGet(emptyStringWhenMissingFilesAllowed);
+//			
+//			String normalizedBroadIndel = this.normalizedIndels.stream().filter(isBroad.and(matchesTumour(tumourAliquotID))).findFirst().get().getFileName();
+//			String normalizedSangerIndel = this.normalizedIndels.stream().filter(isSanger.and(matchesTumour(tumourAliquotID))).findFirst().get().getFileName();
+//			String normalizedDkfzEmblIndel = this.normalizedIndels.stream().filter(isDkfzEmbl.and(matchesTumour(tumourAliquotID))).findFirst().get().getFileName();
+			
+			Job broadIndelAnnotatorJob = this.runAnnotator(workflow,"indel", Pipeline.broad, normalizedBroadIndel, tumourMinibamPath, normalMinibamPath, tumourAliquotID, updateFilesForUpload, parents);
+			Job dfkzEmblIndelAnnotatorJob = this.runAnnotator(workflow,"indel", Pipeline.dkfz_embl, normalizedDkfzEmblIndel, tumourMinibamPath, normalMinibamPath, tumourAliquotID, updateFilesForUpload, broadIndelAnnotatorJob);
+			Job sangerIndelAnnotatorJob = this.runAnnotator(workflow, "indel", Pipeline.sanger, normalizedSangerIndel, tumourMinibamPath, normalMinibamPath, tumourAliquotID,updateFilesForUpload, dfkzEmblIndelAnnotatorJob);
+	
+			Job broadSNVAnnotatorJob = this.runAnnotator(workflow,"SNV", Pipeline.broad,broadOxogSNVFileName, tumourMinibamPath, normalMinibamPath, tumourAliquotID,updateFilesForUpload, parents);
+			Job dfkzEmblSNVAnnotatorJob = this.runAnnotator(workflow,"SNV", Pipeline.dkfz_embl,dkfzEmbleOxogSNVFileName, tumourMinibamPath, normalMinibamPath, tumourAliquotID,updateFilesForUpload, broadSNVAnnotatorJob);
+			Job sangerSNVAnnotatorJob = this.runAnnotator(workflow,"SNV",Pipeline.sanger,sangerOxogSNVFileName, tumourMinibamPath, normalMinibamPath, tumourAliquotID,updateFilesForUpload, dfkzEmblSNVAnnotatorJob);
+			Job museSNVAnnotatorJob = this.runAnnotator(workflow,"SNV",Pipeline.muse,museOxogSNVFileName, tumourMinibamPath, normalMinibamPath, tumourAliquotID,updateFilesForUpload, dfkzEmblSNVAnnotatorJob);
+	
+			Job broadSNVFromIndelAnnotatorJob = this.runAnnotator(workflow,"SNV",Pipeline.broad, broadOxoGSNVFromIndelFileName, tumourMinibamPath, normalMinibamPath, tumourAliquotID,updateFilesForUpload, parents);
+			Job dfkzEmblSNVFromIndelAnnotatorJob = this.runAnnotator(workflow,"SNV",Pipeline.dkfz_embl, dkfzEmblOxoGSNVFromIndelFileName, tumourMinibamPath, normalMinibamPath, tumourAliquotID,updateFilesForUpload, broadSNVFromIndelAnnotatorJob);
+			Job sangerSNVFromIndelAnnotatorJob = this.runAnnotator(workflow,"SNV",Pipeline.sanger, sangerOxoGSNVFromIndelFileName, tumourMinibamPath, normalMinibamPath, tumourAliquotID,updateFilesForUpload, dfkzEmblSNVFromIndelAnnotatorJob);
+
+			annotatorJobs.add(sangerSNVFromIndelAnnotatorJob);
+			annotatorJobs.add(sangerSNVAnnotatorJob);
+			annotatorJobs.add(sangerIndelAnnotatorJob);
+			annotatorJobs.add(museSNVAnnotatorJob);
+		}
+		return annotatorJobs;
+	}
+
+	
+	Job runAnnotator(AbstractWorkflowDataModel workflow, String inputType, Pipeline workflowName, String vcfPath, String tumourBamPath, String normalBamPath, String tumourAliquotID, Consumer<String> updateFilesForUpload, Job ...parents)
 	{
 		String outDir = "/datastore/files_for_upload/";
 		String containerName = "pcawg-annotator_"+workflowName+"_"+inputType;
@@ -106,6 +169,106 @@ public class PcawgAnnotatorJobGenerator {
 
 	public void setGitMoveTestMode(boolean gitMoveTestMode) {
 		this.gitMoveTestMode = gitMoveTestMode;
+	}
+
+
+	public String getNormalizedBroadIndel() {
+		return this.normalizedBroadIndel;
+	}
+
+
+	public void setNormalizedBroadIndel(String normalizedBroadIndel) {
+		this.normalizedBroadIndel = normalizedBroadIndel;
+	}
+
+
+	public String getNormalizedDkfzEmblIndel() {
+		return this.normalizedDkfzEmblIndel;
+	}
+
+
+	public void setNormalizedDkfzEmblIndel(String normalizedDkfzEmblIndel) {
+		this.normalizedDkfzEmblIndel = normalizedDkfzEmblIndel;
+	}
+
+
+	public String getNormalizedSangerIndel() {
+		return this.normalizedSangerIndel;
+	}
+
+
+	public void setNormalizedSangerIndel(String normalizedSangerIndel) {
+		this.normalizedSangerIndel = normalizedSangerIndel;
+	}
+
+
+	public String getBroadOxogSNVFileName() {
+		return this.broadOxogSNVFileName;
+	}
+
+
+	public void setBroadOxogSNVFileName(String broadOxogSNVFileName) {
+		this.broadOxogSNVFileName = broadOxogSNVFileName;
+	}
+
+
+	public String getDkfzEmbleOxogSNVFileName() {
+		return this.dkfzEmbleOxogSNVFileName;
+	}
+
+
+	public void setDkfzEmbleOxogSNVFileName(String dkfzEmbleOxogSNVFileName) {
+		this.dkfzEmbleOxogSNVFileName = dkfzEmbleOxogSNVFileName;
+	}
+
+
+	public String getSangerOxogSNVFileName() {
+		return this.sangerOxogSNVFileName;
+	}
+
+
+	public void setSangerOxogSNVFileName(String sangerOxogSNVFileName) {
+		this.sangerOxogSNVFileName = sangerOxogSNVFileName;
+	}
+
+
+	public String getMuseOxogSNVFileName() {
+		return this.museOxogSNVFileName;
+	}
+
+
+	public void setMuseOxogSNVFileName(String museOxogSNVFileName) {
+		this.museOxogSNVFileName = museOxogSNVFileName;
+	}
+
+
+	public String getBroadOxoGSNVFromIndelFileName() {
+		return this.broadOxoGSNVFromIndelFileName;
+	}
+
+
+	public void setBroadOxoGSNVFromIndelFileName(String broadOxoGSNVFromIndelFileName) {
+		this.broadOxoGSNVFromIndelFileName = broadOxoGSNVFromIndelFileName;
+	}
+
+
+	public String getDkfzEmblOxoGSNVFromIndelFileName() {
+		return this.dkfzEmblOxoGSNVFromIndelFileName;
+	}
+
+
+	public void setDkfzEmblOxoGSNVFromIndelFileName(String dkfzEmblOxoGSNVFromIndelFileName) {
+		this.dkfzEmblOxoGSNVFromIndelFileName = dkfzEmblOxoGSNVFromIndelFileName;
+	}
+
+
+	public String getSangerOxoGSNVFromIndelFileName() {
+		return this.sangerOxoGSNVFromIndelFileName;
+	}
+
+
+	public void setSangerOxoGSNVFromIndelFileName(String sangerOxoGSNVFromIndelFileName) {
+		this.sangerOxoGSNVFromIndelFileName = sangerOxoGSNVFromIndelFileName;
 	}
 
 }
