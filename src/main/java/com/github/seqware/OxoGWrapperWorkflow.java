@@ -5,6 +5,7 @@ import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.function.BiFunction;
 import java.util.function.Function;
 import java.util.function.Predicate;
 import java.util.function.Supplier;
@@ -80,6 +81,12 @@ public class OxoGWrapperWorkflow extends BaseOxoGWrapperWorkflow {
 	private List<VcfInfo> extractedSnvsFromIndels = new ArrayList<VcfInfo>();
 	private List<VcfInfo> mergedVcfs = new ArrayList<VcfInfo>();
 	private List<VcfInfo> normalizedIndels = new ArrayList<VcfInfo>();
+	
+	@FunctionalInterface
+	interface QuadConsumer<A,B,C,D>
+	{
+		void accept(A a, B b, C c, D d);
+	}
 	
 	/**
 	 * Copy the credentials files from ~/.gnos to /datastore/credentials
@@ -408,7 +415,17 @@ public class OxoGWrapperWorkflow extends BaseOxoGWrapperWorkflow {
 		
 		String moveToFailed = GitUtils.gitMoveCommand("running-jobs","failed-jobs",this.JSONlocation + "/" + this.JSONrepoName + "/" + this.JSONfolderName,this.JSONfileName, this.gitMoveTestMode, this.getWorkflowBaseDir() + "/scripts/");
 		Job runOxoGWorkflow = this.getWorkflow().createBashJob("run OxoG Filter for tumour "+tumourAliquotID); 
-		Function<String,String> getFileName = (s) -> {  return s.substring(s.lastIndexOf("/")); };
+		Function<String,String> getFileName = (s) -> {
+			if (this.allowMissingFiles)
+			{
+				if (s!=null && !s.trim().equals(""))
+				{
+					return s.substring(s.lastIndexOf("/"));
+				}
+				return "";
+			}
+			return s.substring(s.lastIndexOf("/"));
+		};
 		String pathToResults = "/datastore/oxog_results/tumour_"+tumourAliquotID+"/cga/fh/pcawg_pipeline/jobResults_pipette/jobs/"+this.normalAliquotID+"/links_for_gnos/annotate_failed_sites_to_vcfs/";
 		String pathToUploadDir = "/datastore/files_for_upload/";
 		
@@ -694,7 +711,7 @@ public class OxoGWrapperWorkflow extends BaseOxoGWrapperWorkflow {
 		generateAnalysisFilesVCFs.addParent(parentJob);
 		return generateAnalysisFilesVCFs;
 	}
-	
+
 
 	/**
 	 * Runs Jonathan Dursi's Annotator tool on a input for a workflow.
@@ -742,8 +759,7 @@ public class OxoGWrapperWorkflow extends BaseOxoGWrapperWorkflow {
 					+ "    tabix -p vcf "+outDir+"/"+annotatedFileName+".gz \n "
 					+ "fi\n"
 					+ ") " ;
-			
-			
+				
 			String moveToFailed = GitUtils.gitMoveCommand("running-jobs","failed-jobs",this.JSONlocation + "/" + this.JSONrepoName + "/" + this.JSONfolderName,this.JSONfileName, this.gitMoveTestMode, this.getWorkflowBaseDir() + "/scripts/");
 			command += " || " + moveToFailed;
 		}
@@ -797,29 +813,75 @@ public class OxoGWrapperWorkflow extends BaseOxoGWrapperWorkflow {
 			//Remember: MUSE files do not get PASS-filtered. Also, there is no INDEL so there cannot be any SNVs extracted from INDELs.
 			String museOxogSNVFileName = this.filesForUpload.stream().filter(p -> p.toUpperCase().contains("MUSE") && p.endsWith(".oxoG.vcf.gz")).findFirst().orElseGet(emptyStringWhenMissingFilesAllowed);
 			
-			String normalizedBroadIndel = this.normalizedIndels.stream().filter(isBroad.and(matchesTumour(tumourAliquotID))).findFirst().get().getFileName();
-			String normalizedSangerIndel = this.normalizedIndels.stream().filter(isSanger.and(matchesTumour(tumourAliquotID))).findFirst().get().getFileName();
-			String normalizedDkfzEmblIndel = this.normalizedIndels.stream().filter(isDkfzEmbl.and(matchesTumour(tumourAliquotID))).findFirst().get().getFileName();
-			
-			Job broadIndelAnnotatorJob = this.runAnnotator("indel", Pipeline.broad, normalizedBroadIndel, tInf.getTumourMinibamPath(),this.normalMinibamPath, tInf.getAliquotID(), parents);
-			Job dfkzEmblIndelAnnotatorJob = this.runAnnotator("indel", Pipeline.dkfz_embl, normalizedDkfzEmblIndel, tInf.getTumourMinibamPath(), this.normalMinibamPath, tInf.getAliquotID(), broadIndelAnnotatorJob);
-			Job sangerIndelAnnotatorJob = this.runAnnotator("indel", Pipeline.sanger, normalizedSangerIndel, tInf.getTumourMinibamPath(), this.normalMinibamPath, tInf.getAliquotID(), dfkzEmblIndelAnnotatorJob);
-	
-			Job broadSNVAnnotatorJob = this.runAnnotator("SNV", Pipeline.broad,broadOxogSNVFileName, tInf.getTumourMinibamPath(), this.normalMinibamPath, tInf.getAliquotID(), parents);
-			Job dfkzEmblSNVAnnotatorJob = this.runAnnotator("SNV", Pipeline.dkfz_embl,dkfzEmbleOxogSNVFileName, tInf.getTumourMinibamPath(), this.normalMinibamPath, tInf.getAliquotID(), broadSNVAnnotatorJob);
-			Job sangerSNVAnnotatorJob = this.runAnnotator("SNV",Pipeline.sanger,sangerOxogSNVFileName, tInf.getTumourMinibamPath(), this.normalMinibamPath, tInf.getAliquotID(), dfkzEmblSNVAnnotatorJob);
-			Job museSNVAnnotatorJob = this.runAnnotator("SNV",Pipeline.muse,museOxogSNVFileName, tInf.getTumourMinibamPath(), this.normalMinibamPath, tInf.getAliquotID(), dfkzEmblSNVAnnotatorJob);
-	
-			Job broadSNVFromIndelAnnotatorJob = this.runAnnotator("SNV",Pipeline.broad, broadOxoGSNVFromIndelFileName, tInf.getTumourMinibamPath(), this.normalMinibamPath, tInf.getAliquotID(), parents);
-			Job dfkzEmblSNVFromIndelAnnotatorJob = this.runAnnotator("SNV",Pipeline.dkfz_embl, dkfzEmblOxoGSNVFromIndelFileName, tInf.getTumourMinibamPath(), this.normalMinibamPath, tInf.getAliquotID(), broadSNVFromIndelAnnotatorJob);
-			Job sangerSNVFromIndelAnnotatorJob = this.runAnnotator("SNV",Pipeline.sanger, sangerOxoGSNVFromIndelFileName, tInf.getTumourMinibamPath(), this.normalMinibamPath, tInf.getAliquotID(), dfkzEmblSNVFromIndelAnnotatorJob);
+			String normalizedBroadIndel = this.normalizedIndels.stream().filter(isBroad.and(matchesTumour(tumourAliquotID))).findFirst().orElse(new VcfInfo()).getFileName();
+			String normalizedSangerIndel = this.normalizedIndels.stream().filter(isSanger.and(matchesTumour(tumourAliquotID))).findFirst().orElse(new VcfInfo()).getFileName();
+			String normalizedDkfzEmblIndel = this.normalizedIndels.stream().filter(isDkfzEmbl.and(matchesTumour(tumourAliquotID))).findFirst().orElse(new VcfInfo()).getFileName();
 
-			finalAnnotatorJobs.add(sangerSNVFromIndelAnnotatorJob);
-			finalAnnotatorJobs.add(sangerSNVAnnotatorJob);
-			finalAnnotatorJobs.add(sangerIndelAnnotatorJob);
-			finalAnnotatorJobs.add(museSNVAnnotatorJob);
+			if (!this.allowMissingFiles)
+			{
+				Job broadIndelAnnotatorJob = this.runAnnotator("indel", Pipeline.broad, normalizedBroadIndel, tInf.getTumourMinibamPath(),this.normalMinibamPath, tInf.getAliquotID(), parents);
+				Job dfkzEmblIndelAnnotatorJob = this.runAnnotator("indel", Pipeline.dkfz_embl, normalizedDkfzEmblIndel, tInf.getTumourMinibamPath(), this.normalMinibamPath, tInf.getAliquotID(), broadIndelAnnotatorJob);
+				Job sangerIndelAnnotatorJob = this.runAnnotator("indel", Pipeline.sanger, normalizedSangerIndel, tInf.getTumourMinibamPath(), this.normalMinibamPath, tInf.getAliquotID(), dfkzEmblIndelAnnotatorJob);
+		
+				Job broadSNVAnnotatorJob = this.runAnnotator("SNV", Pipeline.broad,broadOxogSNVFileName, tInf.getTumourMinibamPath(), this.normalMinibamPath, tInf.getAliquotID(), parents);
+				Job dfkzEmblSNVAnnotatorJob = this.runAnnotator("SNV", Pipeline.dkfz_embl,dkfzEmbleOxogSNVFileName, tInf.getTumourMinibamPath(), this.normalMinibamPath, tInf.getAliquotID(), broadSNVAnnotatorJob);
+				Job sangerSNVAnnotatorJob = this.runAnnotator("SNV",Pipeline.sanger,sangerOxogSNVFileName, tInf.getTumourMinibamPath(), this.normalMinibamPath, tInf.getAliquotID(), dfkzEmblSNVAnnotatorJob);
+				Job museSNVAnnotatorJob = this.runAnnotator("SNV",Pipeline.muse,museOxogSNVFileName, tInf.getTumourMinibamPath(), this.normalMinibamPath, tInf.getAliquotID(), dfkzEmblSNVAnnotatorJob);
+		
+				Job broadSNVFromIndelAnnotatorJob = this.runAnnotator("SNV",Pipeline.broad, broadOxoGSNVFromIndelFileName, tInf.getTumourMinibamPath(), this.normalMinibamPath, tInf.getAliquotID(), parents);
+				Job dfkzEmblSNVFromIndelAnnotatorJob = this.runAnnotator("SNV",Pipeline.dkfz_embl, dkfzEmblOxoGSNVFromIndelFileName, tInf.getTumourMinibamPath(), this.normalMinibamPath, tInf.getAliquotID(), broadSNVFromIndelAnnotatorJob);
+				Job sangerSNVFromIndelAnnotatorJob = this.runAnnotator("SNV",Pipeline.sanger, sangerOxoGSNVFromIndelFileName, tInf.getTumourMinibamPath(), this.normalMinibamPath, tInf.getAliquotID(), dfkzEmblSNVFromIndelAnnotatorJob);
+
+				finalAnnotatorJobs.add(sangerSNVFromIndelAnnotatorJob);
+				finalAnnotatorJobs.add(sangerSNVAnnotatorJob);
+				finalAnnotatorJobs.add(sangerIndelAnnotatorJob);
+				finalAnnotatorJobs.add(museSNVAnnotatorJob);
+			}
+			else
+			{
+				List<Job> indelJobs = new ArrayList<Job>(3);
+				List<Job> snvJobs = new ArrayList<Job>(3);
+				List<Job> snvFromIndelJobs = new ArrayList<Job>(3);
+				
+				QuadConsumer<Pipeline, String, String, List<Job>> runAnnotatorIfPossible = (pipeline,vcfName,type,jobs) -> {
+					if (vcfName!=null && vcfName.trim().length()>0)
+					{
+						Job[] parentOrParents = getParentOrParents(jobs, parents);
+						Job j = this.runAnnotator(type, pipeline, vcfName, tInf.getTumourMinibamPath(),this.normalMinibamPath, tInf.getAliquotID(), parentOrParents);
+						jobs.add(j);
+					}
+				};
+				
+				runAnnotatorIfPossible.accept(Pipeline.broad, normalizedBroadIndel,"indel",indelJobs);
+				runAnnotatorIfPossible.accept(Pipeline.dkfz_embl, normalizedDkfzEmblIndel,"indel",indelJobs);
+				runAnnotatorIfPossible.accept(Pipeline.sanger, normalizedSangerIndel,"indel",indelJobs);
+				
+				runAnnotatorIfPossible.accept(Pipeline.broad, broadOxogSNVFileName,"SNV",snvJobs);
+				runAnnotatorIfPossible.accept(Pipeline.dkfz_embl, dkfzEmbleOxogSNVFileName,"SNV",snvJobs);
+				runAnnotatorIfPossible.accept(Pipeline.sanger, sangerOxogSNVFileName,"SNV",snvJobs);
+				runAnnotatorIfPossible.accept(Pipeline.muse, museOxogSNVFileName,"SNV",snvJobs);
+				
+				runAnnotatorIfPossible.accept(Pipeline.broad, broadOxoGSNVFromIndelFileName,"SNV",snvFromIndelJobs);
+				runAnnotatorIfPossible.accept(Pipeline.dkfz_embl, dkfzEmblOxoGSNVFromIndelFileName,"SNV",snvFromIndelJobs);
+				runAnnotatorIfPossible.accept(Pipeline.sanger, sangerOxoGSNVFromIndelFileName,"SNV",snvFromIndelJobs);
+				
+				finalAnnotatorJobs.addAll(indelJobs);
+				finalAnnotatorJobs.addAll(snvJobs);
+				finalAnnotatorJobs.addAll(snvFromIndelJobs);
+
+			}
 		}
 		return finalAnnotatorJobs;
+	}
+
+	/**
+	 * If jobs is not empty, return the last item in that list. If it IS empty, return parents.
+	 * @param jobs
+	 * @param parents
+	 * @return
+	 */
+	private Job[] getParentOrParents(List<Job> jobs, Job... parents) {  
+		return jobs.size()>0 ? Arrays.asList(jobs.get(jobs.size()-1)).toArray(new Job[1]) : parents;
 	}
 
 	private Job statInputFiles(Job parent) {
@@ -996,27 +1058,41 @@ public class OxoGWrapperWorkflow extends BaseOxoGWrapperWorkflow {
 			
 			// OxoG will run after move2running. Move2running will run after all the jobs that perform input file downloads and file preprocessing have finished.
 			
-			List<Job> preprocessJobs = new ArrayList<Job>(this.tumours.size() * 3);
+			List<Job> preprocessIndelsJobs = new ArrayList<Job>(this.tumours.size() * 3);
 			for (int i =0; i < this.tumours.size(); i++)
 			{
-			
-				Job sangerPreprocessVCF = this.preProcessIndelVCF(sangerPassFilter, Pipeline.sanger,"/"+ this.sangerGnosID +"/"+ this.vcfs.stream().filter(isSanger.and(isIndel))
-																																					.map(m -> m.getFileName()).findFirst().get(),
-																																this.tumours.get(i).getAliquotID());
-				Job dkfzEmblPreprocessVCF = this.preProcessIndelVCF(dkfzemblPassFilter, Pipeline.dkfz_embl, "/"+ this.dkfzemblGnosID +"/"+ this.vcfs.stream().filter(isDkfzEmbl.and(isIndel))
-																																							.map(m -> m.getFileName()).findFirst().get(),
-																																this.tumours.get(i).getAliquotID());
-				Job broadPreprocessVCF = this.preProcessIndelVCF(broadPassFilter, Pipeline.broad, "/"+ this.broadGnosID +"/"+ this.vcfs.stream().filter(isBroad.and(isIndel))
-																																				.map(m -> m.getFileName()).findFirst().get(),
-																																this.tumours.get(i).getAliquotID());
-				preprocessJobs.add(broadPreprocessVCF);
-				preprocessJobs.add(sangerPreprocessVCF);
-				preprocessJobs.add(dkfzEmblPreprocessVCF);
+				String tumourAliquotID = tumours.get(i).getAliquotID();
+				final String vcfNotFoundToken = "VCF_NOT_FOUND";
+				BiFunction<String, Predicate<VcfInfo>, String> generateVcfName = (s,p) ->"/"+ s +"/"+ this.vcfs.stream()
+																								.filter(vcfMatchesTypePipelineTumour(isIndel, p, tumourAliquotID))
+																								.map(m -> m.getFileName())
+																								.findFirst().orElse(vcfNotFoundToken);
+
+				String sangerIndelVcfName = generateVcfName.apply(this.sangerGnosID, isSanger);
+				if (!sangerIndelVcfName.endsWith(vcfNotFoundToken))
+				{
+					Job sangerPreprocessVCF = this.preProcessIndelVCF(sangerPassFilter, Pipeline.sanger, sangerIndelVcfName, tumourAliquotID);
+					preprocessIndelsJobs.add(sangerPreprocessVCF);
+				}
+				
+				String dkfzEmblIndelVcfName = generateVcfName.apply(this.dkfzemblGnosID, isDkfzEmbl);
+				if (!dkfzEmblIndelVcfName.endsWith(vcfNotFoundToken))
+				{
+					Job dkfzEmblPreprocessVCF = this.preProcessIndelVCF(dkfzemblPassFilter, Pipeline.dkfz_embl, dkfzEmblIndelVcfName, tumourAliquotID);
+					preprocessIndelsJobs.add(dkfzEmblPreprocessVCF);
+				}
+				
+				String broadIndelVcfName = generateVcfName.apply(this.broadGnosID, isBroad);
+				if (!broadIndelVcfName.endsWith(vcfNotFoundToken))
+				{
+					Job broadPreprocessVCF = this.preProcessIndelVCF(broadPassFilter, Pipeline.broad, broadIndelVcfName, tumourAliquotID);
+					preprocessIndelsJobs.add(broadPreprocessVCF);
+				}
 			}
 			List<Job> combineVCFJobs = new ArrayList<Job>(this.tumours.size());
 			for (int i =0; i< this.tumours.size(); i++)
-			{		
-				Job combineVCFsByType = this.combineVCFsByType(this.tumours.get(i).getAliquotID(), preprocessJobs.toArray(new Job[preprocessJobs.size()]) );
+			{	
+				Job combineVCFsByType = this.combineVCFsByType(this.tumours.get(i).getAliquotID(), preprocessIndelsJobs.toArray(new Job[preprocessIndelsJobs.size()]) );
 				combineVCFJobs.add(combineVCFsByType);
 			}
 			
