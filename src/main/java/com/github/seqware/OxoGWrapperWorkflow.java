@@ -756,15 +756,31 @@ public class OxoGWrapperWorkflow extends BaseOxoGWrapperWorkflow {
 			List<Job> preprocessJobs = new ArrayList<Job>(this.tumours.size() * 3);
 			for (int i =0; i < this.tumours.size(); i++)
 			{
-				BiFunction<String, Predicate<VcfInfo>, String> generateVcfName = (s,p) -> "/"+ s +"/"+ this.vcfs.stream().filter(p.and(isIndel)).map(m -> m.getFileName()).findFirst().get();
+				String tumourAliquotID = tumours.get(i).getAliquotID();
+				final String vcfNotFoundToken = "VCF_NOT_FOUND";
+				BiFunction<String, Predicate<VcfInfo>, String> generateVcfName = (s,p) ->"/"+ s +"/"+ this.vcfs.stream()
+																						.filter(vcfMatchesTypePipelineTumour(isIndel, p, tumourAliquotID))
+																						.map(m -> m.getFileName())
+																						.findFirst().orElse(vcfNotFoundToken);
 				
-				Job sangerPreprocessVCF = this.preProcessIndelVCF(sangerPassFilter, Pipeline.sanger,generateVcfName.apply(this.sangerGnosID, isSanger), this.tumours.get(i).getAliquotID());
-				Job dkfzEmblPreprocessVCF = this.preProcessIndelVCF(dkfzemblPassFilter, Pipeline.dkfz_embl, generateVcfName.apply(this.dkfzemblGnosID, isDkfzEmbl), this.tumours.get(i).getAliquotID());
-				Job broadPreprocessVCF = this.preProcessIndelVCF(broadPassFilter, Pipeline.broad, generateVcfName.apply(this.broadGnosID, isBroad), this.tumours.get(i).getAliquotID());
-
-				preprocessJobs.add(broadPreprocessVCF);
-				preprocessJobs.add(sangerPreprocessVCF);
-				preprocessJobs.add(dkfzEmblPreprocessVCF);
+				String sangerIndelVcfName = generateVcfName.apply(this.sangerGnosID, isSanger);
+				if (!sangerIndelVcfName.endsWith(vcfNotFoundToken))
+				{
+					Job sangerPreprocessVCF = this.preProcessIndelVCF(sangerPassFilter, Pipeline.sanger,sangerIndelVcfName, this.tumours.get(i).getAliquotID());
+					preprocessJobs.add(sangerPreprocessVCF);
+				}
+				String dkfzEmblIndelVcfName = generateVcfName.apply(this.dkfzemblGnosID, isDkfzEmbl);
+				if (!dkfzEmblIndelVcfName.endsWith(vcfNotFoundToken))
+				{
+					Job dkfzEmblPreprocessVCF = this.preProcessIndelVCF(dkfzemblPassFilter, Pipeline.dkfz_embl, dkfzEmblIndelVcfName, this.tumours.get(i).getAliquotID());
+					preprocessJobs.add(dkfzEmblPreprocessVCF);
+				}
+				String broadIndelVcfName = generateVcfName.apply(this.broadGnosID, isBroad);
+				if (broadIndelVcfName.endsWith(vcfNotFoundToken))
+				{
+					Job broadPreprocessVCF = this.preProcessIndelVCF(broadPassFilter, Pipeline.broad, broadIndelVcfName, this.tumours.get(i).getAliquotID());
+					preprocessJobs.add(broadPreprocessVCF);
+				}
 			}
 			List<Job> combineVCFJobs = new ArrayList<Job>(this.tumours.size());
 			for (int i =0; i< this.tumours.size(); i++)
