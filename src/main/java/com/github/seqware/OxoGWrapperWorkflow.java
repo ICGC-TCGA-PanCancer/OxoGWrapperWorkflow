@@ -29,6 +29,7 @@ import net.sourceforge.seqware.pipeline.workflowV2.model.Job;
 public class OxoGWrapperWorkflow extends BaseOxoGWrapperWorkflow {
 
 	private Collector<String[], ?, Map<String, Object>> collectToMap = Collectors.toMap(kv -> kv[0], kv -> kv[1]);;
+
 	Consumer<String> updateFilesForUpload = (s) -> this.filesForUpload.add(s);
 	private Predicate<VcfInfo> isSanger = p -> p.getOriginatingPipeline() == Pipeline.sanger;
 	private Predicate<VcfInfo> isBroad = p -> p.getOriginatingPipeline() == Pipeline.broad;
@@ -207,7 +208,6 @@ public class OxoGWrapperWorkflow extends BaseOxoGWrapperWorkflow {
 	private Job passFilterWorkflow(Pipeline workflowName, Job ... parents)
 	{
 		Job passFilter = this.getWorkflow().createBashJob("pass filter "+workflowName);
-
 		PreprocessJobGenerator generator = new PreprocessJobGenerator(this.JSONlocation, this.JSONrepoName, this.JSONfolderName, this.JSONfileName);
 		passFilter = generator.passFilterWorkflow(this, workflowName, parents);
 		
@@ -297,7 +297,6 @@ public class OxoGWrapperWorkflow extends BaseOxoGWrapperWorkflow {
 	 * @return
 	 */
 	private Job doOxoG(String pathToTumour, String tumourAliquotID, Job ...parents) {
-
 		Predicate<? super VcfInfo> isSangerSNV = this.vcfMatchesTypePipelineTumour(isSnv, isSanger, tumourAliquotID);
 		Predicate<? super VcfInfo> isBroadSNV = this.vcfMatchesTypePipelineTumour(isSnv, isBroad, tumourAliquotID);
 		Predicate<? super VcfInfo> isDkfzEmblSNV = this.vcfMatchesTypePipelineTumour(isSnv, isDkfzEmbl, tumourAliquotID);
@@ -347,6 +346,7 @@ public class OxoGWrapperWorkflow extends BaseOxoGWrapperWorkflow {
 	 */
 	private Job doVariantBam(BAMType bamType, String bamPath, String tumourBAMFileName, String tumourID, Job ...parents) {
 		Job runVariantbam = this.getWorkflow().createBashJob("run "+bamType+(bamType==BAMType.tumour?"_"+tumourID+"_":"")+" variantbam");
+
 		
 		if (!this.skipVariantBam)
 		{
@@ -530,7 +530,10 @@ public class OxoGWrapperWorkflow extends BaseOxoGWrapperWorkflow {
 		generateAnalysisFilesVCFs.addParent(parentJob);
 		return generateAnalysisFilesVCFs;
 	}
+
+
 	
+
 	/*
 	 * Wrapper function to GitUtils.giveMove 
 	 */
@@ -565,6 +568,7 @@ public class OxoGWrapperWorkflow extends BaseOxoGWrapperWorkflow {
 			generator.setSangerOxoGSNVFromIndelFileName(this.filesForUpload.stream().filter(p -> (p.contains(Pipeline.sanger.toString()) && isExtractedSNV.test(p) )).findFirst().orElseGet(emptyStringWhenMissingFilesAllowed));
 			generator.setDkfzEmbleOxogSNVFileName(this.filesForUpload.stream().filter(p -> ((p.contains(tumourAliquotID) && p.contains("dkfz-snvCalling") && p.endsWith(passFilteredOxoGSuffix)))).findFirst().orElseGet(emptyStringWhenMissingFilesAllowed));
 			generator.setDkfzEmblOxoGSNVFromIndelFileName(this.filesForUpload.stream().filter(p -> (p.contains(Pipeline.dkfz_embl.toString()) && isExtractedSNV.test(p) )).findFirst().orElseGet(emptyStringWhenMissingFilesAllowed));
+
 			//Remember: MUSE files do not get PASS-filtered. Also, there is no INDEL so there cannot be any SNVs extracted from INDELs.
 			generator.setMuseOxogSNVFileName(this.filesForUpload.stream().filter(p -> p.toUpperCase().contains("MUSE") && p.endsWith(".oxoG.vcf.gz")).findFirst().orElseGet(emptyStringWhenMissingFilesAllowed));
 			generator.setNormalizedBroadIndel(this.normalizedIndels.stream().filter(isBroad.and(matchesTumour(tumourAliquotID))).findFirst().get().getFileName());
@@ -642,7 +646,6 @@ public class OxoGWrapperWorkflow extends BaseOxoGWrapperWorkflow {
 				List<String> dkfzEmblList = buildVcfListByPredicate.apply(isDkfzEmbl);
 				List<String> museList = buildVcfListByPredicate.apply(isMuse);
 				List<String> normalList = Arrays.asList( this.bamNormalIndexObjectID,this.bamNormalObjectID);
-
 				//System.out.println("DEBUG: sangerList: "+sangerList.toString());
 				Map<String,List<String>> workflowObjectIDs = new HashMap<String,List<String>>(6);
 				workflowObjectIDs.put(Pipeline.broad.toString(), broadList);
@@ -740,6 +743,7 @@ public class OxoGWrapperWorkflow extends BaseOxoGWrapperWorkflow {
 			Job dkfzemblPassFilter = this.passFilterWorkflow(Pipeline.dkfz_embl, statFiles);
 			// ...No, we're not going to filter the Muse SNV file.
 			
+
 			//update all filenames to include ".pass-filtered."
 			Function<String,String> addPassFilteredSuffix = (x) -> { return x.replace(".vcf.gz",".pass-filtered.vcf.gz"); };
 			for (VcfInfo vInfo : this.vcfs)
@@ -763,6 +767,7 @@ public class OxoGWrapperWorkflow extends BaseOxoGWrapperWorkflow {
 																						.map(m -> m.getFileName())
 																						.findFirst().orElse(vcfNotFoundToken);
 				
+
 				String sangerIndelVcfName = generateVcfName.apply(this.sangerGnosID, isSanger);
 				if (!sangerIndelVcfName.endsWith(vcfNotFoundToken))
 				{

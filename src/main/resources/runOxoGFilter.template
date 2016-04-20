@@ -50,12 +50,8 @@
 ( ([ -d {{ pathToUploadDir }} ] || mkdir -p {{ pathToUploadDir }}) \
 	&& cp {{ pathToResults }}/*.vcf.gz  {{ pathToUploadDir }} \
 	&& cp {{ pathToResults }}/*.vcf.gz.tbi   {{ pathToUploadDir }} \
-	&& cp {{ broadNormalizedIndelVCFName }}  {{ pathToUploadDir }} \
-	&& cp {{ dkfzEmblNormalizedIndelVCFName }}  {{ pathToUploadDir }} \
-	&& cp {{ sangerNormalizedIndelVCFName }}  {{ pathToUploadDir }} \
-	&& cp {{ broadNormalizedIndelVCFName }}.tbi  {{ pathToUploadDir }} \
-	&& cp {{ dkfzEmblNormalizedIndelVCFName }}.tbi  {{ pathToUploadDir }} \
-	&& cp {{ sangerNormalizedIndelVCFName }}.tbi  {{ pathToUploadDir }} \
+	&& cp /datastore/vcf/*/*bcftools-norm.vcf.gz  {{ pathToUploadDir }} \
+	&& cp /datastore/vcf/*/*bcftools-norm.vcf.gz.tbi  {{ pathToUploadDir }} \
 	&& cp /datastore/oxog_workspace/tumour_{{ tumourID }}/mutect/sg/gather/{{ aliquotID }}.call_stats.txt  {{ pathToUploadDir }}/{{ aliquotID }}.call_stats_tumour_{{ tumourID }}.txt \
 	&& cp /datastore/oxog_results/tumour_{{ tumourID }}/{{ aliquotID }}.gnos_files.tar {{ pathToUploadDir }}/{{ aliquotID }}.gnos_files_tumour_{{ tumourID }}.tar \
 	&& cd {{ pathToUploadDir }} \
