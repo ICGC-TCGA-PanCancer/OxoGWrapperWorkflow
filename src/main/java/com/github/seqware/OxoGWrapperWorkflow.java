@@ -486,9 +486,7 @@ public class OxoGWrapperWorkflow extends BaseOxoGWrapperWorkflow {
 					{ "pathToTumour", pathToTumour }, { "normalBamGnosID", this.normalBamGnosID }, { "normalBAMFileName", this.normalBAMFileName } ,
 					{ "broadGnosID", this.broadGnosID }, { "sangerGnosID", this.sangerGnosID }, { "dkfzemblGnosID", this.dkfzemblGnosID }, { "museGnosID", this.museGnosID },
 					{ "sangerSNVName", sangerSNV}, { "broadSNVName", broadSNV }, { "dkfzEmblSNVName", dkfzEmblSNV }, { "museSNVName", museSNV },
-					{ "pathToResults", pathToResults}, { "pathToUploadDir", pathToUploadDir },
-					{ "broadNormalizedIndelVCFName",normalizedBroadIndel }, { "sangerNormalizedIndelVCFName",normalizedSangerIndel },
-					{ "dkfzEmblNormalizedIndelVCFName",normalizedDkfzEmblIndel }
+					{ "pathToResults", pathToResults}, { "pathToUploadDir", pathToUploadDir }
 				} ).collect(this.collectToMap), "runOxoGFilter.template");
 			runOxoGWorkflow.setCommand("( "+runOxoGCommand+" ) || "+ moveToFailed);
 		}
