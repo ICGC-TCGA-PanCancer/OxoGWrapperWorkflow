@@ -783,18 +783,14 @@ public class OxoGWrapperWorkflow extends BaseOxoGWrapperWorkflow {
 					//OxoG jobs can put a heavy CPU load on the system (in bursts) so probably better to run them in sequence.
 					//If there is > 1 OxoG job (i.e. a multi-tumour donor), each OxoG job should have the prior OxoG job as its parent.
 					oxoG = this.doOxoG(tInf.getTumourBamGnosID()+"/"+tInf.getTumourBAMFileName(),tInf.getAliquotID(), oxogJobs.get(i-1));
-					for (int j =0 ; j<combineVCFJobs.size(); j++)
-					{
-						oxoG.addParent(combineVCFJobs.get(j));
-					}
 				}
 				else
 				{
 					oxoG = this.doOxoG(tInf.getTumourBamGnosID()+"/"+tInf.getTumourBAMFileName(),tInf.getAliquotID());
-					for (int j =0 ; j<combineVCFJobs.size(); j++)
-					{
-						oxoG.addParent(combineVCFJobs.get(j));
-					}
+				}
+				for (int j =0 ; j<combineVCFJobs.size(); j++)
+				{
+					oxoG.addParent(combineVCFJobs.get(j));
 				}
 				oxogJobs.add(oxoG);
 			}
