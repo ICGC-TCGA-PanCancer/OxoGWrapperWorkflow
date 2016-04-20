@@ -41,38 +41,6 @@ public class PcawgAnnotatorJobGenerator extends JobGeneratorBase {
 	{
 		List<Job> annotatorJobs = new ArrayList<Job>();
 		
-//		Job broadIndelAnnotatorJob = this.runAnnotator(workflow,"indel", Pipeline.broad, normalizedBroadIndel, tumourMinibamPath, normalMinibamPath, tumourAliquotID, updateFilesForUpload, parents);
-//		Job dfkzEmblIndelAnnotatorJob = this.runAnnotator(workflow,"indel", Pipeline.dkfz_embl, normalizedDkfzEmblIndel, tumourMinibamPath, normalMinibamPath, tumourAliquotID, updateFilesForUpload, broadIndelAnnotatorJob);
-//		Job sangerIndelAnnotatorJob = this.runAnnotator(workflow, "indel", Pipeline.sanger, normalizedSangerIndel, tumourMinibamPath, normalMinibamPath, tumourAliquotID,updateFilesForUpload, dfkzEmblIndelAnnotatorJob);
-//
-//		Job broadSNVAnnotatorJob = this.runAnnotator(workflow,"SNV", Pipeline.broad,broadOxogSNVFileName, tumourMinibamPath, normalMinibamPath, tumourAliquotID,updateFilesForUpload, parents);
-//		Job dfkzEmblSNVAnnotatorJob = this.runAnnotator(workflow,"SNV", Pipeline.dkfz_embl,dkfzEmbleOxogSNVFileName, tumourMinibamPath, normalMinibamPath, tumourAliquotID,updateFilesForUpload, broadSNVAnnotatorJob);
-//		Job sangerSNVAnnotatorJob = this.runAnnotator(workflow,"SNV",Pipeline.sanger,sangerOxogSNVFileName, tumourMinibamPath, normalMinibamPath, tumourAliquotID,updateFilesForUpload, dfkzEmblSNVAnnotatorJob);
-//		Job museSNVAnnotatorJob = this.runAnnotator(workflow,"SNV",Pipeline.muse,museOxogSNVFileName, tumourMinibamPath, normalMinibamPath, tumourAliquotID,updateFilesForUpload, dfkzEmblSNVAnnotatorJob);
-//
-//		Job broadSNVFromIndelAnnotatorJob = this.runAnnotator(workflow,"SNV",Pipeline.broad, broadOxoGSNVFromIndelFileName, tumourMinibamPath, normalMinibamPath, tumourAliquotID,updateFilesForUpload, parents);
-//		Job dfkzEmblSNVFromIndelAnnotatorJob = this.runAnnotator(workflow,"SNV",Pipeline.dkfz_embl, dkfzEmblOxoGSNVFromIndelFileName, tumourMinibamPath, normalMinibamPath, tumourAliquotID,updateFilesForUpload, broadSNVFromIndelAnnotatorJob);
-//		Job sangerSNVFromIndelAnnotatorJob = this.runAnnotator(workflow,"SNV",Pipeline.sanger, sangerOxoGSNVFromIndelFileName, tumourMinibamPath, normalMinibamPath, tumourAliquotID,updateFilesForUpload, dfkzEmblSNVFromIndelAnnotatorJob);
-//
-//		annotatorJobs.add(sangerSNVFromIndelAnnotatorJob);
-//		annotatorJobs.add(sangerSNVAnnotatorJob);
-//		annotatorJobs.add(sangerIndelAnnotatorJob);
-//		annotatorJobs.add(museSNVAnnotatorJob);
-
-//		String normalizedBroadIndel = this.normalizedIndels.stream().filter(isBroad.and(matchesTumour(tumourAliquotID))).findFirst().orElse(new VcfInfo()).getFileName();
-//		String normalizedSangerIndel = this.normalizedIndels.stream().filter(isSanger.and(matchesTumour(tumourAliquotID))).findFirst().orElse(new VcfInfo()).getFileName();
-//		String normalizedDkfzEmblIndel = this.normalizedIndels.stream().filter(isDkfzEmbl.and(matchesTumour(tumourAliquotID))).findFirst().orElse(new VcfInfo()).getFileName();
-	 	Function<String,String> getFileName = (s) -> {
-			if (this.allowMissingFiles)
-			{
-				if (s!=null && !s.trim().equals(""))
-				{
-					return s.substring(s.lastIndexOf("/"));
-				}
-				return "";
-			}
-			return s.substring(s.lastIndexOf("/"));
-		};
 		if (!this.allowMissingFiles)
 		{
 			Job broadIndelAnnotatorJob = this.runAnnotator(workflow,"indel", Pipeline.broad, normalizedBroadIndel, tumourMinibamPath,normalMinibamPath, tumourAliquotID, updateFilesForUpload, parents);
