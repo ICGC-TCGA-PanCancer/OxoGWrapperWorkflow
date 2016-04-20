@@ -753,7 +753,7 @@ public class OxoGWrapperWorkflow extends BaseOxoGWrapperWorkflow {
 			
 			// OxoG will run after move2running. Move2running will run after all the jobs that perform input file downloads and file preprocessing have finished.
 			
-			List<Job> preprocessJobs = new ArrayList<Job>(this.tumours.size() * 3);
+			List<Job> preprocessIndelsJobs = new ArrayList<Job>(this.tumours.size() * 3);
 			for (int i =0; i < this.tumours.size(); i++)
 			{
 				String tumourAliquotID = tumours.get(i).getAliquotID();
@@ -767,25 +767,25 @@ public class OxoGWrapperWorkflow extends BaseOxoGWrapperWorkflow {
 				if (!sangerIndelVcfName.endsWith(vcfNotFoundToken))
 				{
 					Job sangerPreprocessVCF = this.preProcessIndelVCF(sangerPassFilter, Pipeline.sanger,sangerIndelVcfName, this.tumours.get(i).getAliquotID());
-					preprocessJobs.add(sangerPreprocessVCF);
+					preprocessIndelsJobs.add(sangerPreprocessVCF);
 				}
 				String dkfzEmblIndelVcfName = generateVcfName.apply(this.dkfzemblGnosID, isDkfzEmbl);
 				if (!dkfzEmblIndelVcfName.endsWith(vcfNotFoundToken))
 				{
 					Job dkfzEmblPreprocessVCF = this.preProcessIndelVCF(dkfzemblPassFilter, Pipeline.dkfz_embl, dkfzEmblIndelVcfName, this.tumours.get(i).getAliquotID());
-					preprocessJobs.add(dkfzEmblPreprocessVCF);
+					preprocessIndelsJobs.add(dkfzEmblPreprocessVCF);
 				}
 				String broadIndelVcfName = generateVcfName.apply(this.broadGnosID, isBroad);
 				if (broadIndelVcfName.endsWith(vcfNotFoundToken))
 				{
 					Job broadPreprocessVCF = this.preProcessIndelVCF(broadPassFilter, Pipeline.broad, broadIndelVcfName, this.tumours.get(i).getAliquotID());
-					preprocessJobs.add(broadPreprocessVCF);
+					preprocessIndelsJobs.add(broadPreprocessVCF);
 				}
 			}
 			List<Job> combineVCFJobs = new ArrayList<Job>(this.tumours.size());
 			for (int i =0; i< this.tumours.size(); i++)
 			{		
-				Job combineVCFsByType = this.combineVCFsByType(this.tumours.get(i).getAliquotID(), preprocessJobs.toArray(new Job[preprocessJobs.size()]) );
+				Job combineVCFsByType = this.combineVCFsByType(this.tumours.get(i).getAliquotID(), preprocessIndelsJobs.toArray(new Job[preprocessIndelsJobs.size()]) );
 				combineVCFJobs.add(combineVCFsByType);
 			}
 			
