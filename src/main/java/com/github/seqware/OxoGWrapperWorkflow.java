@@ -301,10 +301,6 @@ public class OxoGWrapperWorkflow extends BaseOxoGWrapperWorkflow {
 		Predicate<? super VcfInfo> isDkfzEmblSNV = this.vcfMatchesTypePipelineTumour(isSnv, isDkfzEmbl, tumourAliquotID);
 		Predicate<? super VcfInfo> isMuseSNV = this.vcfMatchesTypePipelineTumour(isSnv, isMuse, tumourAliquotID);
 		
-		Predicate<? super VcfInfo> isSangerINDEL = this.vcfMatchesTypePipelineTumour(isIndel,isSanger,tumourAliquotID);
-		Predicate<? super VcfInfo> isBroadINDEL = this.vcfMatchesTypePipelineTumour(isIndel,isBroad,tumourAliquotID);
-		Predicate<? super VcfInfo> isDkfzEmblINDEL = this.vcfMatchesTypePipelineTumour(isIndel,isDkfzEmbl,tumourAliquotID);
-		
 		OxoGJobGenerator oxogJobGenerator = new OxoGJobGenerator(this.JSONlocation, this.JSONrepoName, this.JSONfolderName, this.JSONfileName, tumourAliquotID, this.normalAliquotID);
 		oxogJobGenerator.setBroadGnosID(this.broadGnosID);
 		oxogJobGenerator.setSangerSNV(this.getVcfName(isSangerSNV,this.vcfs));
@@ -314,9 +310,6 @@ public class OxoGWrapperWorkflow extends BaseOxoGWrapperWorkflow {
 		oxogJobGenerator.setExtractedSangerSNV(this.getVcfName(isSangerSNV,this.extractedSnvsFromIndels));
 		oxogJobGenerator.setExtractedBroadSNV(this.getVcfName(isBroadSNV,this.extractedSnvsFromIndels));
 		oxogJobGenerator.setExtractedDkfzEmblSNV(this.getVcfName(isDkfzEmblSNV,this.extractedSnvsFromIndels));
-		oxogJobGenerator.setNormalizedSangerIndel(this.getVcfName(isSangerINDEL,this.normalizedIndels));
-		oxogJobGenerator.setNormalizedBroadIndel(this.getVcfName(isBroadINDEL,this.normalizedIndels));
-		oxogJobGenerator.setNormalizedDkfzEmblIndel(this.getVcfName(isDkfzEmblINDEL,this.normalizedIndels));
 		oxogJobGenerator.setGitMoveTestMode(this.gitMoveTestMode);
 		
 		Consumer<String> updateFilesToUpload = (s) -> this.filesForUpload.add(s);

@@ -31,9 +31,7 @@ public class OxoGJobGenerator extends JobGeneratorBase {
 	private String dkfzEmblSNV;
 	private String broadSNV;
 	private String sangerSNV;
-	private String normalizedBroadIndel;
-	private String normalizedSangerIndel;
-	private String normalizedDkfzEmblIndel;
+
 	private String museGnosID;
 	private boolean allowMissingFiles;
 
@@ -258,30 +256,6 @@ public class OxoGJobGenerator extends JobGeneratorBase {
 
 	public void setSangerSNV(String sangerSNV) {
 		this.sangerSNV = sangerSNV;
-	}
-
-	public String getNormalizedBroadIndel() {
-		return this.normalizedBroadIndel;
-	}
-
-	public void setNormalizedBroadIndel(String normalizedBroadIndel) {
-		this.normalizedBroadIndel = normalizedBroadIndel;
-	}
-
-	public String getNormalizedSangerIndel() {
-		return this.normalizedSangerIndel;
-	}
-
-	public void setNormalizedSangerIndel(String normalizedSangerIndel) {
-		this.normalizedSangerIndel = normalizedSangerIndel;
-	}
-
-	public String getNormalizedDkfzEmblIndel() {
-		return this.normalizedDkfzEmblIndel;
-	}
-
-	public void setNormalizedDkfzEmblIndel(String normalizedDkfzEmblIndel) {
-		this.normalizedDkfzEmblIndel = normalizedDkfzEmblIndel;
 	}
 
 	public String getMuseGnosID() {
