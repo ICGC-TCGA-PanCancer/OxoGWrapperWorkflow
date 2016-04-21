@@ -1,5 +1,9 @@
 # CHANGELOG
 
+## 2.0.1
+ - VCFs can now be missing and the workflow will continue. To use this feature, add `allowMissingFiles=true` to your INI file.
+ 
+
 ## 2.0.0
  - OxoG can now handle donors with multiple tumours!
 

@@ -3,21 +3,13 @@
 	(
 		EXTRACTED_SNV_MOUNT=""
 		EXTRACTED_SNV_FILES=""
-		if (( $(zcat {{ sangerExtractedSNVVCFPath }} | grep "^[^#]" | wc -l) > 0 )) ; then
-			echo "{{ sangerExtractedSNVVCFPath }} has SNVs."
-			EXTRACTED_SNV_MOUNT=" ${EXTRACTED_SNV_MOUNT} -v  {{ sangerExtractedSNVVCFPath }}:/datafiles/VCF/{{ sangerWorfklow }}/{{ sangerExtractedSNVVCF }} "
-			EXTRACTED_SNV_FILES=" ${EXTRACTED_SNV_FILES} /datafiles/VCF/{{ sangerWorfklow }}/{{ sangerExtractedSNVVCF }} "
-		fi
-		if (( $(zcat {{ broadExtractedSNVVCFPath }} | grep  "^[^#]" | wc -l) > 0 )) ; then
-			echo "{{ broadExtractedSNVVCFPath }} has SNVs."
-			EXTRACTED_SNV_MOUNT=" ${EXTRACTED_SNV_MOUNT} -v {{ broadExtractedSNVVCFPath }}:/datafiles/VCF/{{ broadWorkflow }}/{{ broadExtractedSNVVCF }} "
-			EXTRACTED_SNV_FILES=" ${EXTRACTED_SNV_FILES} /datafiles/VCF/{{ broadWorkflow }}/{{ broadExtractedSNVVCF }} "
-		fi
-		if (( $(zcat {{ dkfzEmblExtractedSNVVCFPath }} | grep "^[^#]" | wc -l) > 0 )) ; then
-			echo "{{ dkfzEmblExtractedSNVVCFPath }} has SNVs."
-			EXTRACTED_SNV_MOUNT=" ${EXTRACTED_SNV_MOUNT} -v {{ dkfzEmblExtractedSNVVCFPath }}:/datafiles/VCF/{{ dkfzEmblWorkflow }}/{{ dkfzEmblExtractedSNVVCF }} "
-			EXTRACTED_SNV_FILES=" ${EXTRACTED_SNV_FILES} /datafiles/VCF/{{ dkfzEmblWorkflow }}/{{ dkfzEmblExtractedSNVVCF }} "
-		fi
+
+{{ checkSangerExtractedSNV }}
+
+{{ checkBroadExtractedSNV }}
+
+{{ checkDkfzEmblExtractedSNV }}
+
 		set -x
 		docker run --rm --name="oxog_filter_with_tumour_{{ tumourID }}" \
 				-v /refdata/:/cga/fh/pcawg_pipeline/refdata/ \
@@ -35,10 +27,7 @@
 						/datafiles/BAM/tumour/{{ pathToTumour }} \
 						/datafiles/BAM/normal/{{ normalBamGnosID }}/{{ normalBAMFileName }} \
  						{{ oxoQScore }} \
-						/datafiles/VCF/{{ sangerWorkflow }}/{{ sangerSNVName }} \
-						/datafiles/VCF/{{ dkfzEmblWorkflow }}/{{ dkfzEmblSNVName }} \
-						/datafiles/VCF/{{ museWorkflow }}/{{ museSNVName }} \
-						/datafiles/VCF/{{ broadWorkflow }}/{{ broadSNVName }} \
+						{{ sangerSNVName }}  {{ dkfzEmblSNVName }}  {{ museSNVName }}  {{ broadSNVName }} \
 						${EXTRACTED_SNV_FILES}; "
 		set +x
 	) || echo "OxoG Exit Code: $?" 
