@@ -438,24 +438,35 @@ public class OxoGWrapperWorkflow extends BaseOxoGWrapperWorkflow {
 		Predicate<? super VcfInfo> isDkfzEmblSNV = this.vcfMatchesTypePipelineTumour(isSnv, isDkfzEmbl, tumourAliquotID);
 		Predicate<? super VcfInfo> isMuseSNV = this.vcfMatchesTypePipelineTumour(isSnv, isMuse, tumourAliquotID);
 		
-		Predicate<? super VcfInfo> isSangerINDEL = this.vcfMatchesTypePipelineTumour(isIndel,isSanger,tumourAliquotID);
-		Predicate<? super VcfInfo> isBroadINDEL = this.vcfMatchesTypePipelineTumour(isIndel,isBroad,tumourAliquotID);
-		Predicate<? super VcfInfo> isDkfzEmblINDEL = this.vcfMatchesTypePipelineTumour(isIndel,isDkfzEmbl,tumourAliquotID);
-				
-		String sangerSNV = this.getVcfName(isSangerSNV,this.vcfs);
-		String broadSNV = this.getVcfName(isBroadSNV,this.vcfs);
-		String dkfzEmblSNV = this.getVcfName(isDkfzEmblSNV,this.vcfs);
-		String museSNV = this.getVcfName(isMuseSNV,this.vcfs);
+		BiFunction<String,String,String> applyPrefixForOxoG = (vcfName,pipeline) -> {
+			if (vcfName == null || vcfName.trim().length()==0)
+			{
+				//if missing files are allowed, just return an empty string.
+				if (this.allowMissingFiles)
+				{
+					return "";
+				}
+				else
+				{
+					throw new RuntimeException("A VCF name was empty/missing, but allowMissingFiles is "+this.allowMissingFiles);
+				}
+			}
+			else
+			{
+				// This is the path inside the OxoG container that a VCF must be on.
+				return "/datafiles/VCF/"+pipeline+"/"+vcfName;
+			}
+		};
 		
-		//TODO: Need to fill in extractedBroadSNV (and others with *something* so that the zcat doesn't hang the workflow when it tries to read but there's no filename...
+		String sangerSNV = applyPrefixForOxoG.apply(this.getVcfName(isSangerSNV,this.vcfs),Pipeline.sanger.toString());
+		String broadSNV = applyPrefixForOxoG.apply(this.getVcfName(isBroadSNV,this.vcfs),Pipeline.broad.toString());
+		String dkfzEmblSNV = applyPrefixForOxoG.apply(this.getVcfName(isDkfzEmblSNV,this.vcfs),Pipeline.dkfz_embl.toString());
+		String museSNV = applyPrefixForOxoG.apply(this.getVcfName(isMuseSNV,this.vcfs),Pipeline.muse.toString());
+		
 		String extractedSangerSNV = this.getVcfName(isSangerSNV,this.extractedSnvsFromIndels);
 		String extractedBroadSNV = this.getVcfName(isBroadSNV,this.extractedSnvsFromIndels);
 		String extractedDkfzEmblSNV = this.getVcfName(isDkfzEmblSNV,this.extractedSnvsFromIndels);
 		
-		String normalizedSangerIndel = this.getVcfName(isSangerINDEL,this.normalizedIndels);
-		String normalizedBroadIndel = this.getVcfName(isBroadINDEL,this.normalizedIndels);
-		String normalizedDkfzEmblIndel = this.getVcfName(isDkfzEmblINDEL,this.normalizedIndels);
-				
 		if (!this.skipOxoG)
 		{
 			String checkSangerExtractedSNV;
