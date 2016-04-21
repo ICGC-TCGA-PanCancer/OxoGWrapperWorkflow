@@ -27,10 +27,7 @@
 						/datafiles/BAM/tumour/{{ pathToTumour }} \
 						/datafiles/BAM/normal/{{ normalBamGnosID }}/{{ normalBAMFileName }} \
  						{{ oxoQScore }} \
-						/datafiles/VCF/{{ sangerWorkflow }}/{{ sangerSNVName }} \
-						/datafiles/VCF/{{ dkfzEmblWorkflow }}/{{ dkfzEmblSNVName }} \
-						/datafiles/VCF/{{ museWorkflow }}/{{ museSNVName }} \
-						/datafiles/VCF/{{ broadWorkflow }}/{{ broadSNVName }} \
+						{{ sangerSNVName }}  {{ dkfzEmblSNVName }}  {{ museSNVName }}  {{ broadSNVName }} \
 						${EXTRACTED_SNV_FILES}; "
 		set +x
 	) || echo "OxoG Exit Code: $?" 
