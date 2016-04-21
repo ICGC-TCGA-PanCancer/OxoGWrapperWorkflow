@@ -4,6 +4,10 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.function.BiConsumer;
+import java.util.function.Function;
+import java.util.stream.Collector;
+import java.util.stream.Collectors;
 
 import com.github.seqware.OxoGWrapperWorkflow.DownloadMethod;
 import com.github.seqware.OxoGWrapperWorkflow.Pipeline;
@@ -50,6 +54,7 @@ public abstract class BaseOxoGWrapperWorkflow extends AbstractWorkflowDataModel 
 	
 	protected List<String> filesForUpload = new ArrayList<String>();
 	
+
 	protected String sangerGnosID;
 	protected String broadGnosID;
 	protected String dkfzemblGnosID;
@@ -110,23 +115,48 @@ public abstract class BaseOxoGWrapperWorkflow extends AbstractWorkflowDataModel 
 	protected int tumourCount;
 	
 	List<TumourInfo> tumours;
+
+	protected boolean allowMissingFiles = false;
 	
 	List<VcfInfo> vcfs;
-	
+
 	/**
 	 * Get a property name that is mandatory
 	 * @param propName The name of the property
 	 * @return The property, as a String. Convert to other types if you need to.
 	 * @throws Exception An Exception with the message "Property with key <i>propName</i> cannot be null" will be thrown if property is not found.
 	 */
-	private String getMandatoryProperty(String propName) throws Exception
+	private String getMandatoryProperty(String propName)
 	{
 		if (hasPropertyAndNotNull(propName)) {
-			return getProperty(propName);
+			try {
+				return getProperty(propName);
+			}
+			catch (Exception e)
+			{
+				throw new RuntimeException (e);
+			}
 		}
 		else {
-			throw new Exception ("Property with key "+propName+ " cannot be null!");
+			throw new RuntimeException ("Property with key "+propName+ " cannot be null!");
 		}
+	}
+	
+	private String getOptionalProperty(String propName)
+	{
+		boolean hasPropertyAndNotNull = hasPropertyAndNotNull(propName);
+		if (hasPropertyAndNotNull)
+		{
+			try
+			{
+				return getProperty(propName);
+			}
+			catch (Exception e)
+			{
+				throw new RuntimeException("The property "+propName+ " seems to be in the INI file: "+hasPropertyAndNotNull + ", but retrieving the property caused an exception, which shouldn't have happened!",e);
+			}
+		}
+		return "";
 	}
 
 	/**
@@ -135,6 +165,22 @@ public abstract class BaseOxoGWrapperWorkflow extends AbstractWorkflowDataModel 
 	protected void init() {
 		//Was having class-loader issues with Jinja, probably coming from however it is that seqware builds these bundles, this seems to have resolved it.
 		Thread.currentThread().setContextClassLoader(this.getClass().getClassLoader());
+
+		// If missing files are NOT allowed, an exception should be thrown for missing values. Otherwise, 
+		// fields will be set to either the value in the INI file, or an empty string, with no exceptions being thrown.
+		Function<String, String> setBasedOnAllowMissingFiles = (lookupKey) -> {
+				return ( ( ! this.allowMissingFiles)
+						 ? this.getMandatoryProperty(lookupKey)
+						 : this.getOptionalProperty(lookupKey) );
+		};
+
+
+		BiConsumer<String, String> putIntoMapIfSet = (id, name) -> { 
+			if (name !=null && !name.trim().equals(""))
+			{
+				this.objectToFilenames.put(id, name);
+			}
+		} ;
 
 		try {
 			if (hasPropertyAndNotNull("downloadMethod")) {
@@ -151,7 +197,10 @@ public abstract class BaseOxoGWrapperWorkflow extends AbstractWorkflowDataModel 
 			this.dkfzemblGnosID = this.getMandatoryProperty(JSONUtils.DKFZEMBL_GNOS_ID);
 			this.museGnosID = this.getMandatoryProperty(JSONUtils.MUSE_GNOS_ID);
 
-			
+			if (hasPropertyAndNotNull("allowMissingFiles")) {
+				this.allowMissingFiles = Boolean.valueOf(getProperty("allowMissingFiles"));
+			}
+			System.out.println("DEBUG: allowMissingFiles: "+allowMissingFiles);
 			for (int i = 0; i < tumourCount; i++)
 			{
 				System.out.println("reading tumour "+i);
@@ -186,16 +235,16 @@ public abstract class BaseOxoGWrapperWorkflow extends AbstractWorkflowDataModel 
 						else
 						{
 							VcfInfo vInfo = new VcfInfo();
-							vInfo.setObjectID(this.getMandatoryProperty(JSONUtils.lookUpKeyGenerator(p, v, "data", "object_id_"+i)));
-							vInfo.setIndexObjectID(this.getMandatoryProperty(JSONUtils.lookUpKeyGenerator(p, v, "index", "object_id_"+i)));
-							vInfo.setFileName(this.getMandatoryProperty(JSONUtils.lookUpKeyGenerator(p, v, "data", "file_name_"+i)));
-							vInfo.setIndexFileName(this.getMandatoryProperty(JSONUtils.lookUpKeyGenerator(p, v, "index", "file_name_"+i)));
-							vInfo.setOriginatingTumourAliquotID(this.getMandatoryProperty((JSONUtils.TUMOUR_ALIQUOT_ID+"_"+i)));
+							vInfo.setObjectID( setBasedOnAllowMissingFiles.apply(JSONUtils.lookUpKeyGenerator(p, v, "data", "object_id_"+i)));
+							vInfo.setIndexObjectID( setBasedOnAllowMissingFiles.apply(JSONUtils.lookUpKeyGenerator(p, v, "index", "object_id_"+i)));
+							vInfo.setFileName( setBasedOnAllowMissingFiles.apply(JSONUtils.lookUpKeyGenerator(p, v, "data", "file_name_"+i)));
+							vInfo.setIndexFileName( setBasedOnAllowMissingFiles.apply(JSONUtils.lookUpKeyGenerator(p, v, "index", "file_name_"+i)));
+							vInfo.setOriginatingTumourAliquotID( setBasedOnAllowMissingFiles.apply(JSONUtils.TUMOUR_ALIQUOT_ID+"_"+i));
 							vInfo.setVcfType(v);
 							vInfo.setOriginatingPipeline(p);
 							
-							this.objectToFilenames.put(vInfo.getObjectID(),vInfo.getFileName());
-							this.objectToFilenames.put(vInfo.getIndexObjectID(),vInfo.getIndexFileName());
+							putIntoMapIfSet.accept(vInfo.getObjectID(),vInfo.getFileName());
+							putIntoMapIfSet.accept(vInfo.getIndexObjectID(),vInfo.getIndexFileName());
 							switch (p)
 							{
 								case broad:
@@ -211,8 +260,11 @@ public abstract class BaseOxoGWrapperWorkflow extends AbstractWorkflowDataModel 
 									vInfo.setPipelineGnosID(this.museGnosID);
 									break;
 							}
-							
-							this.vcfs.add(vInfo);
+							//Only add this object if there is an actual file name present.
+							if (vInfo.getFileName()!=null && !vInfo.getFileName().trim().equals(""))
+							{
+								this.vcfs.add(vInfo);
+							}
 						}
 					}
 				}
@@ -252,7 +304,6 @@ public abstract class BaseOxoGWrapperWorkflow extends AbstractWorkflowDataModel 
 			
 			this.objectToFilenames.put(this.bamNormalObjectID, this.normalBAMFileName);
 			this.objectToFilenames.put(this.bamNormalIndexObjectID, this.normalBamIndexFileName);
-
 			this.uploadKey= this.getMandatoryProperty("uploadKey");
 			this.gnosKey= this.getMandatoryProperty("gnosKey");
 			
@@ -317,10 +368,10 @@ public abstract class BaseOxoGWrapperWorkflow extends AbstractWorkflowDataModel 
 				this.dkfzEmblGNOSRepoURL = this.getMandatoryProperty(JSONUtils.DKFZ_EMBL_DOWNLOAD_URL);
 				this.museGNOSRepoURL = this.getMandatoryProperty(JSONUtils.MUSE_DOWNLOAD_URL);
 				this.normalBamGNOSRepoURL = this.getMandatoryProperty(JSONUtils.NORMAL_BAM_DOWNLOAD_URL);
-				//this.tumourBamGNOSRepoURL = this.getMandatoryProperty(JSONUtils.TUMOUR_BAM_DOWNLOAD_URL);
 				this.gtDownloadBamKey = this.getMandatoryProperty("gtDownloadBamKey");
 				this.gtDownloadVcfKey = this.getMandatoryProperty("gtDownloadVcfKey");
 			}
+
 
 			
 		} catch (Exception e) {

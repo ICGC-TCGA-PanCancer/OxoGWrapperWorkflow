@@ -40,8 +40,8 @@ class GitUtils {
 		// Checkout master
 		pullRepoJob.getCommand().addArgument("cd " + JSONlocation + "/" + JSONrepoName + " && git checkout master \n");
 		// Get a list of what's in there.
-		pullRepoJob.getCommand().addArgument("echo \"contents: \"\n");
-		pullRepoJob.getCommand().addArgument("ls -lRA  \n");
+		//pullRepoJob.getCommand().addArgument("echo \"contents: \"\n");
+		//pullRepoJob.getCommand().addArgument("ls -lRA  \n");
 		return pullRepoJob;
 	}
 

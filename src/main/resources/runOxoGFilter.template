@@ -3,21 +3,13 @@
 	(
 		EXTRACTED_SNV_MOUNT=""
 		EXTRACTED_SNV_FILES=""
-		if (( $(zcat {{ sangerExtractedSNVVCFPath }} | grep "^[^#]" | wc -l) > 0 )) ; then
-			echo "{{ sangerExtractedSNVVCFPath }} has SNVs."
-			EXTRACTED_SNV_MOUNT=" ${EXTRACTED_SNV_MOUNT} -v  {{ sangerExtractedSNVVCFPath }}:/datafiles/VCF/{{ sangerWorfklow }}/{{ sangerExtractedSNVVCF }} "
-			EXTRACTED_SNV_FILES=" ${EXTRACTED_SNV_FILES} /datafiles/VCF/{{ sangerWorfklow }}/{{ sangerExtractedSNVVCF }} "
-		fi
-		if (( $(zcat {{ broadExtractedSNVVCFPath }} | grep  "^[^#]" | wc -l) > 0 )) ; then
-			echo "{{ broadExtractedSNVVCFPath }} has SNVs."
-			EXTRACTED_SNV_MOUNT=" ${EXTRACTED_SNV_MOUNT} -v {{ broadExtractedSNVVCFPath }}:/datafiles/VCF/{{ broadWorkflow }}/{{ broadExtractedSNVVCF }} "
-			EXTRACTED_SNV_FILES=" ${EXTRACTED_SNV_FILES} /datafiles/VCF/{{ broadWorkflow }}/{{ broadExtractedSNVVCF }} "
-		fi
-		if (( $(zcat {{ dkfzEmblExtractedSNVVCFPath }} | grep "^[^#]" | wc -l) > 0 )) ; then
-			echo "{{ dkfzEmblExtractedSNVVCFPath }} has SNVs."
-			EXTRACTED_SNV_MOUNT=" ${EXTRACTED_SNV_MOUNT} -v {{ dkfzEmblExtractedSNVVCFPath }}:/datafiles/VCF/{{ dkfzEmblWorkflow }}/{{ dkfzEmblExtractedSNVVCF }} "
-			EXTRACTED_SNV_FILES=" ${EXTRACTED_SNV_FILES} /datafiles/VCF/{{ dkfzEmblWorkflow }}/{{ dkfzEmblExtractedSNVVCF }} "
-		fi
+
+{{ checkSangerExtractedSNV }}
+
+{{ checkBroadExtractedSNV }}
+
+{{ checkDkfzEmblExtractedSNV }}
+
 		set -x
 		docker run --rm --name="oxog_filter_with_tumour_{{ tumourID }}" \
 				-v /refdata/:/cga/fh/pcawg_pipeline/refdata/ \
@@ -50,12 +42,8 @@
 ( ([ -d {{ pathToUploadDir }} ] || mkdir -p {{ pathToUploadDir }}) \
 	&& cp {{ pathToResults }}/*.vcf.gz  {{ pathToUploadDir }} \
 	&& cp {{ pathToResults }}/*.vcf.gz.tbi   {{ pathToUploadDir }} \
-	&& cp {{ broadNormalizedIndelVCFName }}  {{ pathToUploadDir }} \
-	&& cp {{ dkfzEmblNormalizedIndelVCFName }}  {{ pathToUploadDir }} \
-	&& cp {{ sangerNormalizedIndelVCFName }}  {{ pathToUploadDir }} \
-	&& cp {{ broadNormalizedIndelVCFName }}.tbi  {{ pathToUploadDir }} \
-	&& cp {{ dkfzEmblNormalizedIndelVCFName }}.tbi  {{ pathToUploadDir }} \
-	&& cp {{ sangerNormalizedIndelVCFName }}.tbi  {{ pathToUploadDir }} \
+	&& cp /datastore/vcf/*/*bcftools-norm.vcf.gz  {{ pathToUploadDir }} \
+	&& cp /datastore/vcf/*/*bcftools-norm.vcf.gz.tbi  {{ pathToUploadDir }} \
 	&& cp /datastore/oxog_workspace/tumour_{{ tumourID }}/mutect/sg/gather/{{ aliquotID }}.call_stats.txt  {{ pathToUploadDir }}/{{ aliquotID }}.call_stats_tumour_{{ tumourID }}.txt \
 	&& cp /datastore/oxog_results/tumour_{{ tumourID }}/{{ aliquotID }}.gnos_files.tar {{ pathToUploadDir }}/{{ aliquotID }}.gnos_files_tumour_{{ tumourID }}.tar \
 	&& cd {{ pathToUploadDir }} \
