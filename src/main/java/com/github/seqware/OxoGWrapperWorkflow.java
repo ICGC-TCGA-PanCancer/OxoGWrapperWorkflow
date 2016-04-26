@@ -148,7 +148,7 @@ public class OxoGWrapperWorkflow extends BaseOxoGWrapperWorkflow {
 		
 		String outDir = "/datastore/bam/"+bamType.toString()+"/";
 		String getBamCommandString;
-		getBamCommandString = getFileCommandString(downloadMethod, outDir, bamType.toString(), this.storageSource, this.gtDownloadVcfKey, objectIDs);
+		getBamCommandString = getFileCommandString(downloadMethod, outDir, bamType.toString(), this.storageSource, this.gtDownloadBamKey, objectIDs);
 		String moveToFailed = GitUtils.gitMoveCommand("downloading-jobs","failed-jobs",this.JSONlocation + "/" + this.JSONrepoName + "/" + this.JSONfolderName,this.JSONfileName, this.gitMoveTestMode, this.getWorkflowBaseDir() + "/scripts/");
 		getBamFileJob.setCommand("( "+getBamCommandString+" ) || "+moveToFailed);
 
@@ -264,6 +264,13 @@ public class OxoGWrapperWorkflow extends BaseOxoGWrapperWorkflow {
 
 		String moveToFailed = GitUtils.gitMoveCommand("running-jobs","failed-jobs",this.JSONlocation + "/" + this.JSONrepoName + "/" + this.JSONfolderName,this.JSONfileName, this.gitMoveTestMode, this.getWorkflowBaseDir() + "/scripts/");				 
 		runBCFToolsNormCommand += (" || " + moveToFailed );
+
+		VcfInfo normalizedIndel = new VcfInfo();
+		normalizedIndel.setFileName(outDir + "/"+normalizedINDELName);
+		normalizedIndel.setOriginatingPipeline(workflowName);
+		normalizedIndel.setVcfType(VCFType.indel);
+		normalizedIndel.setOriginatingTumourAliquotID(tumourAliquotID);
+		this.normalizedIndels.add(normalizedIndel);
 		
 		bcfToolsNormJob.setCommand(runBCFToolsNormCommand);
 		bcfToolsNormJob.addParent(parent);
@@ -291,12 +298,6 @@ public class OxoGWrapperWorkflow extends BaseOxoGWrapperWorkflow {
 		extractedSnv.setOriginatingTumourAliquotID(tumourAliquotID);
 		this.extractedSnvsFromIndels.add(extractedSnv);
 		
-		VcfInfo normalizedIndel = new VcfInfo();
-		normalizedIndel.setFileName(outDir + "/"+normalizedINDELName);
-		normalizedIndel.setOriginatingPipeline(workflowName);
-		normalizedIndel.setVcfType(VCFType.indel);
-		normalizedIndel.setOriginatingTumourAliquotID(tumourAliquotID);
-		this.normalizedIndels.add(normalizedIndel);
 		return extractSNVFromIndel;
 	}
 	
@@ -476,7 +477,8 @@ public class OxoGWrapperWorkflow extends BaseOxoGWrapperWorkflow {
 				if (!this.allowMissingFiles || (this.allowMissingFiles && vcf!=null && vcf.trim().length()>0))
 				{
 						return TemplateUtils.getRenderedTemplate(Arrays.stream(new String[][]{
-							{ "extractedSNVVCF", vcf}, { "worfklow", "sanger" }, {"extractedSNVVCFPath",generatePathForOxoG.apply(vcf,pipeline) }
+							{ "extractedSNVVCF", vcf.replaceAll("/datastore/vcf/[^/]+/", "")},
+							{ "workflow", pipeline.toString() }, {"extractedSNVVCFPath",vcf }
 						}).collect(this.collectToMap),"checkForExtractedSNVs.template");
 				}
 				else
@@ -507,7 +509,7 @@ public class OxoGWrapperWorkflow extends BaseOxoGWrapperWorkflow {
 		}
 
 		
-		Function<String,String> changeToOxoGSuffix = (s) ->  pathToUploadDir + s.replace(".vcf.gz", ".oxoG.vcf.gz");
+		Function<String,String> changeToOxoGSuffix = (s) ->  pathToUploadDir + s.replace(".vcf.gz", ".oxoG.vcf.gz").replaceAll("/datafiles/VCF/[^/]+/","/");
 		Function<String,String> changeToOxoGTBISuffix = changeToOxoGSuffix.andThen((s) -> s+=".tbi");
 		
 		BiConsumer<String,Function<String,String>> addToFilesForUpload = (vcfName, vcfNameProcessor) -> 
