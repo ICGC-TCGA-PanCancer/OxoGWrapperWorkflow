@@ -1005,7 +1005,7 @@ public class OxoGWrapperWorkflow extends BaseOxoGWrapperWorkflow {
 				workflowObjectIDs.put(Pipeline.dkfz_embl.toString(), dkfzEmblList);
 				workflowObjectIDs.put(Pipeline.muse.toString(), museList);
 				workflowObjectIDs.put(BAMType.normal.toString(), normalList);
-				for (int i = 0; i < this.tumours.size() ; i ++)
+				for (int i = 0; i < this.tumours.size(); i ++)
 				{
 					TumourInfo tInfo = this.tumours.get(i);
 					List<String> tumourIDs = new ArrayList<String>();
@@ -1020,9 +1020,9 @@ public class OxoGWrapperWorkflow extends BaseOxoGWrapperWorkflow {
 				workflowURLs.put(Pipeline.dkfz_embl.toString(), this.dkfzEmblGNOSRepoURL);
 				workflowURLs.put(Pipeline.muse.toString(), this.museGNOSRepoURL);
 				workflowURLs.put(BAMType.normal.toString(), this.normalBamGNOSRepoURL);
-				for (int i =0 ; i < this.tumours.size(); i++)
+				for (int i = 0 ; i < this.tumours.size(); i++)
 				{
-					workflowURLs.put(BAMType.tumour.toString()+"_"+i, tumours.get(i).getTumourBamGNOSRepoURL());
+					workflowURLs.put(BAMType.tumour.toString()+"_"+tumours.get(i).getAliquotID(), tumours.get(i).getTumourBamGNOSRepoURL());
 				}
 				
 				Function<String,List<String>> chooseObjects = (s) -> 
