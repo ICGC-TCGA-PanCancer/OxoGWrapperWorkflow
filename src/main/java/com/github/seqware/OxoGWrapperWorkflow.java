@@ -264,6 +264,13 @@ public class OxoGWrapperWorkflow extends BaseOxoGWrapperWorkflow {
 
 		String moveToFailed = GitUtils.gitMoveCommand("running-jobs","failed-jobs",this.JSONlocation + "/" + this.JSONrepoName + "/" + this.JSONfolderName,this.JSONfileName, this.gitMoveTestMode, this.getWorkflowBaseDir() + "/scripts/");				 
 		runBCFToolsNormCommand += (" || " + moveToFailed );
+
+		VcfInfo normalizedIndel = new VcfInfo();
+		normalizedIndel.setFileName(outDir + "/"+normalizedINDELName);
+		normalizedIndel.setOriginatingPipeline(workflowName);
+		normalizedIndel.setVcfType(VCFType.indel);
+		normalizedIndel.setOriginatingTumourAliquotID(tumourAliquotID);
+		this.normalizedIndels.add(normalizedIndel);
 		
 		bcfToolsNormJob.setCommand(runBCFToolsNormCommand);
 		bcfToolsNormJob.addParent(parent);
@@ -291,12 +298,6 @@ public class OxoGWrapperWorkflow extends BaseOxoGWrapperWorkflow {
 		extractedSnv.setOriginatingTumourAliquotID(tumourAliquotID);
 		this.extractedSnvsFromIndels.add(extractedSnv);
 		
-		VcfInfo normalizedIndel = new VcfInfo();
-		normalizedIndel.setFileName(outDir + "/"+normalizedINDELName);
-		normalizedIndel.setOriginatingPipeline(workflowName);
-		normalizedIndel.setVcfType(VCFType.indel);
-		normalizedIndel.setOriginatingTumourAliquotID(tumourAliquotID);
-		this.normalizedIndels.add(normalizedIndel);
 		return extractSNVFromIndel;
 	}
 	
@@ -476,7 +477,7 @@ public class OxoGWrapperWorkflow extends BaseOxoGWrapperWorkflow {
 				if (!this.allowMissingFiles || (this.allowMissingFiles && vcf!=null && vcf.trim().length()>0))
 				{
 						return TemplateUtils.getRenderedTemplate(Arrays.stream(new String[][]{
-							{ "extractedSNVVCF", vcf}, { "worfklow", "sanger" }, {"extractedSNVVCFPath",generatePathForOxoG.apply(vcf,pipeline) }
+							{ "extractedSNVVCF", vcf}, { "workflow", pipeline.toString() }, {"extractedSNVVCFPath",generatePathForOxoG.apply(vcf.replace("/datastore/vcf/[^/]+/", ""),pipeline) }
 						}).collect(this.collectToMap),"checkForExtractedSNVs.template");
 				}
 				else
