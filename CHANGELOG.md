@@ -1,5 +1,8 @@
 # CHANGELOG
 
+## 2.0.2
+ - Bugfix for gtdownload
+
 ## 2.0.1
  - VCFs can now be missing and the workflow will continue. To use this feature, add `allowMissingFiles=true` to your INI file.
  
