@@ -83,7 +83,7 @@ public class OxoGJobGenerator extends JobGeneratorBase {
 			if (!this.allowMissingFiles || (this.allowMissingFiles && vcf!=null && vcf.trim().length()>0))
 			{
 					return TemplateUtils.getRenderedTemplate(Arrays.stream(new String[][]{
-						{ "extractedSNVVCF", vcf}, { "worfklow", "sanger" }, {"extractedSNVVCFPath",generatePathForOxoG.apply(vcf,pipeline) }
+						{ "extractedSNVVCF", vcf.replaceAll("/datastore/vcf/[^/]+/", "")}, { "worfklow", pipeline.toString() }, {"extractedSNVVCFPath",vcf }
 					}).collect(this.collectToMap),"checkForExtractedSNVs.template");
 			}
 			else
@@ -110,7 +110,7 @@ public class OxoGJobGenerator extends JobGeneratorBase {
 		{
 			runOxoGWorkflow.addParent(parent);
 		}
-		Function<String,String> changeToOxoGSuffix = (s) ->  pathToUploadDir + s.replace(".vcf.gz", ".oxoG.vcf.gz");
+		Function<String,String> changeToOxoGSuffix = (s) ->  pathToUploadDir + s.replace(".vcf.gz", ".oxoG.vcf.gz").replaceAll("/datafiles/VCF/[^/]+/","/");
 		Function<String,String> changeToOxoGTBISuffix = changeToOxoGSuffix.andThen((s) -> s+=".tbi");
 		
 		BiConsumer<String,Function<String,String>> addToFilesForUpload = (vcfName, vcfNameProcessor) -> 
