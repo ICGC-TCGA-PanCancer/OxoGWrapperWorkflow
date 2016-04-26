@@ -1,7 +1,11 @@
 # CHANGELOG
 
 ## 2.0.2
- - Bugfix for gtdownload
+ - Bugfixes:
+ 	- for gtdownload:
+ 		- properly index the URLs
+ 		- use the correct key for downloading BAMs
+ 	- Remove possible "/datafiles/VCF/..." prefix from files_for_upload
 
 ## 2.0.1
  - VCFs can now be missing and the workflow will continue. To use this feature, add `allowMissingFiles=true` to your INI file.
