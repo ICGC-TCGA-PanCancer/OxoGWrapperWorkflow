@@ -477,7 +477,8 @@ public class OxoGWrapperWorkflow extends BaseOxoGWrapperWorkflow {
 				if (!this.allowMissingFiles || (this.allowMissingFiles && vcf!=null && vcf.trim().length()>0))
 				{
 						return TemplateUtils.getRenderedTemplate(Arrays.stream(new String[][]{
-							{ "extractedSNVVCF", vcf}, { "workflow", pipeline.toString() }, {"extractedSNVVCFPath",generatePathForOxoG.apply(vcf.replace("/datastore/vcf/[^/]+/", ""),pipeline) }
+							{ "extractedSNVVCF", vcf.replaceAll("/datastore/vcf/[^/]+/", "")},
+							{ "workflow", pipeline.toString() }, {"extractedSNVVCFPath",vcf }
 						}).collect(this.collectToMap),"checkForExtractedSNVs.template");
 				}
 				else
