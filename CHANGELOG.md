@@ -1,5 +1,8 @@
 # CHANGELOG
 
+## 2.0.3
+ - Changes to the OxoG docker image from Dimitri. This is supposed to fix the OxoG MAF issues. New image name is "oxog:160428".
+
 ## 2.0.2
  - Bugfixes:
  	- for gtdownload:
