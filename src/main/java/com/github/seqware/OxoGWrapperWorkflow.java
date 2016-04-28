@@ -276,7 +276,6 @@ public class OxoGWrapperWorkflow extends BaseOxoGWrapperWorkflow {
 		bcfToolsNormJob.addParent(parent);
 		
 		//Normalized INDELs should be indexed uploaded
-		
 		filesForUpload.add(outDir+"/"+normalizedINDELName);
 		filesForUpload.add(outDir+"/"+normalizedINDELName+".tbi");
 		
@@ -418,18 +417,6 @@ public class OxoGWrapperWorkflow extends BaseOxoGWrapperWorkflow {
 		String moveToFailed = GitUtils.gitMoveCommand("running-jobs","failed-jobs",this.JSONlocation + "/" + this.JSONrepoName + "/" + this.JSONfolderName,this.JSONfileName, this.gitMoveTestMode, this.getWorkflowBaseDir() + "/scripts/");
 		Job runOxoGWorkflow = this.getWorkflow().createBashJob("run OxoG Filter for tumour "+tumourAliquotID);
 		Function<String,String> getFileName = s -> s.substring(s.lastIndexOf("/")); 
-		
-//		BiFunction<String,Pipeline,String> generatePathForOxoG = (vcfName,pipeline) -> {
-//			if (this.allowMissingFiles)
-//			{
-//				if (vcfName!=null && !vcfName.trim().equals(""))
-//				{
-//					return "/datafiles/VCF/"+pipeline+"/"+vcfName.substring(vcfName.lastIndexOf("/"));
-//				}
-//				return "";
-//			}
-//			return "/datafiles/VCF/"+pipeline+"/"+vcfName.substring(vcfName.lastIndexOf("/"));
-//		};
 		
 		String pathToResults = "/datastore/oxog_results/tumour_"+tumourAliquotID+"/cga/fh/pcawg_pipeline/jobResults_pipette/jobs/"+this.normalAliquotID+"/links_for_gnos/annotate_failed_sites_to_vcfs/";
 		String pathToUploadDir = "/datastore/files_for_upload/";
@@ -615,7 +602,6 @@ public class OxoGWrapperWorkflow extends BaseOxoGWrapperWorkflow {
 			runVariantbam.addParent(parent);
 		}
 		
-		//Job getLogs = this.getOxoGLogs(runOxoGWorkflow);
 		return runVariantbam;
 	}
 	
@@ -629,7 +615,6 @@ public class OxoGWrapperWorkflow extends BaseOxoGWrapperWorkflow {
 		String moveToFailed = GitUtils.gitMoveCommand("uploading-jobs","failed-jobs",this.JSONlocation + "/" + this.JSONrepoName + "/" + this.JSONfolderName,this.JSONfileName, this.gitMoveTestMode, this.getWorkflowBaseDir() + "/scripts/");
 		// Will need to run gtupload to generate the analysis.xml and manifest files (but not actually upload). 
 		Job generateAnalysisFilesVCFs = generateVCFMetadata(parentJob, moveToFailed);
-		
 		Job generateAnalysisFilesBAMs = generateBAMMetadata(parentJob, moveToFailed);
 	
 		String gnosServer = this.gnosMetadataUploadURL.replace("http://", "").replace("https://", "").replace("/", "");
@@ -854,7 +839,6 @@ public class OxoGWrapperWorkflow extends BaseOxoGWrapperWorkflow {
 			String tumourAliquotID = tInf.getAliquotID();
 			String broadOxogSNVFileName = this.filesForUpload.stream().filter(p -> ((p.contains(tumourAliquotID) && p.contains("broad-mutect") && p.endsWith(passFilteredOxoGSuffix)))).findFirst().orElseGet(emptyStringWhenMissingFilesAllowed);
 			String broadOxoGSNVFromIndelFileName = this.filesForUpload.stream().filter(p -> (p.contains(Pipeline.broad.toString()) && isExtractedSNV.test(p) )).findFirst().orElseGet(emptyStringWhenMissingFilesAllowed);
-			
 			
 			String sangerOxogSNVFileName = this.filesForUpload.stream().filter(p -> ((p.contains(tumourAliquotID) && p.contains("svcp_") && p.endsWith(passFilteredOxoGSuffix)))).findFirst().orElseGet(emptyStringWhenMissingFilesAllowed);
 			String sangerOxoGSNVFromIndelFileName = this.filesForUpload.stream().filter(p -> (p.contains(Pipeline.sanger.toString()) && isExtractedSNV.test(p) )).findFirst().orElseGet(emptyStringWhenMissingFilesAllowed);
@@ -1096,7 +1080,6 @@ public class OxoGWrapperWorkflow extends BaseOxoGWrapperWorkflow {
 			Job dkfzemblPassFilter = this.passFilterWorkflow(Pipeline.dkfz_embl, statFiles);
 			// No, we're not going to filter the Muse SNV file.
 			
-
 			//update all filenames to include ".pass-filtered."
 			Function<String,String> addPassFilteredSuffix = (x) -> { return x.replace(".vcf.gz",".pass-filtered.vcf.gz"); };
 			for (VcfInfo vInfo : this.vcfs)
@@ -1109,7 +1092,6 @@ public class OxoGWrapperWorkflow extends BaseOxoGWrapperWorkflow {
 			}
 			
 			// OxoG will run after move2running. Move2running will run after all the jobs that perform input file downloads and file preprocessing have finished.
-			
 			List<Job> preprocessIndelsJobs = new ArrayList<Job>(this.tumours.size() * 3);
 			for (int i =0; i < this.tumours.size(); i++)
 			{
