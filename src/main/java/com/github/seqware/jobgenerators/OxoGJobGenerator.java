@@ -63,17 +63,6 @@ public class OxoGJobGenerator extends JobGeneratorBase {
 		Job runOxoGWorkflow = workflow.getWorkflow().createBashJob("run OxoG Filter for tumour "+this.tumourAliquotID); 
 		Function<String,String> getFileName = s -> s.substring(s.lastIndexOf("/")); 
 		
-		BiFunction<String,Pipeline,String> generatePathForOxoG = (vcfName,pipeline) -> {
-			if (this.allowMissingFiles)
-			{
-				if (vcfName!=null && !vcfName.trim().equals(""))
-				{
-					return "/datafiles/VCF/"+pipeline+"/"+vcfName.substring(vcfName.lastIndexOf("/"));
-				}
-				return "";
-			}
-			return "/datafiles/VCF/"+pipeline+"/"+vcfName.substring(vcfName.lastIndexOf("/"));
-		};
 		String pathToResults = "/datastore/oxog_results/tumour_"+this.tumourAliquotID+"/cga/fh/pcawg_pipeline/jobResults_pipette/jobs/"+this.normalAliquotID+"/links_for_gnos/annotate_failed_sites_to_vcfs/";
 		String pathToUploadDir = "/datastore/files_for_upload/";
 		String checkSangerExtractedSNV;
