@@ -21,7 +21,7 @@
 				-v /datastore/vcf/{{ museWorkflow }}/{{ museGnosID }}/:/datafiles/VCF/{{ museWorkflow }}/ \
 				${EXTRACTED_SNV_MOUNT} \
 				-v /datastore/oxog_results/tumour_{{ tumourID }}/:/cga/fh/pcawg_pipeline/jobResults_pipette/results:rw \
-			oxog:160329 /bin/bash -c "
+			oxog:160428 /bin/bash -c "
 				/cga/fh/pcawg_pipeline/pipelines/run_one_pipeline.bash pcawg /cga/fh/pcawg_pipeline/pipelines/oxog_pipeline.py \
 						{{ aliquotID }} \
 						/datafiles/BAM/tumour/{{ pathToTumour }} \
