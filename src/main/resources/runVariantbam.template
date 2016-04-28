@@ -7,7 +7,7 @@
 			-v /datastore/variantbam_results/:/outdir/ \
 			-v /datastore/padding_rules.txt:/rules.txt \
 			-v {{ pathToBam }}:/input.bam \
-		oxog:160329 /bin/bash -c "
+		oxog:160428 /bin/bash -c "
 			/cga/fh/pcawg_pipeline/modules/VariantBam/variant \
 				-o /outdir/{{ minibamName }} \
 				-i /input.bam  \
