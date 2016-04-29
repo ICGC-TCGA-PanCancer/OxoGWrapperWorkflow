@@ -657,7 +657,7 @@ public class OxoGWrapperWorkflow extends BaseOxoGWrapperWorkflow {
 					preprocessIndelsJobs.add(dkfzEmblPreprocessVCF);
 				}
 				String broadIndelVcfName = generateVcfName.apply(this.broadGnosID, isBroad);
-				if (broadIndelVcfName.endsWith(vcfNotFoundToken))
+				if (!broadIndelVcfName.endsWith(vcfNotFoundToken))
 				{
 					Job broadPreprocessVCF = this.preProcessIndelVCF(broadPassFilter, Pipeline.broad, broadIndelVcfName, this.tumours.get(i).getAliquotID());
 					preprocessIndelsJobs.add(broadPreprocessVCF);
@@ -731,7 +731,8 @@ public class OxoGWrapperWorkflow extends BaseOxoGWrapperWorkflow {
 				annotationJobs = this.doAnnotations( parentJobsToAnnotationJobs.toArray(new Job[parentJobsToAnnotationJobs.size()]));
 			}
 			
-			//Now do the Upload
+			//Now do the Upload. The parents jobs are the Annotation jobs, unless the user set skipAnnotations=true, so there will
+			//not be any annotation jobs. In that case Upload's parents are the jobs that would have been parents to Annotation.
 			Job[] parentsToUpload = (annotationJobs !=null && annotationJobs.size()>0)
 										? annotationJobs.toArray(new Job[annotationJobs.size()])
 										: parentJobsToAnnotationJobs.toArray(new Job[parentJobsToAnnotationJobs.size()]);
