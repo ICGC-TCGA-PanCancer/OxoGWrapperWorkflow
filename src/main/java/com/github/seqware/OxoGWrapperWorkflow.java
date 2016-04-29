@@ -5,13 +5,11 @@ import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.function.BiConsumer;
 import java.util.function.BiFunction;
 import java.util.function.Consumer;
 import java.util.function.Function;
 import java.util.function.Predicate;
 import java.util.function.Supplier;
-import java.util.stream.Collector;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
@@ -727,20 +725,27 @@ public class OxoGWrapperWorkflow extends BaseOxoGWrapperWorkflow {
 			{
 				parentJobsToAnnotationJobs.add(j);
 			}
-			List<Job> annotationJobs = this.doAnnotations( parentJobsToAnnotationJobs.toArray(new Job[parentJobsToAnnotationJobs.size()]));
+			List<Job> annotationJobs = new ArrayList<Job>();
+			if (!this.skipAnnotation)
+			{
+				annotationJobs = this.doAnnotations( parentJobsToAnnotationJobs.toArray(new Job[parentJobsToAnnotationJobs.size()]));
+			}
 			
 			//Now do the Upload
+			Job[] parentsToUpload = (annotationJobs !=null && annotationJobs.size()>0)
+										? annotationJobs.toArray(new Job[annotationJobs.size()])
+										: parentJobsToAnnotationJobs.toArray(new Job[parentJobsToAnnotationJobs.size()]);
 			if (!skipUpload)
 			{
 				// indicate job is in uploading stage.
-				Job move2uploading = this.gitMove( "running-jobs", "uploading-jobs", annotationJobs.toArray(new Job[annotationJobs.size()]));
+				Job move2uploading = this.gitMove( "running-jobs", "uploading-jobs", parentsToUpload);
 				Job uploadResults = doUpload(move2uploading);
 				// indicate job is complete.
 				this.gitMove( "uploading-jobs", "completed-jobs", uploadResults);
 			}
 			else
 			{
-				this.gitMove( "running-jobs", "completed-jobs",annotationJobs.toArray(new Job[annotationJobs.size()]));
+				this.gitMove( "running-jobs", "completed-jobs",parentsToUpload);
 			}
 			//System.out.println(this.filesForUpload);
 		}
