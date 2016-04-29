@@ -6,7 +6,8 @@ import java.util.stream.Collectors;
 
 public class JobGeneratorBase {
 
-	protected Collector<String[], ?, Map<String, Object>> collectToMap = Collectors.toMap(kv -> kv[0], kv -> kv[1]);
+	protected Collector<String[], ?, Map<String, Object>> collectToMap = Collectors.toMap( (kv) -> { return kv[0]; },
+																							(kv) -> { return kv[1]; });
 	protected String JSONlocation;
 	protected String JSONrepoName;
 	protected String JSONfolderName;

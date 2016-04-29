@@ -302,7 +302,6 @@ public class OxoGWrapperWorkflow extends BaseOxoGWrapperWorkflow {
 		Predicate<? super VcfInfo> isMuseSNV = this.vcfMatchesTypePipelineTumour(isSnv, isMuse, tumourAliquotID);
 		
 		OxoGJobGenerator oxogJobGenerator = new OxoGJobGenerator(this.JSONlocation, this.JSONrepoName, this.JSONfolderName, this.JSONfileName, tumourAliquotID, this.normalAliquotID);
-		oxogJobGenerator.setBroadGnosID(this.broadGnosID);
 		oxogJobGenerator.setSangerSNV(this.getVcfName(isSangerSNV,this.vcfs));
 		oxogJobGenerator.setBroadSNV(this.getVcfName(isBroadSNV,this.vcfs));
 		oxogJobGenerator.setDkfzEmblSNV(this.getVcfName(isDkfzEmblSNV,this.vcfs));
@@ -311,6 +310,13 @@ public class OxoGWrapperWorkflow extends BaseOxoGWrapperWorkflow {
 		oxogJobGenerator.setExtractedBroadSNV(this.getVcfName(isBroadSNV,this.extractedSnvsFromIndels));
 		oxogJobGenerator.setExtractedDkfzEmblSNV(this.getVcfName(isDkfzEmblSNV,this.extractedSnvsFromIndels));
 		oxogJobGenerator.setGitMoveTestMode(this.gitMoveTestMode);
+		oxogJobGenerator.setOxoQScore(this.oxoQScore);
+		oxogJobGenerator.setNormalBamGnosID(this.normalBamGnosID);
+		oxogJobGenerator.setNormalBAMFileName(this.normalBAMFileName);
+		oxogJobGenerator.setBroadGnosID(this.broadGnosID);
+		oxogJobGenerator.setSangerGnosID(this.sangerGnosID);
+		oxogJobGenerator.setDkfzemblGnosID(this.dkfzemblGnosID);
+		oxogJobGenerator.setMuseGnosID(this.museGnosID);
 		
 		Consumer<String> updateFilesToUpload = (s) -> this.filesForUpload.add(s);
 		Job runOxoGWorkflow = this.getWorkflow().createBashJob("run OxoG Filter for tumour "+tumourAliquotID);
