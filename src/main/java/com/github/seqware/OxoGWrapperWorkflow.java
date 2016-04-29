@@ -5,11 +5,13 @@ import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.function.BiConsumer;
 import java.util.function.BiFunction;
 import java.util.function.Consumer;
 import java.util.function.Function;
 import java.util.function.Predicate;
 import java.util.function.Supplier;
+import java.util.stream.Collector;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
@@ -644,7 +646,6 @@ public class OxoGWrapperWorkflow extends BaseOxoGWrapperWorkflow {
 																						.map(m -> m.getFileName())
 																						.findFirst().orElse(vcfNotFoundToken);
 				
-
 				String sangerIndelVcfName = generateVcfName.apply(this.sangerGnosID, isSanger);
 				if (!sangerIndelVcfName.endsWith(vcfNotFoundToken))
 				{

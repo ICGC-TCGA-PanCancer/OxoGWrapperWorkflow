@@ -6,8 +6,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.function.BiConsumer;
 import java.util.function.Function;
-import java.util.stream.Collector;
-import java.util.stream.Collectors;
 
 import com.github.seqware.OxoGWrapperWorkflow.DownloadMethod;
 import com.github.seqware.OxoGWrapperWorkflow.Pipeline;
@@ -173,7 +171,6 @@ public abstract class BaseOxoGWrapperWorkflow extends AbstractWorkflowDataModel 
 						 ? this.getMandatoryProperty(lookupKey)
 						 : this.getOptionalProperty(lookupKey) );
 		};
-
 
 		BiConsumer<String, String> putIntoMapIfSet = (id, name) -> { 
 			if (name !=null && !name.trim().equals(""))
@@ -371,13 +368,9 @@ public abstract class BaseOxoGWrapperWorkflow extends AbstractWorkflowDataModel 
 				this.gtDownloadBamKey = this.getMandatoryProperty("gtDownloadBamKey");
 				this.gtDownloadVcfKey = this.getMandatoryProperty("gtDownloadVcfKey");
 			}
-
-
 			
 		} catch (Exception e) {
 			throw new RuntimeException("Exception encountered during workflow init: "+e.getMessage(),e);
 		}
 	}
 }
-
-

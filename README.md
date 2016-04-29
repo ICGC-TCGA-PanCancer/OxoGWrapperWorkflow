@@ -9,6 +9,8 @@ This workflow will perform three tasks:
  - Mini-bam generation
  - Annotation
 
+Once these tasks are complete, the results will be rsynced from the worker to a server, whose URL can be specified in the INI file.
+
 ### OxoG Filtering
 This is a component by the Broad institute that will perform filtering on VCF files.
 
@@ -22,23 +24,23 @@ This is Jonathan Dursi's Annotator. See:
 
 ## Building
 
-This will just compile and package the Java portion of the workflow:
+This command will just compile and package the Java portion of the workflow:
 
     mvn clean package
 
-To produce a SeqWare bundle:
+To produce a full SeqWare bundle:
 
 	seqware bundle package --dir target/Workflow_Bundle_OxoGWrapper_*_SeqWare_1.1.2
 
-### Usage
+#### Usage
 
-1. Ensure that you have a valid Collaboratory token in `~/.gnos`.
+1. Ensure that you have a valid download credetial files in `~/.gnos`. For more details, see the sections on [download methods](#download-methods). 
 2. Ensure that you have a valid git pem file in `~/.gnos`.
 3. Call the workflow like this:
 
 ```
 	docker run --rm -v /datastore/:/datastore/ \
-		-v /workflows/Workflow_Bundle_OxoGWrapper_2.0.2_SeqWare_1.1.2/:/workflow/ \
+		-v /workflows/Workflow_Bundle_OxoGWrapper_2.0.3_SeqWare_1.1.2/:/workflow/ \
 		-v /var/run/docker.sock:/var/run/docker.sock \
 		-v /home/ubuntu/.gnos/:/home/ubuntu/.gnos/ \
 		-v /home/ubuntu/SomeIniFile.INI:/ini \
@@ -52,9 +54,11 @@ This will build a new image which contains the workflow as a SeqWare bundle:
 
     docker build -t pancancer/pcawg-oxog-wrapper-workflow:x.x.x .
 
-### Usage
+*(replace the `x.x.x` with the correct version number)*
 
-1. Ensure that you have a valid Collaboratory token in `~/.gnos`.
+#### Usage
+
+1. Ensure that you have a valid download credetial files in `~/.gnos`. For more details, see the sections on [download methods](#download-methods).
 2. Ensure that you have a valid git pem file in `~/.gnos`.
 3. Call the workflow like this (note: you do not have to mount the workflows directory in this case, because the workflow is already inside the container):
 
@@ -73,7 +77,7 @@ Populating such an INI file is a lot of work and since most of the necessary inf
 you can use the INIGenerator to produce an INI for you. It works like this:
 
 ```
-cd /workflows/Workflow_Bundle_OxoGWrapper_1.0_SeqWare_1.1.2/Workflow_Bundle_OxoGWrapper/1.0/
+cd /workflows/Workflow_Bundle_OxoGWrapper_2.0.3_SeqWare_1.1.2/Workflow_Bundle_OxoGWrapper/2.0.3/
 java -cp ./classes:./bin com.github.seqware.INIGenerator ~/BTCA-SG.BTCA_donor_A153.json
 ```
 
@@ -93,6 +97,7 @@ Other fields that are useful to populate in the INI:
  - uploadURL - The URL to use in the rsync command at the end of the workflow, such as: `someUser@10.10.10.10:~/incoming/oxog_results/`
  - downloadMethod - Which method to use to download files. Default will be to use the icgc storage client (`icgcStorageClient`), but you can also specify `gtdownload` or `s3` (which will use `aws s3`).
  - storageSource - Where to download files from, if the `downloadMethod` is `icgcStorageClient`. Defaults to `collab` but if you are using the icgc storage client in AWS, you will want to specify `aws`.
+ - allowMissingFiles - Set to `true` if you know that some of the filesets from earlier pipelines might be missing a VCF or two (NOTE: it is assumed that you will have _at least one_ VCF from each pipeline). Only VCFs can be missing. Missing BAM files will cause the workflow to fail. 
 
 ### Download Methods
 There are three tools that this workflow can download files:
@@ -125,9 +130,16 @@ You must have valid credentials to download from this location. Place your `cred
 
 ### Flow Control
 
-It uses git to note state in the workflow.
+This workflow uses git to track the state of executing jobs.
 
-To do this, a repo must be set up with a directory that contains the state-directories. When a JSON file is in a specific directory, in indicates the state that the workflow running that JSOn file is in.
+To do this, a repo must be set up with a directory that contains the proper state-directories. When a JSON file is in a specific directory, in indicates the state that the workflow running that JSOn file is in.
+The necessary directories are:
+ - queued-jobs
+ - downloading-jobs
+ - running-jobs
+ - uploading-jobs
+ - completed-jobs
+ - failed-jobs
 
 The JSON file for a job must first be in the `queued-jobs` directory. The workflow will then move it to the `downloading-jobs` directory. When the download phase of the workflow completes, the file is moved to the `running-jobs` directory.
 When the main processes have finished and the upload is in progress, the file will be moved to the `uploading-jobs` directory. When upload completes successfully, the file will be moved to the `completed-jobs` directory.
@@ -155,7 +167,8 @@ The OxoG results will be located in `/datastore/oxog_results/tumour_${tumourGnos
 The outputs of variantbam will be located in `/datastore/variantbam_results/`. There will be one mini-bam and BAI for each input BAM.
 
 #### Other files
-The VCF files that will be rsynced at the end of this wrapper workflow can be found in `/datastore/files_for_upload/tumour_${tumourGnosID}`, where `${tumourGnosID}` is the GNOS ID of a specific tumour. These directories contain the pass-filtered VCFs, normalized INDEL VCFs, extracted SNV-from-INDEL VCFs, OxoG VCFs, OxoG call-stats, annotated OxoG VCFs, and the index files for all VCFs.
+The VCF files that will be rsynced at the end of this wrapper workflow can be found in `/datastore/files_for_upload/`.
+These directories contain the pass-filtered VCFs, normalized INDEL VCFs, extracted SNV-from-INDEL VCFs, OxoG VCFs, OxoG call-stats, annotated OxoG VCFs, and the index files for all VCFs.
 BAM files are rsynced directly from `/datastore/variantbam_results/`.
 
 Metadata files are generated for later submission to GNOS (which happens as a separate process, after the results are rsynced). These files can be found under `/datastore/vcf-upload-prep/` and `/datastore/bam-upload-prep/`.   
