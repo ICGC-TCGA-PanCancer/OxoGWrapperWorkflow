@@ -208,6 +208,7 @@ public class OxoGWrapperWorkflow extends BaseOxoGWrapperWorkflow {
 	{
 		Job passFilter = this.getWorkflow().createBashJob("pass filter "+workflowName);
 		PreprocessJobGenerator generator = new PreprocessJobGenerator(this.JSONlocation, this.JSONrepoName, this.JSONfolderName, this.JSONfileName);
+
 		passFilter = generator.passFilterWorkflow(this, workflowName, parents);
 		
 		return passFilter;
@@ -239,7 +240,7 @@ public class OxoGWrapperWorkflow extends BaseOxoGWrapperWorkflow {
 		generator.setTumourAliquotID(tumourAliquotID);
 		Consumer<VcfInfo> updateExtractedSNVs = (v) -> this.extractedSnvsFromIndels.add(v);
 		Consumer<VcfInfo> updateNormalizedINDELs = (v) -> this.normalizedIndels.add(v);
-		Job preProcess = generator.preProcessIndelVCF(this, parent, workflowName, vcfName, tumourAliquotID, this.updateFilesForUpload, updateExtractedSNVs, updateNormalizedINDELs);
+		Job preProcess = generator.preProcessIndelVCF(this, parent, workflowName, vcfName, this.refFile, this.updateFilesForUpload, updateExtractedSNVs, updateNormalizedINDELs);
 		
 		return preProcess;
 	}
@@ -254,7 +255,7 @@ public class OxoGWrapperWorkflow extends BaseOxoGWrapperWorkflow {
 	{
 		
 		PreprocessJobGenerator generator = new PreprocessJobGenerator(this.JSONlocation, this.JSONrepo, this.JSONfolderName, this.JSONfileName);
-
+		generator.setTumourAliquotID(tumourAliquotID);
 		List<VcfInfo> nonIndels =this.vcfs.stream().filter(p -> p.getOriginatingTumourAliquotID().equals(tumourAliquotID) && isIndel.negate().test(p)).collect(Collectors.toList());
 		List<VcfInfo> indels = this.normalizedIndels.stream().filter(p -> p.getOriginatingTumourAliquotID().equals(tumourAliquotID)).collect(Collectors.toList());
 		Consumer<VcfInfo> updateMergedVCFs = (v) -> this.mergedVcfs.add(v);
