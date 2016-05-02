@@ -94,12 +94,6 @@ public class OxoGWrapperWorkflow extends BaseOxoGWrapperWorkflow {
 	 * @return
 	 */
 	private Job copyCredentials(Job parentJob){
-		//Might need to set transport.parallel to some fraction of available cores for icgc-storage-client. Use this command to get # CPUs.
-		//The include it in the collab.token file since that's what gets mounted to /icgc/icgc-storage-client/conf/application.properties
-		//lscpu | grep "^CPU(s):" | grep -o "[^ ]$"
-		//Andy says transport.parallel is not yet supported, but transport.memory may improve performance.
-		//Also set transport.memory: either "4" or "6" (GB - implied). 
-		// ...but really, the workflow should not be modifying the collab.token file. Whoever's running the workflow should set what they want.
 		Job copy = this.getWorkflow().createBashJob("copy /home/ubuntu/.gnos");
 		copy.setCommand("mkdir /datastore/credentials && cp -r /home/ubuntu/.gnos/* /datastore/credentials && ls -l /datastore/credentials");
 		copy.addParent(parentJob);
@@ -122,10 +116,8 @@ public class OxoGWrapperWorkflow extends BaseOxoGWrapperWorkflow {
 		switch (downloadMethod)
 		{
 			case icgcStorageClient:
-				//System.out.println("DEBUG: storageSource: "+this.storageSource);
 				return ( DownloaderBuilder.of(ICGCStorageDownloader::new).with(ICGCStorageDownloader::setStorageSource, storageSource).build() ).getDownloadCommandString(outDir, downloadType, objectIDs);
 			case gtdownload:
-				//System.out.println("DEBUG: gtDownloadKey: "+this.gtDownloadVcfKey);
 				return ( DownloaderBuilder.of(GNOSDownloader::new).with(GNOSDownloader::setDownloadKey, downloadKey).build() ).getDownloadCommandString(outDir, downloadType, objectIDs);
 			case s3:
 				return ( DownloaderBuilder.of(S3Downloader::new).build() ).getDownloadCommandString(outDir, downloadType, objectIDs);
@@ -301,12 +293,32 @@ public class OxoGWrapperWorkflow extends BaseOxoGWrapperWorkflow {
 		Predicate<? super VcfInfo> isBroadSNV = this.vcfMatchesTypePipelineTumour(isSnv, isBroad, tumourAliquotID);
 		Predicate<? super VcfInfo> isDkfzEmblSNV = this.vcfMatchesTypePipelineTumour(isSnv, isDkfzEmbl, tumourAliquotID);
 		Predicate<? super VcfInfo> isMuseSNV = this.vcfMatchesTypePipelineTumour(isSnv, isMuse, tumourAliquotID);
+
+		BiFunction<String,String,String> applyPrefixForOxoG = (vcfName,pipeline) -> {
+			if (vcfName == null || vcfName.trim().length()==0)
+			{
+				//if missing files are allowed, just return an empty string.
+				if (this.allowMissingFiles)
+				{
+					return "";
+				}
+				else
+				{
+					throw new RuntimeException("A VCF name was empty/missing, but allowMissingFiles is "+this.allowMissingFiles);
+				}
+			}
+			else
+			{
+				// This is the path inside the OxoG container that a VCF must be on.
+				return "/datafiles/VCF/"+pipeline+"/"+vcfName;
+			}
+		};
 		
 		OxoGJobGenerator oxogJobGenerator = new OxoGJobGenerator(this.JSONlocation, this.JSONrepoName, this.JSONfolderName, this.JSONfileName, tumourAliquotID, this.normalAliquotID);
-		oxogJobGenerator.setSangerSNV(this.getVcfName(isSangerSNV,this.vcfs));
-		oxogJobGenerator.setBroadSNV(this.getVcfName(isBroadSNV,this.vcfs));
-		oxogJobGenerator.setDkfzEmblSNV(this.getVcfName(isDkfzEmblSNV,this.vcfs));
-		oxogJobGenerator.setMuseSNV(this.getVcfName(isMuseSNV,this.vcfs));
+		oxogJobGenerator.setSangerSNV(applyPrefixForOxoG.apply(this.getVcfName(isSangerSNV,this.vcfs),Pipeline.sanger.toString()));
+		oxogJobGenerator.setBroadSNV(applyPrefixForOxoG.apply(this.getVcfName(isBroadSNV,this.vcfs),Pipeline.broad.toString()));
+		oxogJobGenerator.setDkfzEmblSNV(applyPrefixForOxoG.apply(this.getVcfName(isDkfzEmblSNV,this.vcfs),Pipeline.dkfz_embl.toString()));
+		oxogJobGenerator.setMuseSNV(applyPrefixForOxoG.apply(this.getVcfName(isMuseSNV,this.vcfs),Pipeline.muse.toString()));
 		oxogJobGenerator.setExtractedSangerSNV(this.getVcfName(isSangerSNV,this.extractedSnvsFromIndels));
 		oxogJobGenerator.setExtractedBroadSNV(this.getVcfName(isBroadSNV,this.extractedSnvsFromIndels));
 		oxogJobGenerator.setExtractedDkfzEmblSNV(this.getVcfName(isDkfzEmblSNV,this.extractedSnvsFromIndels));
@@ -439,7 +451,6 @@ public class OxoGWrapperWorkflow extends BaseOxoGWrapperWorkflow {
 		Predicate<String> isExtractedSNV = p -> p.contains("extracted-snv") && p.endsWith(".vcf.gz");
 		final String passFilteredOxoGSuffix = ".pass-filtered.oxoG.vcf.gz";
 		//list filtering should only ever produce one result.
-		
 		for (int i = 0; i < this.tumours.size(); i++)
 		{
 			TumourInfo tInf = this.tumours.get(i);
