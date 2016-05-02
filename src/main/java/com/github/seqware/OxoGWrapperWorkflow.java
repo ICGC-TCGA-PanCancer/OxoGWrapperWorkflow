@@ -198,10 +198,10 @@ public class OxoGWrapperWorkflow extends BaseOxoGWrapperWorkflow {
 	 */
 	private Job passFilterWorkflow(Pipeline workflowName, Job ... parents)
 	{
-		Job passFilter = this.getWorkflow().createBashJob("pass filter "+workflowName);
+		//Job passFilter = this.getWorkflow().createBashJob("pass filter "+workflowName);
 		PreprocessJobGenerator generator = new PreprocessJobGenerator(this.JSONlocation, this.JSONrepoName, this.JSONfolderName, this.JSONfileName);
 
-		passFilter = generator.passFilterWorkflow(this, workflowName, parents);
+		Job passFilter = generator.passFilterWorkflow(this, workflowName, parents);
 		
 		return passFilter;
 	}
@@ -330,12 +330,17 @@ public class OxoGWrapperWorkflow extends BaseOxoGWrapperWorkflow {
 		oxogJobGenerator.setSangerGnosID(this.sangerGnosID);
 		oxogJobGenerator.setDkfzemblGnosID(this.dkfzemblGnosID);
 		oxogJobGenerator.setMuseGnosID(this.museGnosID);
+		oxogJobGenerator.setAllowMissingFiles(this.allowMissingFiles);
 		
 		Consumer<String> updateFilesToUpload = (s) -> this.filesForUpload.add(s);
-		Job runOxoGWorkflow = this.getWorkflow().createBashJob("run OxoG Filter for tumour "+tumourAliquotID);
+		Job runOxoGWorkflow;
 		if (!this.skipOxoG)
 		{
 			runOxoGWorkflow = oxogJobGenerator.doOxoG(this, pathToTumour, updateFilesToUpload , parents);
+		}
+		else
+		{
+			runOxoGWorkflow = this.getWorkflow().createBashJob("run OxoG Filter for tumour "+tumourAliquotID);
 		}
 		
 		return runOxoGWorkflow;
@@ -356,9 +361,7 @@ public class OxoGWrapperWorkflow extends BaseOxoGWrapperWorkflow {
 	 * @return
 	 */
 	private Job doVariantBam(BAMType bamType, String bamPath, String tumourBAMFileName, String tumourID, Job ...parents) {
-		Job runVariantbam = this.getWorkflow().createBashJob("run "+bamType+(bamType==BAMType.tumour?"_"+tumourID+"_":"")+" variantbam");
-
-		
+		Job runVariantbam ;//= this.getWorkflow().createBashJob("run "+bamType+(bamType==BAMType.tumour?"_"+tumourID+"_":"")+" variantbam");
 		if (!this.skipVariantBam)
 		{
 			VariantBamJobGenerator variantBamJobGenerator = new VariantBamJobGenerator(this.JSONlocation, this.JSONrepoName, this.JSONfolderName, this.JSONfileName);
@@ -393,6 +396,10 @@ public class OxoGWrapperWorkflow extends BaseOxoGWrapperWorkflow {
 			
 			String bamName = ( bamType == BAMType.normal ? this.normalBAMFileName : tumourBAMFileName);
 			runVariantbam = variantBamJobGenerator.doVariantBam(this, bamType, bamName, bamPath, tumourBAMFileName, tumourID, updateFilesForUpload, parents);
+		}
+		else
+		{
+			runVariantbam = this.getWorkflow().createBashJob("run "+bamType+(bamType==BAMType.tumour?"_"+tumourID+"_":"")+" variantbam");
 		}
 		return runVariantbam;
 	}
@@ -457,6 +464,7 @@ public class OxoGWrapperWorkflow extends BaseOxoGWrapperWorkflow {
 			String tumourAliquotID = tInf.getAliquotID();
 			PcawgAnnotatorJobGenerator generator = new PcawgAnnotatorJobGenerator(this.JSONlocation, this.JSONrepoName, this.JSONfolderName, this.JSONfileName);
 			generator.setGitMoveTestMode(this.gitMoveTestMode);
+			generator.setAllowMissingFiles(this.allowMissingFiles);
 			generator.setBroadOxogSNVFileName(this.filesForUpload.stream().filter(p -> ((p.contains(tumourAliquotID) && p.contains("broad-mutect") && p.endsWith(passFilteredOxoGSuffix)))).findFirst().orElseGet(emptyStringWhenMissingFilesAllowed));
 			generator.setBroadOxoGSNVFromIndelFileName(this.filesForUpload.stream().filter(p -> (p.contains(Pipeline.broad.toString()) && isExtractedSNV.test(p) )).findFirst().orElseGet(emptyStringWhenMissingFilesAllowed));
 			generator.setSangerOxogSNVFileName(this.filesForUpload.stream().filter(p -> ((p.contains(tumourAliquotID) && p.contains("svcp_") && p.endsWith(passFilteredOxoGSuffix)))).findFirst().orElseGet(emptyStringWhenMissingFilesAllowed));
@@ -466,9 +474,9 @@ public class OxoGWrapperWorkflow extends BaseOxoGWrapperWorkflow {
 
 			//Remember: MUSE files do not get PASS-filtered. Also, there is no INDEL so there cannot be any SNVs extracted from INDELs.
 			generator.setMuseOxogSNVFileName(this.filesForUpload.stream().filter(p -> p.toUpperCase().contains("MUSE") && p.endsWith(".oxoG.vcf.gz")).findFirst().orElseGet(emptyStringWhenMissingFilesAllowed));
-			generator.setNormalizedBroadIndel(this.normalizedIndels.stream().filter(isBroad.and(matchesTumour(tumourAliquotID))).findFirst().get().getFileName());
-			generator.setNormalizedDkfzEmblIndel(this.normalizedIndels.stream().filter(isDkfzEmbl.and(matchesTumour(tumourAliquotID))).findFirst().get().getFileName());
-			generator.setNormalizedSangerIndel(this.normalizedIndels.stream().filter(isSanger.and(matchesTumour(tumourAliquotID))).findFirst().get().getFileName());
+			generator.setNormalizedBroadIndel(this.normalizedIndels.stream().filter(isBroad.and(matchesTumour(tumourAliquotID))).findFirst().orElse(new VcfInfo()).getFileName());
+			generator.setNormalizedDkfzEmblIndel(this.normalizedIndels.stream().filter(isDkfzEmbl.and(matchesTumour(tumourAliquotID))).findFirst().orElse(new VcfInfo()).getFileName());
+			generator.setNormalizedSangerIndel(this.normalizedIndels.stream().filter(isSanger.and(matchesTumour(tumourAliquotID))).findFirst().orElse(new VcfInfo()).getFileName());
 			
 			List<Job> jobs = generator.doAnnotations(this, tInf.getAliquotID(), tInf.getTumourMinibamPath(), this.normalMinibamPath, this.updateFilesForUpload, parents);
 			finalAnnotatorJobs.addAll(jobs);
