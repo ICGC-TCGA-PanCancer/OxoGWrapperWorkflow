@@ -1,6 +1,7 @@
 package com.github.seqware;
 
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
 import java.util.function.BiFunction;
 import java.util.function.Consumer;
@@ -272,7 +273,7 @@ public class OxoGWrapperWorkflow extends BaseOxoGWrapperWorkflow {
 	 * @return
 	 */
 	private Job doVariantBam(BAMType bamType, String bamPath, String tumourBAMFileName, String tumourID, Job ...parents) {
-		Job runVariantbam ;//= this.getWorkflow().createBashJob("run "+bamType+(bamType==BAMType.tumour?"_"+tumourID+"_":"")+" variantbam");
+		Job runVariantbam;
 		if (!this.skipVariantBam)
 		{
 			VariantBamJobGenerator variantBamJobGenerator = new VariantBamJobGenerator(this.JSONlocation, this.JSONrepoName, this.JSONfolderName, this.JSONfileName);
@@ -311,6 +312,7 @@ public class OxoGWrapperWorkflow extends BaseOxoGWrapperWorkflow {
 		else
 		{
 			runVariantbam = this.getWorkflow().createBashJob("run "+bamType+(bamType==BAMType.tumour?"_"+tumourID+"_":"")+" variantbam");
+			Arrays.stream(parents).forEach(parent -> runVariantbam.addParent(parent));
 		}
 		return runVariantbam;
 	}
