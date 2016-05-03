@@ -10,6 +10,7 @@ import java.util.function.Predicate;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
+import com.github.seqware.CommonPredicates;
 import com.github.seqware.GitUtils;
 import com.github.seqware.TumourInfo;
 import com.github.seqware.VcfInfo;
@@ -26,10 +27,10 @@ import net.sourceforge.seqware.pipeline.workflowV2.model.Job;
 
 public class DownloadJobGenerator extends JobGeneratorBase {
 
-	private Predicate<VcfInfo> isSanger = p -> p.getOriginatingPipeline() == Pipeline.sanger;
-	private Predicate<VcfInfo> isBroad = p -> p.getOriginatingPipeline() == Pipeline.broad;
-	private Predicate<VcfInfo> isDkfzEmbl = p -> p.getOriginatingPipeline() == Pipeline.dkfz_embl;
-	private Predicate<VcfInfo> isMuse = p -> p.getOriginatingPipeline() == Pipeline.muse;
+//	private Predicate<VcfInfo> isSanger = p -> p.getOriginatingPipeline() == Pipeline.sanger;
+//	private Predicate<VcfInfo> isBroad = p -> p.getOriginatingPipeline() == Pipeline.broad;
+//	private Predicate<VcfInfo> isDkfzEmbl = p -> p.getOriginatingPipeline() == Pipeline.dkfz_embl;
+//	private Predicate<VcfInfo> isMuse = p -> p.getOriginatingPipeline() == Pipeline.muse;
 
 	private String downloadMethod;
 	private String storageSource;
@@ -138,10 +139,10 @@ public class DownloadJobGenerator extends JobGeneratorBase {
 				this.vcfs.stream().filter(p).map(m -> m.getIndexObjectID())
 			).collect(Collectors.toList()) ; 
 		
-		List<String> sangerList =  buildVcfListByPredicate.apply(isSanger);
-		List<String> broadList = buildVcfListByPredicate.apply(isBroad);
-		List<String> dkfzEmblList = buildVcfListByPredicate.apply(isDkfzEmbl);
-		List<String> museList = buildVcfListByPredicate.apply(isMuse);
+		List<String> sangerList =  buildVcfListByPredicate.apply(CommonPredicates.isSanger);
+		List<String> broadList = buildVcfListByPredicate.apply(CommonPredicates.isBroad);
+		List<String> dkfzEmblList = buildVcfListByPredicate.apply(CommonPredicates.isDkfzEmbl);
+		List<String> museList = buildVcfListByPredicate.apply(CommonPredicates.isMuse);
 		List<String> normalList = Arrays.asList( this.bamNormalIndexObjectID,this.bamNormalObjectID);
 		//System.out.println("DEBUG: sangerList: "+sangerList.toString());
 		Map<String,List<String>> workflowObjectIDs = new HashMap<String,List<String>>(6);
