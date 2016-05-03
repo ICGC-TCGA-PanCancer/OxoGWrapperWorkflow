@@ -66,7 +66,7 @@ public class GitUtils {
 	 * @return
 	 * @throws Exception
 	 */
-	static Job gitMove(String src, String dst, Workflow workflow, String JSONlocation, String JSONrepoName,
+	public static Job gitMove(String src, String dst, Workflow workflow, String JSONlocation, String JSONrepoName,
 			String JSONfolderName, String GITname, String GITemail, boolean gitMoveTestMode, String JSONfileName, String pathToScripts,
 			Job... parents) throws Exception {
 		if (parents == null || parents.length == 0) {

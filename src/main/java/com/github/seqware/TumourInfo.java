@@ -1,6 +1,6 @@
 package com.github.seqware;
 
-class TumourInfo {
+public class TumourInfo {
 	private String tumourMetdataURL;
 	private String tumourBAMFileName;
 	private String tumourBamGnosID;

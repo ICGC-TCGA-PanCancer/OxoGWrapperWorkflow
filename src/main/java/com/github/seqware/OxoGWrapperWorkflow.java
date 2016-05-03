@@ -17,6 +17,7 @@ import com.github.seqware.downloaders.DownloaderBuilder;
 import com.github.seqware.downloaders.GNOSDownloader;
 import com.github.seqware.downloaders.ICGCStorageDownloader;
 import com.github.seqware.downloaders.S3Downloader;
+import com.github.seqware.jobgenerators.DownloadJobGenerator;
 import com.github.seqware.jobgenerators.OxoGJobGenerator;
 import com.github.seqware.jobgenerators.PcawgAnnotatorJobGenerator;
 import com.github.seqware.jobgenerators.PreprocessJobGenerator;
@@ -535,104 +536,7 @@ public class OxoGWrapperWorkflow extends BaseOxoGWrapperWorkflow {
 			Job move2download = GitUtils.gitMove("queued-jobs", "downloading-jobs", this.getWorkflow(), this.JSONlocation, this.JSONrepoName, this.JSONfolderName, this.GITname, this.GITemail, this.gitMoveTestMode, this.JSONfileName, pathToScripts ,installTools, pullRepo);
 			Job move2running;
 			if (!skipDownload) {
-				//Download jobs. VCFs downloading serial. Trying to download all in parallel seems to put too great a strain on the system 
-				//since the icgc-storage-client can make full use of all cores on a multi-core system. 
-				DownloadMethod downloadMethod = DownloadMethod.valueOf(this.downloadMethod);
-				
-				Function<Predicate<VcfInfo>, List<String>> buildVcfListByPredicate = (p) -> Stream.concat(
-						this.vcfs.stream().filter(p).map(m -> m.getObjectID()), 
-						this.vcfs.stream().filter(p).map(m -> m.getIndexObjectID())
-					).collect(Collectors.toList()) ; 
-				
-				List<String> sangerList =  buildVcfListByPredicate.apply(isSanger);
-				List<String> broadList = buildVcfListByPredicate.apply(isBroad);
-				List<String> dkfzEmblList = buildVcfListByPredicate.apply(isDkfzEmbl);
-				List<String> museList = buildVcfListByPredicate.apply(isMuse);
-				List<String> normalList = Arrays.asList( this.bamNormalIndexObjectID,this.bamNormalObjectID);
-				//System.out.println("DEBUG: sangerList: "+sangerList.toString());
-				Map<String,List<String>> workflowObjectIDs = new HashMap<String,List<String>>(6);
-				workflowObjectIDs.put(Pipeline.broad.toString(), broadList);
-				workflowObjectIDs.put(Pipeline.sanger.toString(), sangerList);
-				workflowObjectIDs.put(Pipeline.dkfz_embl.toString(), dkfzEmblList);
-				workflowObjectIDs.put(Pipeline.muse.toString(), museList);
-				workflowObjectIDs.put(BAMType.normal.toString(), normalList);
-				for (int i = 0; i < this.tumours.size(); i ++)
-				{
-					TumourInfo tInfo = this.tumours.get(i);
-					List<String> tumourIDs = new ArrayList<String>();
-					tumourIDs.add(tInfo.getBamTumourIndexObjectID());
-					tumourIDs.add(tInfo.getBamTumourObjectID());
-					workflowObjectIDs.put(BAMType.tumour+"_"+tInfo.getAliquotID(), tumourIDs);
-				}
-				
-				Map<String,String> workflowURLs = new HashMap<String,String>(6);
-				workflowURLs.put(Pipeline.broad.toString(), this.broadGNOSRepoURL);
-				workflowURLs.put(Pipeline.sanger.toString(), this.sangerGNOSRepoURL);
-				workflowURLs.put(Pipeline.dkfz_embl.toString(), this.dkfzEmblGNOSRepoURL);
-				workflowURLs.put(Pipeline.muse.toString(), this.museGNOSRepoURL);
-				workflowURLs.put(BAMType.normal.toString(), this.normalBamGNOSRepoURL);
-				for (int i = 0 ; i < this.tumours.size(); i++)
-				{
-					workflowURLs.put(BAMType.tumour.toString()+"_"+tumours.get(i).getAliquotID(), tumours.get(i).getTumourBamGNOSRepoURL());
-				}
-				
-				Function<String,List<String>> chooseObjects = (s) -> 
-				{
-					switch (downloadMethod)
-					{
-						case icgcStorageClient:
-							// ICGC storage client - get list of object IDs, use s (workflowname) as lookup.
-							return workflowObjectIDs.get(s);
-						case s3:
-							//For S3 downloader, it will take a list of strings. The strings are of the pattern: <object_id>:<file_name> and it will download all object IDs to the paired filename.
-							//We prepend the GNOS ID to the filename because other processes have an expectation (from icgc-storage-client and gtdownload) the files will be in a 
-							//directory named with the GNOS ID.
-							List<String> objects = workflowObjectIDs.get(s);
-							List<String> s3Mappings = objects.stream().map(t -> t + ":" + this.workflowNamestoGnosIds.get(s) + "/" + this.objectToFilenames.get(t) ).collect(Collectors.toList());
-							return s3Mappings;
-						case gtdownload:
-							// gtdownloader - look up the GNOS URL, return as list with single item. 
-							return Arrays.asList(workflowURLs.get(s));
-						default:
-							throw new RuntimeException("Unknown download method: "+downloadMethod);
-					}
-				};
-				
-				Job downloadSangerVCFs = this.getVCF(move2download, downloadMethod, Pipeline.sanger, chooseObjects.apply( Pipeline.sanger.toString() ) );
-				Job downloadDkfzEmblVCFs = this.getVCF(downloadSangerVCFs, downloadMethod, Pipeline.dkfz_embl, chooseObjects.apply( Pipeline.dkfz_embl.toString() ) );
-				Job downloadBroadVCFs = this.getVCF(downloadDkfzEmblVCFs, downloadMethod, Pipeline.broad, chooseObjects.apply( Pipeline.broad.toString() ) );
-				Job downloadMuseVCFs = this.getVCF(downloadBroadVCFs, downloadMethod, Pipeline.muse, chooseObjects.apply( Pipeline.muse.toString() ) );
-				// Once VCFs are downloaded, download the BAMs.
-				Job downloadNormalBam = this.getBAM(downloadMuseVCFs, downloadMethod, BAMType.normal, chooseObjects.apply( BAMType.normal.toString() ) );
-				
-				//create a list of jobs to download all tumours.
-				List<Job> getTumourJobs = new ArrayList<Job>(this.tumours.size());
-				System.out.println("Tumours : "+this.tumours);
-				for (int i = 0 ; i < this.tumours.size(); i++)
-				{	
-					Job downloadTumourBam;
-					//download the tumours sequentially.
-					Job downloadTumourBamParent;
-					if (i==0)
-					{
-						downloadTumourBamParent = downloadNormalBam;
-					}
-					else
-					{
-						downloadTumourBamParent = getTumourJobs.get(i-1);
-					}
-					downloadTumourBam = this.getBAM(downloadTumourBamParent, downloadMethod, BAMType.tumour,chooseObjects.apply( BAMType.tumour.toString()+"_"+this.tumours.get(i).getAliquotID() ) );
-					getTumourJobs.add(downloadTumourBam);
-				}
-				
-				// After we've downloaded all VCFs on a per-workflow basis, we also need to do a vcfcombine 
-				// on the *types* of VCFs, for the minibam generator. The per-workflow combined VCFs will
-				// be used by the OxoG filter. These three can be done in parallel because they all require the same inputs, 
-				// but none require the inputs of the other and they are not very intense jobs.
-				// indicate job is running.
-				move2running = GitUtils.gitMove( "downloading-jobs", "running-jobs", this.getWorkflow(),
-						this.JSONlocation, this.JSONrepoName, this.JSONfolderName, this.GITname, this.GITemail, this.gitMoveTestMode, this.JSONfileName, pathToScripts
-						, downloadSangerVCFs, downloadDkfzEmblVCFs, downloadBroadVCFs, downloadMuseVCFs, downloadNormalBam, getTumourJobs.get(getTumourJobs.size()-1));
+				move2running = doDownload(pathToScripts, move2download);
 			}
 			else {
 				// If user is skipping download, then we will just move directly to runnning...
@@ -780,5 +684,131 @@ public class OxoGWrapperWorkflow extends BaseOxoGWrapperWorkflow {
 		{
 			throw new RuntimeException ("Exception caught: "+e.getMessage(), e);
 		}
+	}
+
+	private Job doDownload(String pathToScripts, Job parent) throws Exception {
+		Job move2running;
+		
+		DownloadJobGenerator generator = new DownloadJobGenerator();
+		generator.setBamNormalIndexObjectID(this.bamNormalIndexObjectID);
+		generator.setBamNormalObjectID(this.bamNormalObjectID);
+		generator.setBroadGNOSRepoURL(this.broadGNOSRepoURL);
+		generator.setDkfzEmblGNOSRepoURL(this.dkfzEmblGNOSRepoURL);
+		generator.setDownloadMethod(this.downloadMethod);
+		generator.setGITemail(this.GITemail);
+		generator.setGitMoveTestMode(this.gitMoveTestMode);
+		generator.setGITname(this.GITname);
+		generator.setGtDownloadBamKey(this.gtDownloadBamKey);
+		generator.setGtDownloadVcfKey(this.gtDownloadVcfKey);
+		generator.setJSONFileInfo(this.JSONlocation, this.JSONrepoName, this.JSONfolderName, this.JSONfileName);
+		generator.setMuseGNOSRepoURL(this.museGNOSRepoURL);
+		generator.setNormalBamGNOSRepoURL(this.normalBamGNOSRepoURL);
+		generator.setObjectToFilenames(this.objectToFilenames);
+		generator.setSangerGNOSRepoURL(this.sangerGNOSRepoURL);
+		generator.setStorageSource(this.storageSource);
+		generator.setTumours(this.tumours);
+		generator.setVcfs(this.vcfs);
+		generator.setWorkflowNamestoGnosIds(this.workflowNamestoGnosIds);
+		
+		move2running = generator.doDownload(this, pathToScripts, parent);
+//		//Download jobs. VCFs downloading serial. Trying to download all in parallel seems to put too great a strain on the system 
+//		//since the icgc-storage-client can make full use of all cores on a multi-core system. 
+//		DownloadMethod downloadMethod = DownloadMethod.valueOf(this.downloadMethod);
+//		
+//		Function<Predicate<VcfInfo>, List<String>> buildVcfListByPredicate = (p) -> Stream.concat(
+//				this.vcfs.stream().filter(p).map(m -> m.getObjectID()), 
+//				this.vcfs.stream().filter(p).map(m -> m.getIndexObjectID())
+//			).collect(Collectors.toList()) ; 
+//		
+//		List<String> sangerList =  buildVcfListByPredicate.apply(isSanger);
+//		List<String> broadList = buildVcfListByPredicate.apply(isBroad);
+//		List<String> dkfzEmblList = buildVcfListByPredicate.apply(isDkfzEmbl);
+//		List<String> museList = buildVcfListByPredicate.apply(isMuse);
+//		List<String> normalList = Arrays.asList( this.bamNormalIndexObjectID,this.bamNormalObjectID);
+//		//System.out.println("DEBUG: sangerList: "+sangerList.toString());
+//		Map<String,List<String>> workflowObjectIDs = new HashMap<String,List<String>>(6);
+//		workflowObjectIDs.put(Pipeline.broad.toString(), broadList);
+//		workflowObjectIDs.put(Pipeline.sanger.toString(), sangerList);
+//		workflowObjectIDs.put(Pipeline.dkfz_embl.toString(), dkfzEmblList);
+//		workflowObjectIDs.put(Pipeline.muse.toString(), museList);
+//		workflowObjectIDs.put(BAMType.normal.toString(), normalList);
+//		for (int i = 0; i < this.tumours.size(); i ++)
+//		{
+//			TumourInfo tInfo = this.tumours.get(i);
+//			List<String> tumourIDs = new ArrayList<String>();
+//			tumourIDs.add(tInfo.getBamTumourIndexObjectID());
+//			tumourIDs.add(tInfo.getBamTumourObjectID());
+//			workflowObjectIDs.put(BAMType.tumour+"_"+tInfo.getAliquotID(), tumourIDs);
+//		}
+//		
+//		Map<String,String> workflowURLs = new HashMap<String,String>(6);
+//		workflowURLs.put(Pipeline.broad.toString(), this.broadGNOSRepoURL);
+//		workflowURLs.put(Pipeline.sanger.toString(), this.sangerGNOSRepoURL);
+//		workflowURLs.put(Pipeline.dkfz_embl.toString(), this.dkfzEmblGNOSRepoURL);
+//		workflowURLs.put(Pipeline.muse.toString(), this.museGNOSRepoURL);
+//		workflowURLs.put(BAMType.normal.toString(), this.normalBamGNOSRepoURL);
+//		for (int i = 0 ; i < this.tumours.size(); i++)
+//		{
+//			workflowURLs.put(BAMType.tumour.toString()+"_"+tumours.get(i).getAliquotID(), tumours.get(i).getTumourBamGNOSRepoURL());
+//		}
+//		
+//		Function<String,List<String>> chooseObjects = (s) -> 
+//		{
+//			switch (downloadMethod)
+//			{
+//				case icgcStorageClient:
+//					// ICGC storage client - get list of object IDs, use s (workflowname) as lookup.
+//					return workflowObjectIDs.get(s);
+//				case s3:
+//					//For S3 downloader, it will take a list of strings. The strings are of the pattern: <object_id>:<file_name> and it will download all object IDs to the paired filename.
+//					//We prepend the GNOS ID to the filename because other processes have an expectation (from icgc-storage-client and gtdownload) the files will be in a 
+//					//directory named with the GNOS ID.
+//					List<String> objects = workflowObjectIDs.get(s);
+//					List<String> s3Mappings = objects.stream().map(t -> t + ":" + this.workflowNamestoGnosIds.get(s) + "/" + this.objectToFilenames.get(t) ).collect(Collectors.toList());
+//					return s3Mappings;
+//				case gtdownload:
+//					// gtdownloader - look up the GNOS URL, return as list with single item. 
+//					return Arrays.asList(workflowURLs.get(s));
+//				default:
+//					throw new RuntimeException("Unknown download method: "+downloadMethod);
+//			}
+//		};
+//		
+//		Job downloadSangerVCFs = this.getVCF(move2download, downloadMethod, Pipeline.sanger, chooseObjects.apply( Pipeline.sanger.toString() ) );
+//		Job downloadDkfzEmblVCFs = this.getVCF(downloadSangerVCFs, downloadMethod, Pipeline.dkfz_embl, chooseObjects.apply( Pipeline.dkfz_embl.toString() ) );
+//		Job downloadBroadVCFs = this.getVCF(downloadDkfzEmblVCFs, downloadMethod, Pipeline.broad, chooseObjects.apply( Pipeline.broad.toString() ) );
+//		Job downloadMuseVCFs = this.getVCF(downloadBroadVCFs, downloadMethod, Pipeline.muse, chooseObjects.apply( Pipeline.muse.toString() ) );
+//		// Once VCFs are downloaded, download the BAMs.
+//		Job downloadNormalBam = this.getBAM(downloadMuseVCFs, downloadMethod, BAMType.normal, chooseObjects.apply( BAMType.normal.toString() ) );
+//		
+//		//create a list of jobs to download all tumours.
+//		List<Job> getTumourJobs = new ArrayList<Job>(this.tumours.size());
+//		System.out.println("Tumours : "+this.tumours);
+//		for (int i = 0 ; i < this.tumours.size(); i++)
+//		{	
+//			Job downloadTumourBam;
+//			//download the tumours sequentially.
+//			Job downloadTumourBamParent;
+//			if (i==0)
+//			{
+//				downloadTumourBamParent = downloadNormalBam;
+//			}
+//			else
+//			{
+//				downloadTumourBamParent = getTumourJobs.get(i-1);
+//			}
+//			downloadTumourBam = this.getBAM(downloadTumourBamParent, downloadMethod, BAMType.tumour,chooseObjects.apply( BAMType.tumour.toString()+"_"+this.tumours.get(i).getAliquotID() ) );
+//			getTumourJobs.add(downloadTumourBam);
+//		}
+//		
+//		// After we've downloaded all VCFs on a per-workflow basis, we also need to do a vcfcombine 
+//		// on the *types* of VCFs, for the minibam generator. The per-workflow combined VCFs will
+//		// be used by the OxoG filter. These three can be done in parallel because they all require the same inputs, 
+//		// but none require the inputs of the other and they are not very intense jobs.
+//		// indicate job is running.
+//		move2running = GitUtils.gitMove( "downloading-jobs", "running-jobs", this.getWorkflow(),
+//				this.JSONlocation, this.JSONrepoName, this.JSONfolderName, this.GITname, this.GITemail, this.gitMoveTestMode, this.JSONfileName, pathToScripts
+//				, downloadSangerVCFs, downloadDkfzEmblVCFs, downloadBroadVCFs, downloadMuseVCFs, downloadNormalBam, getTumourJobs.get(getTumourJobs.size()-1));
+		return move2running;
 	}
 }
