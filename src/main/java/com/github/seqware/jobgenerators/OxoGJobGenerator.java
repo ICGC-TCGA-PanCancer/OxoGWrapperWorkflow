@@ -87,7 +87,7 @@ public class OxoGJobGenerator extends JobGeneratorBase {
 			{ "checkSangerExtractedSNV" , checkSangerExtractedSNV },{ "checkBroadExtractedSNV" , checkBroadExtractedSNV },{ "checkDkfzEmblExtractedSNV" , checkDkfzEmblExtractedSNV },
 			{ "sangerWorkflow", Pipeline.sanger.toString() }, { "broadWorkflow", Pipeline.broad.toString() },
 			{ "dkfzEmblWorkflow", Pipeline.dkfz_embl.toString() }, { "museWorkflow", Pipeline.muse.toString() },
-			{ "tumourID", tumourAliquotID }, { "aliquotID", this.normalAliquotID }, { "oxoQScore", this.oxoQScore }, 
+			{ "tumourID", tumourAliquotID }, { "oxoQScore", this.oxoQScore }, 
 			{ "pathToTumour", pathToTumour }, { "normalBamGnosID", this.normalBamGnosID }, { "normalBAMFileName", this.normalBAMFileName } ,
 			{ "broadGnosID", this.broadGnosID }, { "sangerGnosID", this.sangerGnosID }, { "dkfzemblGnosID", this.dkfzemblGnosID }, { "museGnosID", this.museGnosID },
 			{ "sangerSNVName", sangerSNV}, { "broadSNVName", broadSNV }, { "dkfzEmblSNVName", dkfzEmblSNV }, { "museSNVName", museSNV },
