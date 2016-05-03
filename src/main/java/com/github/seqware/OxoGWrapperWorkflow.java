@@ -23,11 +23,6 @@ public class OxoGWrapperWorkflow extends BaseOxoGWrapperWorkflow {
 
 	Consumer<String> updateFilesForUpload = (s) -> this.filesForUpload.add(s);
 
-//	private Predicate<VcfInfo> isSanger = p -> p.getOriginatingPipeline() == Pipeline.sanger;
-//	private Predicate<VcfInfo> isBroad = p -> p.getOriginatingPipeline() == Pipeline.broad;
-//	private Predicate<VcfInfo> isDkfzEmbl = p -> p.getOriginatingPipeline() == Pipeline.dkfz_embl;
-//	private Predicate<VcfInfo> isMuse = p -> p.getOriginatingPipeline() == Pipeline.muse;
-	
 	private Predicate<VcfInfo> isIndel = p -> p.getVcfType() == VCFType.indel;
 	private Predicate<VcfInfo> isSnv = p -> p.getVcfType() == VCFType.snv;
 	private Predicate<VcfInfo> isSv = p -> p.getVcfType() == VCFType.sv;

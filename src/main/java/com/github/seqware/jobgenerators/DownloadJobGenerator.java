@@ -27,11 +27,6 @@ import net.sourceforge.seqware.pipeline.workflowV2.model.Job;
 
 public class DownloadJobGenerator extends JobGeneratorBase {
 
-//	private Predicate<VcfInfo> isSanger = p -> p.getOriginatingPipeline() == Pipeline.sanger;
-//	private Predicate<VcfInfo> isBroad = p -> p.getOriginatingPipeline() == Pipeline.broad;
-//	private Predicate<VcfInfo> isDkfzEmbl = p -> p.getOriginatingPipeline() == Pipeline.dkfz_embl;
-//	private Predicate<VcfInfo> isMuse = p -> p.getOriginatingPipeline() == Pipeline.muse;
-
 	private String downloadMethod;
 	private String storageSource;
 	private String gtDownloadBamKey;
