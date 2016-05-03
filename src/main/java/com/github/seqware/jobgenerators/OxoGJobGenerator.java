@@ -95,10 +95,11 @@ public class OxoGJobGenerator extends JobGeneratorBase {
 		} ).collect(this.collectToMap), "runOxoGFilter.template");
 		
 		runOxoGWorkflow.setCommand("( "+runOxoGCommand+" ) || "+ moveToFailed);
-		for (Job parent : parents)
-		{
-			runOxoGWorkflow.addParent(parent);
-		}
+//		for (Job parent : parents)
+//		{
+//			runOxoGWorkflow.addParent(parent);
+//		}
+		Arrays.stream(parents).forEach(parent -> runOxoGWorkflow.addParent(parent));
 		Function<String,String> changeToOxoGSuffix = (s) ->  pathToUploadDir + s.replace(".vcf.gz", ".oxoG.vcf.gz").replaceAll("/datafiles/VCF/[^/]+/","/");
 		Function<String,String> changeToOxoGTBISuffix = changeToOxoGSuffix.andThen((s) -> s+=".tbi");
 		

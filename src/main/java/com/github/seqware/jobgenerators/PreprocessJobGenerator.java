@@ -46,10 +46,11 @@ public class PreprocessJobGenerator extends JobGeneratorBase {
 		
 		passFilter.setCommand(renderedTemplate);
 		
-		for (Job parent : parents)
-		{
-			passFilter.addParent(parent);
-		}
+//		for (Job parent : parents)
+//		{
+//			passFilter.addParent(parent);
+//		}
+		Arrays.stream(parents).forEach(parent -> passFilter.addParent(parent));
 		
 		return passFilter;
 	}
