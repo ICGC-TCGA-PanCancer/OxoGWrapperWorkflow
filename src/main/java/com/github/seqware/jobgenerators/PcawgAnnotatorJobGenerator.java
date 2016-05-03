@@ -148,10 +148,6 @@ public class PcawgAnnotatorJobGenerator extends JobGeneratorBase {
 		updateFilesForUpload.accept("/datastore/files_for_upload/"+annotatedFileName+".gz.tbi ");
 		
 		annotatorJob.setCommand(command);
-//		for (Job parent : parents)
-//		{
-//			annotatorJob.addParent(parent);
-//		}
 		Arrays.stream(parents).forEach(parent -> annotatorJob.addParent(parent));
 		return annotatorJob;
 	}

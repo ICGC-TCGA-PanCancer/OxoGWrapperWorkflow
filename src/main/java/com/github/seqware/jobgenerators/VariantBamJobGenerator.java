@@ -61,10 +61,6 @@ public class VariantBamJobGenerator extends JobGeneratorBase{
 		command += (" || " + moveToFailed);
 		runVariantbam.setCommand(command);
 
-//		for (Job parent : parents)
-//		{
-//			runVariantbam.addParent(parent);
-//		}
 		Arrays.stream(parents).forEach(parent -> runVariantbam.addParent(parent));
 		
 		return runVariantbam;
