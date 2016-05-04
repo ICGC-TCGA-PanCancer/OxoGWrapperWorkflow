@@ -226,8 +226,7 @@ public abstract class BaseOxoGWrapperWorkflow extends AbstractWorkflowDataModel 
 					{
 						if (p == Pipeline.muse && v != VCFType.snv)
 						{
-							//break out to the next element in VCFType.values
-							//break;
+							//do nothing when MUSE and non-SNV, because MUSE will ONLY have SNV.
 						}
 						else
 						{
