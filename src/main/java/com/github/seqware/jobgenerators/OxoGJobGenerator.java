@@ -16,8 +16,6 @@ import net.sourceforge.seqware.pipeline.workflowV2.model.Job;
 public class OxoGJobGenerator extends JobGeneratorBase {
 
 	private String tumourAliquotID;
-	private String normalAliquotID;
-
 	private String extractedSangerSNV;
 	private String extractedBroadSNV;
 	private String extractedDkfzEmblSNV;
@@ -38,7 +36,6 @@ public class OxoGJobGenerator extends JobGeneratorBase {
 	public OxoGJobGenerator(String JSONlocation, String JSONrepoName, String JSONfolderName, String JSONfileName, String tumourAliquotID, String normalAliquotID) {
 		super(JSONlocation, JSONrepoName, JSONfolderName, JSONfileName);
 		this.tumourAliquotID = tumourAliquotID;
-		this.normalAliquotID = normalAliquotID;
 	}
 	
 	public OxoGJobGenerator(String JSONlocation, String JSONrepoName, String JSONfolderName, String JSONfileName) {
@@ -48,7 +45,6 @@ public class OxoGJobGenerator extends JobGeneratorBase {
 	public OxoGJobGenerator(String tumourAliquotID, String normalAliquotID)
 	{
 		this.tumourAliquotID = tumourAliquotID;
-		this.normalAliquotID = normalAliquotID;
 	}
 	//public OxoGJobGenerator(){}
 	/**
@@ -133,8 +129,8 @@ public class OxoGJobGenerator extends JobGeneratorBase {
 		addToFilesForUpload.accept(extractedBroadSNV, getFileName.andThen(changeToOxoGTBISuffix));
 		addToFilesForUpload.accept(extractedDkfzEmblSNV, getFileName.andThen(changeToOxoGTBISuffix));
 		
-		updateFilesToUpload.accept("/datastore/files_for_upload/" + this.normalAliquotID + ".gnos_files_tumour_" + this.tumourAliquotID + ".tar");
-		updateFilesToUpload.accept("/datastore/files_for_upload/" + this.normalAliquotID + ".call_stats_tumour_" + this.tumourAliquotID + ".txt.gz.tar");
+		updateFilesToUpload.accept("/datastore/files_for_upload/" + this.tumourAliquotID + ".gnos_files.tar");
+		updateFilesToUpload.accept("/datastore/files_for_upload/" + this.tumourAliquotID + ".call_stats.txt.gz.tar");
 		
 		return runOxoGWorkflow;
 		
