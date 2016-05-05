@@ -47,9 +47,9 @@ GetOptions ("broad_snv=s" => \$broad_snv,
 			"indir=s" => \$in_dir,
 			"outdir=s" => \$out_dir);
 
-my @snv = ($broad_snv, $sanger_snv, $de_snv, $muse_snv);
-my @indel = ($broad_indel, $sanger_indel, $de_indel);
-my @sv = ($broad_sv, $sanger_sv, $de_sv);
+my @snv = (split(/,/,$broad_snv), split(/,/,$sanger_snv), split(/,/,$de_snv), split(/,/,$muse_snv));
+my @indel = (split(/,/,$broad_indel), split(/,/,$sanger_indel), split(/,/,$de_indel));
+my @sv = (split(/,/,$broad_sv), split(/,/,$sanger_sv), split(/,/,$de_sv));
 
 process($out_dir."/snv.clean", @snv);
 process($out_dir."/indel.clean", @indel);

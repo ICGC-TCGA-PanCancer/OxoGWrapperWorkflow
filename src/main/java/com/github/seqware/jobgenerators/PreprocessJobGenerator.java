@@ -7,6 +7,7 @@ import java.util.Map;
 import java.util.function.Consumer;
 
 import com.github.seqware.GitUtils;
+import com.github.seqware.OxoGWrapperWorkflow.BAMType;
 import com.github.seqware.OxoGWrapperWorkflow.Pipeline;
 import com.github.seqware.OxoGWrapperWorkflow.VCFType;
 import com.github.seqware.TemplateUtils;
@@ -118,80 +119,145 @@ public class PreprocessJobGenerator extends JobGeneratorBase {
 	 * @param parents
 	 * @return
 	 */
-	public Job combineVCFsByType(AbstractWorkflowDataModel workflow, List<VcfInfo> nonIndels, List<VcfInfo> indels, Consumer<VcfInfo> updateMergedVCFs, Job ... parents)
+	public Job combineVCFsByType(AbstractWorkflowDataModel workflow, List<VcfInfo> nonIndels, List<VcfInfo> indels, Consumer<VcfInfo> updateMergedVCFs, BAMType bamType, Job ... parents)
 	{
-
+		HashMap<String,String> argsMap = new HashMap<>();
 		
 		//Create symlinks to the files in the proper directory.
 		Job prepVCFs = workflow.getWorkflow().createBashJob("create links to VCFs");
 		String prepCommand = "";
+		StringBuffer prepCommandSb = new StringBuffer();
+		StringBuffer combineVcfArgsSb = new StringBuffer();
 		prepCommand+="\n ( ( [ -d /datastore/merged_vcfs ] || sudo mkdir -p /datastore/merged_vcfs/ ) && sudo chmod a+rw /datastore/merged_vcfs && \\\n";
 		
 		String combineVcfArgs = "";
 		
-		//for (VcfInfo vcfInfo : this.vcfs.stream().filter(p -> p.getOriginatingTumourAliquotID().equals(tumourAliquotID) && isIndel.negate().test(p)).collect(Collectors.toList()))
-		for (VcfInfo vcfInfo : nonIndels)
-		{
-			prepCommand += " ln -s /datastore/vcf/"+vcfInfo.getOriginatingPipeline().toString()+"/"+vcfInfo.getPipelineGnosID()+"/"+vcfInfo.getFileName()+" "
-								+ " /datastore/vcf/"+vcfInfo.getOriginatingTumourAliquotID()+"_"+vcfInfo.getOriginatingPipeline().toString()+"_"+vcfInfo.getVcfType().toString()+".vcf && \\\n";
-			combineVcfArgs += " --" + vcfInfo.getOriginatingPipeline().toString() + "_" + vcfInfo.getVcfType().toString()+
-								" "+vcfInfo.getOriginatingTumourAliquotID() + "_" + vcfInfo.getOriginatingPipeline().toString() + "_"+vcfInfo.getVcfType().toString()+".vcf \\\n";
-		}
+		Consumer<VcfInfo> setCommandStrings = vcfInfo -> {
+			String linkTarget = " /datastore/vcf/"+vcfInfo.getOriginatingTumourAliquotID()+"_"+vcfInfo.getOriginatingPipeline().toString()+"_"+vcfInfo.getVcfType().toString()+".vcf ";
+			String linkSource = "/datastore/vcf/"+vcfInfo.getOriginatingPipeline().toString()+"/"+vcfInfo.getPipelineGnosID()+"/"+vcfInfo.getFileName();
+			prepCommandSb.append( " ( [ ! -L "+linkTarget+" ] && ln -s " + linkSource+" "+ linkTarget+" ) && \\\n" );
+//			combineVcfArgsSb.append( " --" + vcfInfo.getOriginatingPipeline().toString() + "_" + vcfInfo.getVcfType().toString()+
+//								" "+vcfInfo.getOriginatingTumourAliquotID() + "_" + vcfInfo.getOriginatingPipeline().toString() + "_"+vcfInfo.getVcfType().toString()+".vcf \\\n" );
 
-		//for (VcfInfo vcfInfo : this.normalizedIndels.stream().filter(p -> p.getOriginatingTumourAliquotID().equals(tumourAliquotID)).collect(Collectors.toList()))
-		for (VcfInfo vcfInfo : indels)
+			//The arguments for vcf_merge_by_type.pl are keyed by "vcfType:pipeline". This will allow merging across tumours, for multi-tumour scenarios.
+			String key = vcfInfo.getVcfType().toString()+":"+vcfInfo.getOriginatingPipeline().toString();
+			String prevValue = argsMap.get(key);
+			String value = (prevValue!=null && prevValue.trim().length()>0 ? prevValue+"," : "")
+							+ vcfInfo.getOriginatingTumourAliquotID() + "_" + vcfInfo.getOriginatingPipeline().toString() + "_"+vcfInfo.getVcfType().toString()+".vcf";
+			argsMap.put(key, value);
+		};
+
+		indels.forEach(setCommandStrings);
+		nonIndels.forEach(setCommandStrings);
+		
+		for (String k : argsMap.keySet())
 		{
-			prepCommand += " ln -s "+vcfInfo.getFileName()+" /datastore/vcf/"+vcfInfo.getOriginatingTumourAliquotID()+"_"+vcfInfo.getOriginatingPipeline().toString()+"_"+vcfInfo.getVcfType().toString()+".vcf && \\\n";
-			combineVcfArgs += " --" + vcfInfo.getOriginatingPipeline().toString() + "_" + vcfInfo.getVcfType().toString()+
-								" "+vcfInfo.getOriginatingTumourAliquotID() + "_" + vcfInfo.getOriginatingPipeline().toString() + "_"+vcfInfo.getVcfType().toString()+".vcf \\\n";
+			String value = argsMap.get(k);
+			String parts[] = k.split(":");
+			String vcfType = parts[0];
+			String pipeline = parts[1];
+			//value will be a comma-separated list of filenames.
+			combineVcfArgsSb.append( " --" + pipeline + "_" + vcfType+" "+value+" \\\n" );
 		}
+		
+//		for (VcfInfo vcfInfo : nonIndels)
+//		{
+//			String linkTarget = " /datastore/vcf/"+vcfInfo.getOriginatingTumourAliquotID()+"_"+vcfInfo.getOriginatingPipeline().toString()+"_"+vcfInfo.getVcfType().toString()+".vcf ";
+//			String linkSource = "/datastore/vcf/"+vcfInfo.getOriginatingPipeline().toString()+"/"+vcfInfo.getPipelineGnosID()+"/"+vcfInfo.getFileName();
+//			prepCommand += " ( [ ! -L "+linkTarget+" ] && ln -s " + linkSource+" "+ linkTarget+" ) && \\\n";
+//			combineVcfArgs += " --" + vcfInfo.getOriginatingPipeline().toString() + "_" + vcfInfo.getVcfType().toString()+
+//								" "+vcfInfo.getOriginatingTumourAliquotID() + "_" + vcfInfo.getOriginatingPipeline().toString() + "_"+vcfInfo.getVcfType().toString()+".vcf \\\n";
+//		}
+//
+//		for (VcfInfo vcfInfo : indels)
+//		{
+//			String linkTarget = " /datastore/vcf/"+vcfInfo.getOriginatingTumourAliquotID()+"_"+vcfInfo.getOriginatingPipeline().toString()+"_"+vcfInfo.getVcfType().toString()+".vcf ";
+//			String linkSource = "/datastore/vcf/"+vcfInfo.getOriginatingPipeline().toString()+"/"+vcfInfo.getPipelineGnosID()+"/"+vcfInfo.getFileName();
+//			prepCommand += " ( [ ! -L "+linkTarget+" ] && ln -s " + linkSource+" "+ linkTarget+" ) && \\\n";
+//			combineVcfArgs += " --" + vcfInfo.getOriginatingPipeline().toString() + "_" + vcfInfo.getVcfType().toString()+
+//								" "+vcfInfo.getOriginatingTumourAliquotID() + "_" + vcfInfo.getOriginatingPipeline().toString() + "_"+vcfInfo.getVcfType().toString()+".vcf \\\n";
+//		}
+		
+		prepCommand = prepCommandSb.toString();
+		combineVcfArgs = combineVcfArgsSb.toString();
 		prepCommand = prepCommand.substring(0,prepCommand.lastIndexOf("&&"));
 		String moveToFailed = GitUtils.gitMoveCommand("running-jobs","failed-jobs",this.JSONlocation + "/" + this.JSONrepoName + "/" + this.JSONfolderName,this.JSONfileName, this.gitMoveTestMode, workflow.getWorkflowBaseDir() + "/scripts/");
 		prepCommand += (") || " + moveToFailed);
 		
 		prepVCFs.setCommand(prepCommand);
-		
-		for (Job parent : parents)
-		{
-			prepVCFs.addParent(parent);
-		}
+
+		Arrays.stream(parents).forEach(parent -> prepVCFs.addParent(parent));
+//		for (Job parent : parents)
+//		{
+//			prepVCFs.addParent(parent);
+//		}
 		
 		Job vcfCombineJob = workflow.getWorkflow().createBashJob("combining VCFs by type for tumour "+this.tumourAliquotID);
-		
-		//run the merge script, then bgzip and index them all.
-		String combineCommand = "(sudo mkdir -p /datastore/merged_vcfs/"+this.tumourAliquotID+"/ "
-								+ " && sudo chmod a+rw /datastore/merged_vcfs/"+this.tumourAliquotID+"/ "
-				+ " && perl "+workflow.getWorkflowBaseDir()+"/scripts/vcf_merge_by_type.pl "
-				+ combineVcfArgs
-				+ " --indir /datastore/vcf/ --outdir /datastore/merged_vcfs/"+this.tumourAliquotID+"/ \\\n"
-				//rename the merged VCFs to ensure they contain the correct aliquot IDs.
-				+ " && cd /datastore/merged_vcfs/"+this.tumourAliquotID+"/ \\\n"
-				+ " && cp snv.clean.sorted.vcf ../snv."+this.tumourAliquotID+".clean.sorted.vcf \\\n"
-				+ " && cp sv.clean.sorted.vcf ../sv."+this.tumourAliquotID+".clean.sorted.vcf \\\n"
-				+ " && cp indel.clean.sorted.vcf ../indel."+this.tumourAliquotID+".clean.sorted.vcf \\\n) || "+moveToFailed;
-
-		vcfCombineJob.setCommand(combineCommand);
-		vcfCombineJob.addParent(prepVCFs);
-		
-		//these files names are hard-coded in runVariantbam.template. So, either get rid of them here (if they're not used anywhere else),
-		//or add them as parameters to the template.
-		//TODO: merged VCFs must now be done on SETS of VCFs from the same tumour.
-		VcfInfo mergedSnvVcf = new VcfInfo();
-		mergedSnvVcf.setFileName("snv."+this.tumourAliquotID+".clean.sorted.vcf");
-		mergedSnvVcf.setVcfType(VCFType.snv);
-		mergedSnvVcf.setOriginatingTumourAliquotID(this.tumourAliquotID);
-		VcfInfo mergedSvVcf = new VcfInfo();
-		mergedSvVcf.setFileName("sv."+this.tumourAliquotID+".clean.sorted.vcf");
-		mergedSvVcf.setVcfType(VCFType.sv);
-		mergedSvVcf.setOriginatingTumourAliquotID(this.tumourAliquotID);
-		VcfInfo mergedIndelVcf = new VcfInfo();
-		mergedIndelVcf.setFileName("indel."+this.tumourAliquotID+".clean.sorted.vcf");
-		mergedIndelVcf.setVcfType(VCFType.indel);
-		mergedIndelVcf.setOriginatingTumourAliquotID(this.tumourAliquotID);
-		updateMergedVCFs.accept(mergedSnvVcf);
-		updateMergedVCFs.accept(mergedSvVcf);
-		updateMergedVCFs.accept(mergedIndelVcf);
-
+		if (bamType == BAMType.tumour)
+		{
+			//run the merge script, then bgzip and index them all.
+			String combineCommand = "(sudo mkdir -p /datastore/merged_vcfs/"+this.tumourAliquotID+"/ "
+									+ " && sudo chmod a+rw /datastore/merged_vcfs/"+this.tumourAliquotID+"/ "
+					+ " && perl "+workflow.getWorkflowBaseDir()+"/scripts/vcf_merge_by_type.pl "
+					+ combineVcfArgs
+					+ " --indir /datastore/vcf/ --outdir /datastore/merged_vcfs/"+this.tumourAliquotID+"/ \\\n"
+					//rename the merged VCFs to ensure they contain the correct aliquot IDs.
+					+ " && cd /datastore/merged_vcfs/"+this.tumourAliquotID+"/ \\\n"
+					+ " && cp snv.clean.sorted.vcf ../snv."+this.tumourAliquotID+".clean.sorted.vcf \\\n"
+					+ " && cp sv.clean.sorted.vcf ../sv."+this.tumourAliquotID+".clean.sorted.vcf \\\n"
+					+ " && cp indel.clean.sorted.vcf ../indel."+this.tumourAliquotID+".clean.sorted.vcf \\\n) || "+moveToFailed;
+	
+			vcfCombineJob.setCommand(combineCommand);
+			vcfCombineJob.addParent(prepVCFs);
+			
+			//these files names are hard-coded in runVariantbam.template. So, either get rid of them here (if they're not used anywhere else),
+			//or add them as parameters to the template.
+			VcfInfo mergedSnvVcf = new VcfInfo();
+			mergedSnvVcf.setFileName("snv."+this.tumourAliquotID+".clean.sorted.vcf");
+			mergedSnvVcf.setVcfType(VCFType.snv);
+			mergedSnvVcf.setOriginatingTumourAliquotID(this.tumourAliquotID);
+			VcfInfo mergedSvVcf = new VcfInfo();
+			mergedSvVcf.setFileName("sv."+this.tumourAliquotID+".clean.sorted.vcf");
+			mergedSvVcf.setVcfType(VCFType.sv);
+			mergedSvVcf.setOriginatingTumourAliquotID(this.tumourAliquotID);
+			VcfInfo mergedIndelVcf = new VcfInfo();
+			mergedIndelVcf.setFileName("indel."+this.tumourAliquotID+".clean.sorted.vcf");
+			mergedIndelVcf.setVcfType(VCFType.indel);
+			mergedIndelVcf.setOriginatingTumourAliquotID(this.tumourAliquotID);
+			updateMergedVCFs.accept(mergedSnvVcf);
+			updateMergedVCFs.accept(mergedSvVcf);
+			updateMergedVCFs.accept(mergedIndelVcf);
+		}
+		else
+		{
+			//run the merge script, then bgzip and index them all.
+			String combineCommand = "(sudo mkdir -p /datastore/merged_vcfs/"+this.tumourAliquotID+"/ "
+									+ " && sudo chmod a+rw /datastore/merged_vcfs/"+this.tumourAliquotID+"/ "
+					+ " && perl "+workflow.getWorkflowBaseDir()+"/scripts/vcf_merge_by_type.pl "
+					+ combineVcfArgs
+					+ " --indir /datastore/vcf/ --outdir /datastore/merged_vcfs/all_tumour_merge/  ) || "+moveToFailed;
+	
+			vcfCombineJob.setCommand(combineCommand);
+			vcfCombineJob.addParent(prepVCFs);
+			
+			//these files names are hard-coded in runVariantbam.template. So, either get rid of them here (if they're not used anywhere else),
+			//or add them as parameters to the template.
+			VcfInfo mergedSnvVcf = new VcfInfo();
+			mergedSnvVcf.setFileName("snv."+this.tumourAliquotID+".clean.sorted.vcf");
+			mergedSnvVcf.setVcfType(VCFType.snv);
+			mergedSnvVcf.setOriginatingTumourAliquotID(this.tumourAliquotID);
+			VcfInfo mergedSvVcf = new VcfInfo();
+			mergedSvVcf.setFileName("sv."+this.tumourAliquotID+".clean.sorted.vcf");
+			mergedSvVcf.setVcfType(VCFType.sv);
+			mergedSvVcf.setOriginatingTumourAliquotID(this.tumourAliquotID);
+			VcfInfo mergedIndelVcf = new VcfInfo();
+			mergedIndelVcf.setFileName("indel."+this.tumourAliquotID+".clean.sorted.vcf");
+			mergedIndelVcf.setVcfType(VCFType.indel);
+			mergedIndelVcf.setOriginatingTumourAliquotID(this.tumourAliquotID);
+			updateMergedVCFs.accept(mergedSnvVcf);
+			updateMergedVCFs.accept(mergedSvVcf);
+			updateMergedVCFs.accept(mergedIndelVcf);
+		}
 		return vcfCombineJob;
 	}
 

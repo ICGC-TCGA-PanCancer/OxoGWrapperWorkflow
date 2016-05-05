@@ -76,6 +76,8 @@ public class OxoGWrapperWorkflow extends BaseOxoGWrapperWorkflow {
 	private List<VcfInfo> extractedSnvsFromIndels = new ArrayList<VcfInfo>();
 	private List<VcfInfo> mergedVcfs = new ArrayList<VcfInfo>();
 	private List<VcfInfo> normalizedIndels = new ArrayList<VcfInfo>();
+
+	private List<VcfInfo> mergedVcfsForNormalVariantBam = new ArrayList<VcfInfo>();
 	
 	/**
 	 * Copy the credentials files from ~/.gnos to /datastore/credentials
@@ -150,9 +152,10 @@ public class OxoGWrapperWorkflow extends BaseOxoGWrapperWorkflow {
 	}
 	
 	/**
-	 * This will combine VCFs from different workflows by the same type. All INDELs will be combined into a new output file,
-	 * all SVs will be combined into a new file, all SNVs will be combined into a new file. 
-	 * @param parents
+	 * This will combine VCFs from different workflows by the same type, on a per-tumour basis. All INDELs will be combined into a new output file,
+	 * all SVs will be combined into a new file, all SNVs will be combined into a new file.
+	 * @param tumourAliquotID - the aliquot ID of the tumour of which the VCFs will be combined.
+	 * @param parents - Parent jobs.
 	 * @return
 	 */
 	private Job combineVCFsByType(String tumourAliquotID, Job ... parents)
@@ -163,11 +166,29 @@ public class OxoGWrapperWorkflow extends BaseOxoGWrapperWorkflow {
 		List<VcfInfo> nonIndels =this.vcfs.stream().filter(p -> p.getOriginatingTumourAliquotID().equals(tumourAliquotID) && isIndel.negate().test(p)).collect(Collectors.toList());
 		List<VcfInfo> indels = this.normalizedIndels.stream().filter(p -> p.getOriginatingTumourAliquotID().equals(tumourAliquotID)).collect(Collectors.toList());
 		Consumer<VcfInfo> updateMergedVCFs = (v) -> this.mergedVcfs.add(v);
-		Job vcfCombineJob = generator.combineVCFsByType(this, nonIndels, indels ,updateMergedVCFs, parents);
+		Job vcfCombineJob = generator.combineVCFsByType(this, nonIndels, indels ,updateMergedVCFs, BAMType.tumour, parents);
 
 		return vcfCombineJob;
 	}
 
+	/**
+	 * Overload of <code>combineVCFsByType(String tumourAliquotID, Job ... parents)</code>. It does not take a tumour ID.
+	 * It should combine vcfs by from from ALL tumours. This is needed when generating the minibam for Normals BAMs in a multi-tumour scenario.  
+	 * @param parents
+	 * @return
+	 */
+	private Job combineVCFsByType(Job ... parents)
+	{
+		PreprocessJobGenerator generator = new PreprocessJobGenerator(this.JSONlocation, this.JSONrepo, this.JSONfolderName, this.JSONfileName);
+		List<VcfInfo> nonIndels =this.vcfs.stream().filter(p -> isIndel.negate().test(p)).collect(Collectors.toList());
+		List<VcfInfo> indels = this.normalizedIndels.stream().collect(Collectors.toList());
+		Consumer<VcfInfo> updateMergedVCFs = (v) -> this.mergedVcfsForNormalVariantBam.add(v);
+		Job vcfCombineJob = generator.combineVCFsByType(this, nonIndels, indels ,updateMergedVCFs, BAMType.normal, parents);
+
+		return vcfCombineJob;
+	}
+
+	
 	private String getVcfName(Predicate<? super VcfInfo> vcfPredicate, List<VcfInfo> vcfList) {
 		if (this.allowMissingFiles)
 		{
@@ -282,11 +303,19 @@ public class OxoGWrapperWorkflow extends BaseOxoGWrapperWorkflow {
 			variantBamJobGenerator.setSnvPadding(String.valueOf(this.snvPadding));
 			variantBamJobGenerator.setSvPadding(String.valueOf(this.svPadding));
 			variantBamJobGenerator.setGitMoveTestMode(this.gitMoveTestMode);
-			variantBamJobGenerator.setTumourAliquotID(tumourID);
-			variantBamJobGenerator.setSnvVcf(mergedVcfs.stream().filter(isSnv).findFirst().get().getFileName());
-			variantBamJobGenerator.setSvVcf(mergedVcfs.stream().filter(isSv).findFirst().get().getFileName());
-			variantBamJobGenerator.setIndelVcf(mergedVcfs.stream().filter(isIndel).findFirst().get().getFileName());
-			
+			if (bamType == BAMType.tumour)
+			{
+				variantBamJobGenerator.setTumourAliquotID(tumourID);
+				variantBamJobGenerator.setSnvVcf(mergedVcfs.stream().filter(isSnv).findFirst().get().getFileName());
+				variantBamJobGenerator.setSvVcf(mergedVcfs.stream().filter(isSv).findFirst().get().getFileName());
+				variantBamJobGenerator.setIndelVcf(mergedVcfs.stream().filter(isIndel).findFirst().get().getFileName());
+			}
+			else
+			{
+				variantBamJobGenerator.setSnvVcf(mergedVcfsForNormalVariantBam.stream().filter(isSnv).findFirst().get().getFileName());
+				variantBamJobGenerator.setSvVcf(mergedVcfsForNormalVariantBam.stream().filter(isSv).findFirst().get().getFileName());
+				variantBamJobGenerator.setIndelVcf(mergedVcfsForNormalVariantBam.stream().filter(isIndel).findFirst().get().getFileName());	
+			}
 			UpdateBamForUpload<String, String> updateFilesForUpload = (path, id) -> {
 				if (id==null || id.trim().equals(""))
 				{
@@ -507,9 +536,16 @@ public class OxoGWrapperWorkflow extends BaseOxoGWrapperWorkflow {
 			}
 			List<Job> combineVCFJobs = new ArrayList<Job>(this.tumours.size());
 			for (int i =0; i< this.tumours.size(); i++)
-			{		
+			{	
 				Job combineVCFsByType = this.combineVCFsByType(this.tumours.get(i).getAliquotID(), preprocessIndelsJobs.toArray(new Job[preprocessIndelsJobs.size()]) );
 				combineVCFJobs.add(combineVCFsByType);
+			}
+			//In a multi-tumour situation, a separate set of merged VCFs needs to be created.
+			//These merged VCFs are a merge across all tumours so that the Normal minibam contains sites in all tumours.
+			if (this.tumourCount > 1)
+			{
+				Job j = this.combineVCFsByType(preprocessIndelsJobs.toArray(new Job[preprocessIndelsJobs.size()]));
+				combineVCFJobs.add(j);
 			}
 			
 			List<Job> oxogJobs = new ArrayList<Job>(this.tumours.size());
