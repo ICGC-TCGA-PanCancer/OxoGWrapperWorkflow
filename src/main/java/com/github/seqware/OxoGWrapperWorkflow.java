@@ -151,26 +151,6 @@ public class OxoGWrapperWorkflow extends BaseOxoGWrapperWorkflow {
 		return preProcess;
 	}
 	
-//	/**
-//	 * This will combine VCFs from different workflows by the same type, on a per-tumour basis. All INDELs will be combined into a new output file,
-//	 * all SVs will be combined into a new file, all SNVs will be combined into a new file.
-//	 * @param tumourAliquotID - the aliquot ID of the tumour of which the VCFs will be combined.
-//	 * @param parents - Parent jobs.
-//	 * @return
-//	 */
-//	private Job combineVCFsByType(String tumourAliquotID, Job ... parents)
-//	{
-//		
-//		PreprocessJobGenerator generator = new PreprocessJobGenerator(this.JSONlocation, this.JSONrepo, this.JSONfolderName, this.JSONfileName);
-//		generator.setTumourAliquotID(tumourAliquotID);
-//		List<VcfInfo> nonIndels =this.vcfs.stream().filter(p -> p.getOriginatingTumourAliquotID().equals(tumourAliquotID) && isIndel.negate().test(p)).collect(Collectors.toList());
-//		List<VcfInfo> indels = this.normalizedIndels.stream().filter(p -> p.getOriginatingTumourAliquotID().equals(tumourAliquotID)).collect(Collectors.toList());
-//		Consumer<VcfInfo> updateMergedVCFs = (v) -> this.mergedVcfs.add(v);
-//		Job vcfCombineJob = generator.combineVCFsByType(this, nonIndels, indels ,updateMergedVCFs, BAMType.tumour, parents);
-//
-//		return vcfCombineJob;
-//	}
-
 	/**
 	 * Combine vcfs by from from ALL tumours. This is needed when generating the minibam for Normals BAMs in a multi-tumour scenario.  
 	 * @param parents
@@ -182,7 +162,7 @@ public class OxoGWrapperWorkflow extends BaseOxoGWrapperWorkflow {
 		List<VcfInfo> nonIndels =this.vcfs.stream().filter(p -> isIndel.negate().test(p)).collect(Collectors.toList());
 		List<VcfInfo> indels = this.normalizedIndels.stream().collect(Collectors.toList());
 		Consumer<VcfInfo> updateMergedVCFs = (v) -> this.mergedVcfs.add(v);
-		Job vcfCombineJob = generator.combineVCFsByType(this, nonIndels, indels ,updateMergedVCFs, BAMType.normal, parents);
+		Job vcfCombineJob = generator.combineVCFsByType(this, nonIndels, indels ,updateMergedVCFs, parents);
 
 		return vcfCombineJob;
 	}
@@ -527,11 +507,7 @@ public class OxoGWrapperWorkflow extends BaseOxoGWrapperWorkflow {
 				}
 			}
 			List<Job> combineVCFJobs = new ArrayList<Job>(this.tumours.size());
-//			for (int i =0; i< this.tumours.size(); i++)
-//			{	
-//				Job combineVCFsByType = this.combineVCFsByType(this.tumours.get(i).getAliquotID(), preprocessIndelsJobs.toArray(new Job[preprocessIndelsJobs.size()]) );
-//				combineVCFJobs.add(combineVCFsByType);
-//			}
+
 			//In a multi-tumour situation, a separate set of merged VCFs needs to be created.
 			//These merged VCFs are a merge across all tumours so that the Normal minibam contains sites in all tumours.
 			if (this.tumourCount > 1)

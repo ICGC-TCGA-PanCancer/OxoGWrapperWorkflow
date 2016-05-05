@@ -7,7 +7,6 @@ import java.util.Map;
 import java.util.function.Consumer;
 
 import com.github.seqware.GitUtils;
-import com.github.seqware.OxoGWrapperWorkflow.BAMType;
 import com.github.seqware.OxoGWrapperWorkflow.Pipeline;
 import com.github.seqware.OxoGWrapperWorkflow.VCFType;
 import com.github.seqware.TemplateUtils;
@@ -119,7 +118,7 @@ public class PreprocessJobGenerator extends JobGeneratorBase {
 	 * @param parents
 	 * @return
 	 */
-	public Job combineVCFsByType(AbstractWorkflowDataModel workflow, List<VcfInfo> nonIndels, List<VcfInfo> indels, Consumer<VcfInfo> updateMergedVCFs, BAMType bamType, Job ... parents)
+	public Job combineVCFsByType(AbstractWorkflowDataModel workflow, List<VcfInfo> nonIndels, List<VcfInfo> indels, Consumer<VcfInfo> updateMergedVCFs, Job ... parents)
 	{
 		HashMap<String,String> argsMap = new HashMap<>();
 		
