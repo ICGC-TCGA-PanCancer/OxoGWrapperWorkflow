@@ -16,8 +16,8 @@ for pipeline in sanger broad dkfz_embl muse; do
 		echo "----------------------------------------------------------------"
 		echo "pipeline snv vcf is: $snv_vcf"
 		OUTFILE=$(basename $snv_vcf)
-		OUTFILE=/datastore/vcf/${OUTFILE/\.vcf\.gz/.chr22.positions.txt/}
-		zcat $snv_vcf | grep ^22 | cut -f2 > $OUTFILE
+		OUTFILE=${OUTFILE/\.vcf\.gz/.chr22.positions.txt}
+		zcat $snv_vcf | grep ^22 | cut -f2 > /datastore/vcf/$OUTFILE
 	
 		while read location; do
 			echo "for location $location:"
@@ -45,6 +45,6 @@ for pipeline in sanger broad dkfz_embl muse; do
 					exit 1;
 				fi
 			done
-		done <$OUTFILE
+		done </datastore/vcf/$OUTFILE
 	done
 done
