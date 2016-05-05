@@ -77,8 +77,6 @@ public class OxoGWrapperWorkflow extends BaseOxoGWrapperWorkflow {
 	private List<VcfInfo> mergedVcfs = new ArrayList<VcfInfo>();
 	private List<VcfInfo> normalizedIndels = new ArrayList<VcfInfo>();
 
-	//private List<VcfInfo> mergedVcfsForNormalVariantBam = new ArrayList<VcfInfo>();
-	
 	/**
 	 * Copy the credentials files from ~/.gnos to /datastore/credentials
 	 * @param parentJob
@@ -562,15 +560,21 @@ public class OxoGWrapperWorkflow extends BaseOxoGWrapperWorkflow {
 				}
 			}
 
+			Job minibamSanityCheck = this.getWorkflow().createBashJob("Check minibams");
+			minibamSanityCheck.setCommand("bash "+pathToScripts+ "/check_minibams.sh");
+			variantBamJobs.stream().forEach(job -> minibamSanityCheck.addParent(job));
+			parentJobsToAnnotationJobs.add(minibamSanityCheck);
 			//set up parent jobs to annotation jobs
-			for (Job j : oxogJobs)
-			{
-				parentJobsToAnnotationJobs.add(j);
-			}
-			for (Job j : variantBamJobs)
-			{
-				parentJobsToAnnotationJobs.add(j);
-			}
+			oxogJobs.stream().forEach(job -> parentJobsToAnnotationJobs.add(job));
+//			for (Job j : oxogJobs)
+//			{
+//				parentJobsToAnnotationJobs.add(j);
+//			}
+//			variantBamJobs.stream().forEach(job -> parentJobsToAnnotationJobs.add(job));
+//			for (Job j : variantBamJobs)
+//			{
+//				parentJobsToAnnotationJobs.add(j);
+//			}
 			List<Job> annotationJobs = new ArrayList<Job>();
 			if (!this.skipAnnotation)
 			{
@@ -582,6 +586,8 @@ public class OxoGWrapperWorkflow extends BaseOxoGWrapperWorkflow {
 			Job[] parentsToUpload = (annotationJobs !=null && annotationJobs.size()>0)
 										? annotationJobs.toArray(new Job[annotationJobs.size()])
 										: parentJobsToAnnotationJobs.toArray(new Job[parentJobsToAnnotationJobs.size()]);
+			
+			
 			if (!skipUpload)
 			{
 				// indicate job is in uploading stage.
