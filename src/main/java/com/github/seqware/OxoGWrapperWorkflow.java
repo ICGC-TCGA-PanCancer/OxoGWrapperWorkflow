@@ -504,15 +504,10 @@ public class OxoGWrapperWorkflow extends BaseOxoGWrapperWorkflow {
 					preprocessIndelsJobs.add(broadPreprocessVCF);
 				}
 			}
+			//TODO: This probably doesn't need to be a list anymore.
 			List<Job> combineVCFJobs = new ArrayList<Job>(this.tumours.size());
-
-			//In a multi-tumour situation, a separate set of merged VCFs needs to be created.
-			//These merged VCFs are a merge across all tumours so that the Normal minibam contains sites in all tumours.
-			if (this.tumourCount > 1)
-			{
-				Job j = this.combineVCFsByType(preprocessIndelsJobs.toArray(new Job[preprocessIndelsJobs.size()]));
-				combineVCFJobs.add(j);
-			}
+			Job combineVCFJob = this.combineVCFsByType(preprocessIndelsJobs.toArray(new Job[preprocessIndelsJobs.size()]));
+			combineVCFJobs.add(combineVCFJob);
 			
 			List<Job> oxogJobs = new ArrayList<Job>(this.tumours.size());
 			for (int i = 0 ; i < this.tumours.size(); i++)
@@ -564,17 +559,9 @@ public class OxoGWrapperWorkflow extends BaseOxoGWrapperWorkflow {
 			minibamSanityCheck.setCommand("bash "+pathToScripts+ "/check_minibams.sh");
 			variantBamJobs.stream().forEach(job -> minibamSanityCheck.addParent(job));
 			parentJobsToAnnotationJobs.add(minibamSanityCheck);
+
 			//set up parent jobs to annotation jobs
 			oxogJobs.stream().forEach(job -> parentJobsToAnnotationJobs.add(job));
-//			for (Job j : oxogJobs)
-//			{
-//				parentJobsToAnnotationJobs.add(j);
-//			}
-//			variantBamJobs.stream().forEach(job -> parentJobsToAnnotationJobs.add(job));
-//			for (Job j : variantBamJobs)
-//			{
-//				parentJobsToAnnotationJobs.add(j);
-//			}
 			List<Job> annotationJobs = new ArrayList<Job>();
 			if (!this.skipAnnotation)
 			{
