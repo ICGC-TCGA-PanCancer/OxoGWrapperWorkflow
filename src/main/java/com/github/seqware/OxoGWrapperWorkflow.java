@@ -76,7 +76,7 @@ public class OxoGWrapperWorkflow extends BaseOxoGWrapperWorkflow {
 	private List<VcfInfo> extractedSnvsFromIndels = new ArrayList<VcfInfo>();
 	private List<VcfInfo> mergedVcfs = new ArrayList<VcfInfo>();
 	private List<VcfInfo> normalizedIndels = new ArrayList<VcfInfo>();
-	
+
 	/**
 	 * Copy the credentials files from ~/.gnos to /datastore/credentials
 	 * @param parentJob
@@ -150,24 +150,22 @@ public class OxoGWrapperWorkflow extends BaseOxoGWrapperWorkflow {
 	}
 	
 	/**
-	 * This will combine VCFs from different workflows by the same type. All INDELs will be combined into a new output file,
-	 * all SVs will be combined into a new file, all SNVs will be combined into a new file. 
+	 * Combine vcfs by from from ALL tumours. This is needed when generating the minibam for Normals BAMs in a multi-tumour scenario.  
 	 * @param parents
 	 * @return
 	 */
-	private Job combineVCFsByType(String tumourAliquotID, Job ... parents)
+	private Job combineVCFsByType(Job ... parents)
 	{
-		
 		PreprocessJobGenerator generator = new PreprocessJobGenerator(this.JSONlocation, this.JSONrepo, this.JSONfolderName, this.JSONfileName);
-		generator.setTumourAliquotID(tumourAliquotID);
-		List<VcfInfo> nonIndels =this.vcfs.stream().filter(p -> p.getOriginatingTumourAliquotID().equals(tumourAliquotID) && isIndel.negate().test(p)).collect(Collectors.toList());
-		List<VcfInfo> indels = this.normalizedIndels.stream().filter(p -> p.getOriginatingTumourAliquotID().equals(tumourAliquotID)).collect(Collectors.toList());
+		List<VcfInfo> nonIndels =this.vcfs.stream().filter(p -> isIndel.negate().test(p)).collect(Collectors.toList());
+		List<VcfInfo> indels = this.normalizedIndels.stream().collect(Collectors.toList());
 		Consumer<VcfInfo> updateMergedVCFs = (v) -> this.mergedVcfs.add(v);
 		Job vcfCombineJob = generator.combineVCFsByType(this, nonIndels, indels ,updateMergedVCFs, parents);
 
 		return vcfCombineJob;
 	}
 
+	
 	private String getVcfName(Predicate<? super VcfInfo> vcfPredicate, List<VcfInfo> vcfList) {
 		if (this.allowMissingFiles)
 		{
@@ -282,6 +280,7 @@ public class OxoGWrapperWorkflow extends BaseOxoGWrapperWorkflow {
 			variantBamJobGenerator.setSnvPadding(String.valueOf(this.snvPadding));
 			variantBamJobGenerator.setSvPadding(String.valueOf(this.svPadding));
 			variantBamJobGenerator.setGitMoveTestMode(this.gitMoveTestMode);
+
 			variantBamJobGenerator.setTumourAliquotID(tumourID);
 			variantBamJobGenerator.setSnvVcf(mergedVcfs.stream().filter(isSnv).findFirst().get().getFileName());
 			variantBamJobGenerator.setSvVcf(mergedVcfs.stream().filter(isSv).findFirst().get().getFileName());
@@ -505,12 +504,10 @@ public class OxoGWrapperWorkflow extends BaseOxoGWrapperWorkflow {
 					preprocessIndelsJobs.add(broadPreprocessVCF);
 				}
 			}
+			//TODO: This probably doesn't need to be a list anymore.
 			List<Job> combineVCFJobs = new ArrayList<Job>(this.tumours.size());
-			for (int i =0; i< this.tumours.size(); i++)
-			{		
-				Job combineVCFsByType = this.combineVCFsByType(this.tumours.get(i).getAliquotID(), preprocessIndelsJobs.toArray(new Job[preprocessIndelsJobs.size()]) );
-				combineVCFJobs.add(combineVCFsByType);
-			}
+			Job combineVCFJob = this.combineVCFsByType(preprocessIndelsJobs.toArray(new Job[preprocessIndelsJobs.size()]));
+			combineVCFJobs.add(combineVCFJob);
 			
 			List<Job> oxogJobs = new ArrayList<Job>(this.tumours.size());
 			for (int i = 0 ; i < this.tumours.size(); i++)
@@ -558,15 +555,13 @@ public class OxoGWrapperWorkflow extends BaseOxoGWrapperWorkflow {
 				}
 			}
 
+			Job minibamSanityCheck = this.getWorkflow().createBashJob("Check minibams");
+			minibamSanityCheck.setCommand("bash "+pathToScripts+ "/check_minibams.sh");
+			variantBamJobs.stream().forEach(job -> minibamSanityCheck.addParent(job));
+			parentJobsToAnnotationJobs.add(minibamSanityCheck);
+
 			//set up parent jobs to annotation jobs
-			for (Job j : oxogJobs)
-			{
-				parentJobsToAnnotationJobs.add(j);
-			}
-			for (Job j : variantBamJobs)
-			{
-				parentJobsToAnnotationJobs.add(j);
-			}
+			oxogJobs.stream().forEach(job -> parentJobsToAnnotationJobs.add(job));
 			List<Job> annotationJobs = new ArrayList<Job>();
 			if (!this.skipAnnotation)
 			{
@@ -578,6 +573,8 @@ public class OxoGWrapperWorkflow extends BaseOxoGWrapperWorkflow {
 			Job[] parentsToUpload = (annotationJobs !=null && annotationJobs.size()>0)
 										? annotationJobs.toArray(new Job[annotationJobs.size()])
 										: parentJobsToAnnotationJobs.toArray(new Job[parentJobsToAnnotationJobs.size()]);
+			
+			
 			if (!skipUpload)
 			{
 				// indicate job is in uploading stage.
