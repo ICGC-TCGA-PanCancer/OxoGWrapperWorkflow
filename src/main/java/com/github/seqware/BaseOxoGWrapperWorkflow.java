@@ -15,7 +15,6 @@ import net.sourceforge.seqware.pipeline.workflowV2.AbstractWorkflowDataModel;
 
 public abstract class BaseOxoGWrapperWorkflow extends AbstractWorkflowDataModel {
 	
-	//ugh... so many fields. There's probably a better way to do this, just no time right now.
 	protected String oxoQScore = "";
 	protected String donorID;
 	protected String specimenID;
@@ -64,19 +63,18 @@ public abstract class BaseOxoGWrapperWorkflow extends AbstractWorkflowDataModel 
 	
 	//Path to reference file usd for normalization, *relative* to /refdata/
 	protected String refFile = "public/Homo_sapiens_assembly19.fasta";
-	//protected String tumourBamGnosID;
+
 	protected String normalBamGnosID;
 	protected String uploadKey;
 	protected String gnosKey;
 	
-	//These two variables can be used to skip running OxoG and variant bam, in case they have already been run.
+	//These variables can be used to skip running OxoG, Variant bam, and Annotation, in case they have already been run.
 	//Intended to speed up testing by skipping these steps when results already exist.
 	protected boolean skipOxoG = false;
 	protected boolean skipVariantBam = false;
 	protected boolean skipAnnotation = false;
 	
 	protected String normalMinibamPath;
-	//protected String tumourMinibamPath;
 	
 	protected String gnosMetadataUploadURL = "https://gtrepo-osdc-icgc.annailabs.com";
 	
@@ -226,8 +224,7 @@ public abstract class BaseOxoGWrapperWorkflow extends AbstractWorkflowDataModel 
 					{
 						if (p == Pipeline.muse && v != VCFType.snv)
 						{
-							//break out to the next element in VCFType.values
-							//break;
+							//do nothing when MUSE and non-SNV, because MUSE will ONLY have SNV.
 						}
 						else
 						{

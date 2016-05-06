@@ -40,7 +40,7 @@ To produce a full SeqWare bundle:
 
 ```
 	docker run --rm -v /datastore/:/datastore/ \
-		-v /workflows/Workflow_Bundle_OxoGWrapper_2.0.3_SeqWare_1.1.2/:/workflow/ \
+		-v /workflows/Workflow_Bundle_OxoGWrapper_2.0.4_SeqWare_1.1.2/:/workflow/ \
 		-v /var/run/docker.sock:/var/run/docker.sock \
 		-v /home/ubuntu/.gnos/:/home/ubuntu/.gnos/ \
 		-v /home/ubuntu/SomeIniFile.INI:/ini \
@@ -77,7 +77,7 @@ Populating such an INI file is a lot of work and since most of the necessary inf
 you can use the INIGenerator to produce an INI for you. It works like this:
 
 ```
-cd /workflows/Workflow_Bundle_OxoGWrapper_2.0.3_SeqWare_1.1.2/Workflow_Bundle_OxoGWrapper/2.0.3/
+cd /workflows/Workflow_Bundle_OxoGWrapper_2.0.4_SeqWare_1.1.2/Workflow_Bundle_OxoGWrapper/2.0.4/
 java -cp ./classes:./bin com.github.seqware.INIGenerator ~/BTCA-SG.BTCA_donor_A153.json
 ```
 

@@ -13,7 +13,7 @@
 		set -x
 		docker run --rm --name="oxog_filter_with_tumour_{{ tumourID }}" \
 				-v /refdata/:/cga/fh/pcawg_pipeline/refdata/ \
-				-v /datastore/oxog_workspace/tumour_{{ tumourID }}/:/cga/fh/pcawg_pipeline/jobResults_pipette/jobs/{{ aliquotID }}/:rw \
+				-v /datastore/oxog_workspace/tumour_{{ tumourID }}/:/cga/fh/pcawg_pipeline/jobResults_pipette/jobs/{{ tumourID }}/:rw \
 				-v /datastore/bam/:/datafiles/BAM/ \
 				-v /datastore/vcf/{{ broadWorkflow }}/{{ broadGnosID }}/:/datafiles/VCF/{{ broadWorkflow }}/ \
 				-v /datastore/vcf/{{ sangerWorkflow }}/{{ sangerGnosID}}/:/datafiles/VCF/{{ sangerWorkflow }}/ \
@@ -23,7 +23,7 @@
 				-v /datastore/oxog_results/tumour_{{ tumourID }}/:/cga/fh/pcawg_pipeline/jobResults_pipette/results:rw \
 			oxog:160428 /bin/bash -c "
 				/cga/fh/pcawg_pipeline/pipelines/run_one_pipeline.bash pcawg /cga/fh/pcawg_pipeline/pipelines/oxog_pipeline.py \
-						{{ aliquotID }} \
+						{{ tumourID }} \
 						/datafiles/BAM/tumour/{{ pathToTumour }} \
 						/datafiles/BAM/normal/{{ normalBamGnosID }}/{{ normalBAMFileName }} \
  						{{ oxoQScore }} \
@@ -33,7 +33,7 @@
 	) || echo "OxoG Exit Code: $?" 
 )
 
-(cd /datastore/oxog_results/tumour_{{ tumourID }}/ && sudo chmod a+rw -R /datastore/oxog_results/ && tar -xvkf ./{{ aliquotID }}.gnos_files.tar  )
+(cd /datastore/oxog_results/tumour_{{ tumourID }}/ && sudo chmod a+rw -R /datastore/oxog_results/ && tar -xvkf ./{{ tumourID }}.gnos_files.tar  )
 
 
 ( ([ -d {{ pathToUploadDir }} ] || mkdir -p {{ pathToUploadDir }}) \
@@ -41,8 +41,8 @@
 	&& cp {{ pathToResults }}/*.vcf.gz.tbi   {{ pathToUploadDir }} \
 	&& cp /datastore/vcf/*/*bcftools-norm.vcf.gz  {{ pathToUploadDir }} \
 	&& cp /datastore/vcf/*/*bcftools-norm.vcf.gz.tbi  {{ pathToUploadDir }} \
-	&& cp /datastore/oxog_workspace/tumour_{{ tumourID }}/mutect/sg/gather/{{ aliquotID }}.call_stats.txt  {{ pathToUploadDir }}/{{ aliquotID }}.call_stats_tumour_{{ tumourID }}.txt \
-	&& cp /datastore/oxog_results/tumour_{{ tumourID }}/{{ aliquotID }}.gnos_files.tar {{ pathToUploadDir }}/{{ aliquotID }}.gnos_files_tumour_{{ tumourID }}.tar \
+	&& cp /datastore/oxog_workspace/tumour_{{ tumourID }}/mutect/sg/gather/{{ tumourID }}.call_stats.txt  {{ pathToUploadDir }}/{{ tumourID }}.call_stats.txt \
+	&& cp /datastore/oxog_results/tumour_{{ tumourID }}/{{ tumourID }}.gnos_files.tar {{ pathToUploadDir }}/{{ tumourID }}.gnos_files.tar \
 	&& cd {{ pathToUploadDir }} \
-	&& gzip -f {{ aliquotID }}.call_stats_tumour_{{ tumourID }}.txt \
-	&& tar -cvf ./{{ aliquotID }}.call_stats_tumour_{{ tumourID }}.txt.gz.tar ./{{ aliquotID }}.call_stats_tumour_{{ tumourID }}.txt.gz )  
+	&& gzip -f {{ tumourID }}.call_stats.txt \
+	&& tar -cvf ./{{ tumourID }}.call_stats.txt.gz.tar ./{{ tumourID }}.call_stats.txt.gz )  
