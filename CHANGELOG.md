@@ -1,5 +1,8 @@
 # CHANGELOG
 
+## 2.0.4
+ - Fix: In situations with multiple tumours, the merged VCFs did not contain data from all tumours, they were only the merge across pipelines of each tumour. This has been corrected: there will now be a single set of merged VCFs which are a merge-by-type across all pipelines across all tumours. 
+
 ## 2.0.3
  - Changes to the OxoG docker image from Dimitri. This is supposed to fix the OxoG MAF issues. New image name is "oxog:160428".
 
