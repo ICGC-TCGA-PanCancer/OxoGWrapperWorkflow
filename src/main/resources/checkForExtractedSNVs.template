@@ -1,5 +1,5 @@
 		if (( $(zcat {{ extractedSNVVCFPath }} | grep "^[^#]" | wc -l) > 0 )) ; then
 			echo "{{ extractedSNVVCFPath }} has SNVs."
-			EXTRACTED_SNV_MOUNT=" ${EXTRACTED_SNV_MOUNT} -v  {{ extractedSNVVCFPath }}:/datafiles/VCF/{{ worfklow }}/{{ extractedSNVVCF }} "
+			EXTRACTED_SNV_MOUNT=" ${EXTRACTED_SNV_MOUNT} -v  {{ extractedSNVVCFPath }}:/datafiles/VCF/{{ workflow }}/{{ extractedSNVVCF }} "
 			EXTRACTED_SNV_FILES=" ${EXTRACTED_SNV_FILES} /datafiles/VCF/{{ workflow }}/{{ extractedSNVVCF }} "
 		fi
