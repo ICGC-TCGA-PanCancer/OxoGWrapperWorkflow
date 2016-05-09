@@ -68,7 +68,7 @@ public class OxoGJobGenerator extends JobGeneratorBase {
 			if (!this.allowMissingFiles || (this.allowMissingFiles && vcf!=null && vcf.trim().length()>0))
 			{
 					return TemplateUtils.getRenderedTemplate(Arrays.stream(new String[][]{
-						{ "extractedSNVVCF", vcf.replaceAll("/datastore/vcf/[^/]+/", "")}, { "worfklow", pipeline.toString() }, {"extractedSNVVCFPath",vcf }
+						{ "extractedSNVVCF", vcf.replaceAll("/datastore/vcf/[^/]+/", "")}, { "workflow", pipeline.toString() }, {"extractedSNVVCFPath",vcf }
 					}).collect(this.collectToMap),"checkForExtractedSNVs.template");
 			}
 			else
