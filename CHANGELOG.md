@@ -1,5 +1,8 @@
 # CHANGELOG
 
+## 2.0.5
+ - Fixed a bug that would have cause the workflow to crash in the case that there were SNVs extracted from an INDEL VCF. 
+
 ## 2.0.4
  - Fixes:
  	- In situations with multiple tumours, the merged VCFs did not contain data from all tumours, they were only the merge across pipelines of each tumour. This has been corrected: there will now be a single set of merged VCFs which are a merge-by-type across all pipelines across all tumours.
