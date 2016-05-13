@@ -22,20 +22,20 @@ This is Jonathan Dursi's Annotator. See:
  - https://hub.docker.com/r/ljdursi/pcawg-annotate/ 
  - https://github.com/ljdursi/sga-annotate-docker
 
-## Building
+## Building a SeqWare bundle.
 
 This command will just compile and package the Java portion of the workflow:
 
     mvn clean package
 
-To produce a full SeqWare bundle:
+To produce a full SeqWare bundle, you will need to use SeqWare:
 
 	seqware bundle package --dir target/Workflow_Bundle_OxoGWrapper_*_SeqWare_1.1.2
 
 #### Usage
 
 1. Ensure that you have a valid download credetial files in `~/.gnos`. For more details, see the sections on [download methods](#download-methods). 
-2. Ensure that you have a valid git pem file in `~/.gnos`.
+2. Ensure that you have a valid git pem file in `~/.gnos`. See here, for more details: https://help.github.com/articles/generating-an-ssh-key/
 3. Call the workflow like this:
 
 ```
@@ -59,7 +59,7 @@ This will build a new image which contains the workflow as a SeqWare bundle:
 #### Usage
 
 1. Ensure that you have a valid download credetial files in `~/.gnos`. For more details, see the sections on [download methods](#download-methods).
-2. Ensure that you have a valid git pem file in `~/.gnos`.
+2. Ensure that you have a valid git pem file in `~/.gnos`. See here, for more details: https://help.github.com/articles/generating-an-ssh-key/
 3. Call the workflow like this (note: you do not have to mount the workflows directory in this case, because the workflow is already inside the container):
 
 ```
