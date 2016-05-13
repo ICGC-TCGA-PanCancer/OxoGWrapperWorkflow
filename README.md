@@ -108,7 +108,7 @@ There are three tools that this workflow can download files:
 #### icgc-storage-client
 This is the **default** download method.
 To use this download method, specify `downloadMethod=icgcStorageClient` in the INI file.
-You must have a `collab.token` file that is in the `~/.gnos` directory of the machine that will run the workflow.
+You must have a `collab.token` file that is in the `~/.gnos` directory of the machine that will run the workflow. To learn more about using the icgc-storage-client, see here: http://docs.icgc.org/cloud/guide/#storage-client-usage
 
 #### gtdownload
 This will use the gtdownload tool, as found in the docker container `pancancer/pancancer_upload_download`.
