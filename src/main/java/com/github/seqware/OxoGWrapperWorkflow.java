@@ -556,7 +556,8 @@ public class OxoGWrapperWorkflow extends BaseOxoGWrapperWorkflow {
 			}
 
 			Job minibamSanityCheck = this.getWorkflow().createBashJob("Check minibams");
-			minibamSanityCheck.setCommand("bash "+pathToScripts+ "/check_minibams.sh");
+			String moveToFailed = GitUtils.gitMoveCommand("running-jobs","failed-jobs",this.JSONlocation + "/" + this.JSONrepoName + "/" + this.JSONfolderName,this.JSONfileName, this.gitMoveTestMode, this.getWorkflowBaseDir() + "/scripts/");
+			minibamSanityCheck.setCommand("(bash "+pathToScripts+ "/check_minibams.sh) || "+moveToFailed);
 			variantBamJobs.stream().forEach(job -> minibamSanityCheck.addParent(job));
 			parentJobsToAnnotationJobs.add(minibamSanityCheck);
 
