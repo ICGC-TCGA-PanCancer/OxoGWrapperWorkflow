@@ -7,9 +7,9 @@ for pipeline in sanger broad dkfz_embl muse; do
 	
 	SNV_PATTERN=""
 	if [ "$pipeline" == "muse" ] ; then
-		SNV_PATTERN="/datastore/vcf/$pipeline/*/*snv*vcf.gz"
+		SNV_PATTERN="/datastore/vcf/$pipeline/*/*somatic.snv*vcf.gz"
 	else
-		SNV_PATTERN="/datastore/vcf/$pipeline/*/*snv*pass-filtered*vcf.gz"
+		SNV_PATTERN="/datastore/vcf/$pipeline/*/*somatic.snv*pass-filtered*vcf.gz"
 	fi
 
 	for snv_vcf in $(ls $SNV_PATTERN); do

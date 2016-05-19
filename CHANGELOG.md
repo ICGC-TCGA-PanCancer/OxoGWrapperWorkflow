@@ -1,5 +1,9 @@
 # CHANGELOG
 
+## 2.0.6
+ - Bug fix: the check_minibam script was checking germline files which caused it to fail. This is only a problem when using gtdownload to download files because the other download methods download only the necessary files, but gtdownload downloads the complete fileset including germline files.
+ - Bug fix: move the JSON file to the failed-jobs directory if the check_minibam script fails.
+
 ## 2.0.5
  - Fixed a bug that would have cause the workflow to crash in the case that there were SNVs extracted from an INDEL VCF. 
 

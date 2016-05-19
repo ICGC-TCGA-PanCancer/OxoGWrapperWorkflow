@@ -22,25 +22,25 @@ This is Jonathan Dursi's Annotator. See:
  - https://hub.docker.com/r/ljdursi/pcawg-annotate/ 
  - https://github.com/ljdursi/sga-annotate-docker
 
-## Building
+## Building a SeqWare bundle.
 
 This command will just compile and package the Java portion of the workflow:
 
     mvn clean package
 
-To produce a full SeqWare bundle:
+To produce a full SeqWare bundle, you will need to use SeqWare:
 
 	seqware bundle package --dir target/Workflow_Bundle_OxoGWrapper_*_SeqWare_1.1.2
 
 #### Usage
 
 1. Ensure that you have a valid download credetial files in `~/.gnos`. For more details, see the sections on [download methods](#download-methods). 
-2. Ensure that you have a valid git pem file in `~/.gnos`.
+2. Ensure that you have a valid git pem file in `~/.gnos`. See here, for more details: https://help.github.com/articles/generating-an-ssh-key/
 3. Call the workflow like this:
 
 ```
 	docker run --rm -v /datastore/:/datastore/ \
-		-v /workflows/Workflow_Bundle_OxoGWrapper_2.0.5_SeqWare_1.1.2/:/workflow/ \
+		-v /workflows/Workflow_Bundle_OxoGWrapper_2.0.6_SeqWare_1.1.2/:/workflow/ \
 		-v /var/run/docker.sock:/var/run/docker.sock \
 		-v /home/ubuntu/.gnos/:/home/ubuntu/.gnos/ \
 		-v /home/ubuntu/SomeIniFile.INI:/ini \
@@ -59,7 +59,7 @@ This will build a new image which contains the workflow as a SeqWare bundle:
 #### Usage
 
 1. Ensure that you have a valid download credetial files in `~/.gnos`. For more details, see the sections on [download methods](#download-methods).
-2. Ensure that you have a valid git pem file in `~/.gnos`.
+2. Ensure that you have a valid git pem file in `~/.gnos`. See here, for more details: https://help.github.com/articles/generating-an-ssh-key/
 3. Call the workflow like this (note: you do not have to mount the workflows directory in this case, because the workflow is already inside the container):
 
 ```
@@ -77,7 +77,7 @@ Populating such an INI file is a lot of work and since most of the necessary inf
 you can use the INIGenerator to produce an INI for you. It works like this:
 
 ```
-cd /workflows/Workflow_Bundle_OxoGWrapper_2.0.5_SeqWare_1.1.2/Workflow_Bundle_OxoGWrapper/2.0.5/
+cd /workflows/Workflow_Bundle_OxoGWrapper_2.0.6_SeqWare_1.1.2/Workflow_Bundle_OxoGWrapper/2.0.6/
 java -cp ./classes:./bin com.github.seqware.INIGenerator ~/BTCA-SG.BTCA_donor_A153.json
 ```
 
@@ -108,7 +108,7 @@ There are three tools that this workflow can download files:
 #### icgc-storage-client
 This is the **default** download method.
 To use this download method, specify `downloadMethod=icgcStorageClient` in the INI file.
-You must have a `collab.token` file that is in the `~/.gnos` directory of the machine that will run the workflow.
+You must have a `collab.token` file that is in the `~/.gnos` directory of the machine that will run the workflow. To learn more about using the icgc-storage-client, see here: http://docs.icgc.org/cloud/guide/#storage-client-usage
 
 #### gtdownload
 This will use the gtdownload tool, as found in the docker container `pancancer/pancancer_upload_download`.
