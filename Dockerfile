@@ -1,7 +1,7 @@
 FROM pancancer/seqware_whitestar_pancancer:1.1.2-actual-java8
 MAINTAINER Solomon Shorser <solomon.shorser@oicr.on.ca>
 
-ENV OXOG_WRAPPER_IMAGE_VERSION 2.0.5
+ENV OXOG_WRAPPER_IMAGE_VERSION 2.0.6
 LABEL OXOG_WRAPPER_IMAGE_VERSION $OXOG_WRAPPER_IMAGE_VERSION
 # For the storage client.
 ENV STORAGE_PROFILE=collab
