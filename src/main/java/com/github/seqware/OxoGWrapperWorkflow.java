@@ -289,7 +289,13 @@ public class OxoGWrapperWorkflow extends BaseOxoGWrapperWorkflow {
 			UpdateBamForUpload<String, String> updateFilesForUpload = (path, id) -> {
 				if (id==null || id.trim().equals(""))
 				{
-					this.normalMinibamPath = path;
+					//only update the normalMinibamPath with the path to the actual BAM.
+					//If you get a .bai file here, add it to filesForUpload,
+					//but don't do anything else.
+					if (path.endsWith(".bam"))
+					{
+						this.normalMinibamPath = path;
+					}
 					this.filesForUpload.add(path);
 				}
 				else
@@ -298,7 +304,13 @@ public class OxoGWrapperWorkflow extends BaseOxoGWrapperWorkflow {
 					{
 						if (tInfo.getAliquotID().equals(id))
 						{
-							tInfo.setTumourMinibamPath(path);
+							//Set the tumour minibam path only to the BAM file.
+							//If you get a .bai file here, add it to filesForUpload,
+							//but don't do anything else.
+							if (path.endsWith(".bam"))
+							{
+								tInfo.setTumourMinibamPath(path);
+							}
 							filesForUpload.add(path);
 						}
 					}
