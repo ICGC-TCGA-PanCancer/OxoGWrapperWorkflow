@@ -70,7 +70,7 @@ public class OxoGWrapperWorkflow extends BaseOxoGWrapperWorkflow {
 	
 	public enum DownloadMethod
 	{
-		gtdownload, icgcStorageClient, s3
+		gtdownload, icgcStorageClient, s3, filesystemCopy
 	}
 	
 	private List<VcfInfo> extractedSnvsFromIndels = new ArrayList<VcfInfo>();

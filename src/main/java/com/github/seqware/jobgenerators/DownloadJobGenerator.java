@@ -18,6 +18,7 @@ import com.github.seqware.OxoGWrapperWorkflow.BAMType;
 import com.github.seqware.OxoGWrapperWorkflow.DownloadMethod;
 import com.github.seqware.OxoGWrapperWorkflow.Pipeline;
 import com.github.seqware.downloaders.DownloaderBuilder;
+import com.github.seqware.downloaders.FileSystemDownloader;
 import com.github.seqware.downloaders.GNOSDownloader;
 import com.github.seqware.downloaders.ICGCStorageDownloader;
 import com.github.seqware.downloaders.S3Downloader;
@@ -45,16 +46,18 @@ public class DownloadJobGenerator extends JobGeneratorBase {
 	private Map<String,String> workflowNamestoGnosIds;
 	private Map<String,String> objectToFilenames;
 
-	private String getFileCommandString(DownloadMethod downloadMethod, String outDir, String downloadType, String storageSource, String downloadKey, String ... objectIDs  )
+	private String getFileCommandString(DownloadMethod downloadMethod, String outDir, String workflowName, String storageSource, String downloadKey, String ... objectIDs  )
 	{
 		switch (downloadMethod)
 		{
 			case icgcStorageClient:
-				return ( DownloaderBuilder.of(ICGCStorageDownloader::new).with(ICGCStorageDownloader::setStorageSource, storageSource).build() ).getDownloadCommandString(outDir, downloadType, objectIDs);
+				return ( DownloaderBuilder.of(ICGCStorageDownloader::new).with(ICGCStorageDownloader::setStorageSource, storageSource).build() ).getDownloadCommandString(outDir, workflowName, objectIDs);
 			case gtdownload:
-				return ( DownloaderBuilder.of(GNOSDownloader::new).with(GNOSDownloader::setDownloadKey, downloadKey).build() ).getDownloadCommandString(outDir, downloadType, objectIDs);
+				return ( DownloaderBuilder.of(GNOSDownloader::new).with(GNOSDownloader::setDownloadKey, downloadKey).build() ).getDownloadCommandString(outDir, workflowName, objectIDs);
 			case s3:
-				return ( DownloaderBuilder.of(S3Downloader::new).build() ).getDownloadCommandString(outDir, downloadType, objectIDs);
+				return ( DownloaderBuilder.of(S3Downloader::new).build() ).getDownloadCommandString(outDir, workflowName, objectIDs);
+			case filesystemCopy:
+				return ( DownloaderBuilder.of(FileSystemDownloader::new).build() ).getDownloadCommandString(outDir, workflowName, objectIDs);
 			default:
 				throw new RuntimeException("Unknown downloadMethod: "+downloadMethod.toString());
 		}
