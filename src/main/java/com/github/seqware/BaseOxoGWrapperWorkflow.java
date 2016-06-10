@@ -6,6 +6,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.function.BiConsumer;
 import java.util.function.Function;
+import java.util.stream.Collectors;
 
 import com.github.seqware.OxoGWrapperWorkflow.DownloadMethod;
 import com.github.seqware.OxoGWrapperWorkflow.Pipeline;
@@ -56,6 +57,7 @@ public abstract class BaseOxoGWrapperWorkflow extends AbstractWorkflowDataModel 
 	protected String broadGnosID;
 	protected String dkfzemblGnosID;
 	protected String museGnosID;
+	//NOTE: smufin does not have GNOS IDs.
 	
 	//This could be used implement a sort of local-file mode. For now, it's just used to speed up testing.
 	protected boolean skipDownload = false;
@@ -183,15 +185,62 @@ public abstract class BaseOxoGWrapperWorkflow extends AbstractWorkflowDataModel 
 		} ;
 
 		try {
-			if (hasPropertyAndNotNull("vcfDownloadMethod")) {
-				this.vcfDownloadMethod = getProperty("vcfDownloadMethod");
+			if (hasPropertyAndNotNull("skipDownload")) {
+				this.skipDownload = Boolean.valueOf(getProperty("skipDownload"));
 			}
+			
+			if (hasPropertyAndNotNull("skipUpload")) {
+				this.skipUpload = Boolean.valueOf(getProperty("skipUpload"));
+			}
+			
+			if (hasPropertyAndNotNull("skipOxoG")) {
+				this.skipOxoG = Boolean.valueOf(getProperty("skipOxoG"));
+			}
+			
+			if (hasPropertyAndNotNull("skipVariantBam")) {
+				this.skipVariantBam = Boolean.valueOf(getProperty("skipVariantBam"));
+			}
+			
+			if (hasPropertyAndNotNull("skipAnnotation")) {
+				this.skipAnnotation = Boolean.valueOf(getProperty("skipAnnotation"));
+			}
+			
+			//First we'll check to see if we have Pipeline-specific download methods
+			//If we don't then all VCF will use the same method.
+			for (Pipeline p : Pipeline.values())
+			{
+				if (hasPropertyAndNotNull(p.toString()+"DownloadMethod")) {
+					this.pipelineDownloadMethods.put(p, DownloadMethod.valueOf(getMandatoryProperty(p.toString()+"DownloadMethod")));
+				}
+				else
+				{
+					// If no download method is defined for a pipeline, we'll set it to null and fill it in later.
+					this.pipelineDownloadMethods.put(p, null);	
+				}
+			}
+
+			
+			//This can be used to fill in gaps where a pipeline-specific value was not given.
+			if (hasPropertyAndNotNull("vcfDownloadMethod")) {
+				this.vcfDownloadMethod = getMandatoryProperty("vcfDownloadMethod");
+				// set any pipeline download method to the defaule of vcfDownloadMethod
+				for (Pipeline p : this.pipelineDownloadMethods.keySet().stream().filter(k -> this.pipelineDownloadMethods.get(k) == null).collect(Collectors.toList()))
+				{
+					this.pipelineDownloadMethods.put(p, DownloadMethod.valueOf(this.vcfDownloadMethod));
+				}
+			}
+			//If the user has set a separate BAM download method, use that. Otherwise, use the same as for VCF.
 			if (hasPropertyAndNotNull("bamDownloadMethod")) {
-				this.bamDownloadMethod = getProperty("bamDownloadMethod");
+				this.bamDownloadMethod = getMandatoryProperty("bamDownloadMethod");
 			}
 			else
 			{
 				this.bamDownloadMethod = this.vcfDownloadMethod;
+			}
+			// By now, we should have everything set up with a downloadMethod. If BAM has not download method, something went wrong and the workflow should terminate.
+			if (!this.skipDownload && (this.bamDownloadMethod == null || this.bamDownloadMethod.trim().equals("")))
+			{
+				throw new RuntimeException("bamDownloadMethod is null/empty! This means that you did not set bamDownloadMethod in the INI file, or you did not set vcfDownloadMethod. At least ONE of these MUST be set.");
 			}
 			
 			this.tumourCount = Integer.valueOf(this.getMandatoryProperty(JSONUtils.TUMOUR_COUNT));
@@ -234,9 +283,11 @@ public abstract class BaseOxoGWrapperWorkflow extends AbstractWorkflowDataModel 
 				{
 					for (VCFType v : VCFType.values())
 					{
-						if (p == Pipeline.muse && v != VCFType.snv)
+						if ( (p == Pipeline.muse && v != VCFType.snv)
+							|| (p == Pipeline.smufin && v != VCFType.indel))
 						{
-							//do nothing when MUSE and non-SNV, because MUSE will ONLY have SNV.
+							// do nothing when MUSE and non-SNV OR when smufin and non-INDEL,
+							// because MUSE will ONLY have SNV, and SMuFin will only have INDEL.
 						}
 						else
 						{
@@ -264,6 +315,9 @@ public abstract class BaseOxoGWrapperWorkflow extends AbstractWorkflowDataModel 
 									break;
 								case muse:
 									vInfo.setPipelineGnosID(this.museGnosID);
+									break;
+								case smufin:
+									//smufin has no GNOS ID so don't need to do anything. 
 									break;
 							}
 							//Only add this object if there is an actual file name present.
@@ -335,26 +389,6 @@ public abstract class BaseOxoGWrapperWorkflow extends AbstractWorkflowDataModel 
 			
 			if (hasPropertyAndNotNull("refFile")) {
 				this.refFile = getProperty("refFile");
-			}
-			
-			if (hasPropertyAndNotNull("skipDownload")) {
-				this.skipDownload = Boolean.valueOf(getProperty("skipDownload"));
-			}
-			
-			if (hasPropertyAndNotNull("skipUpload")) {
-				this.skipUpload = Boolean.valueOf(getProperty("skipUpload"));
-			}
-			
-			if (hasPropertyAndNotNull("skipOxoG")) {
-				this.skipOxoG = Boolean.valueOf(getProperty("skipOxoG"));
-			}
-			
-			if (hasPropertyAndNotNull("skipVariantBam")) {
-				this.skipVariantBam = Boolean.valueOf(getProperty("skipVariantBam"));
-			}
-			
-			if (hasPropertyAndNotNull("skipAnnotation")) {
-				this.skipAnnotation = Boolean.valueOf(getProperty("skipAnnotation"));
 			}
 			
 			if (hasPropertyAndNotNull("gnosMetadataUploadURL")) {

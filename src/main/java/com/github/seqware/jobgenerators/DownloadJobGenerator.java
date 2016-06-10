@@ -46,6 +46,7 @@ public class DownloadJobGenerator extends JobGeneratorBase {
 	private List<VcfInfo> vcfs;
 	private Map<String,String> workflowNamestoGnosIds;
 	private Map<String,String> objectToFilenames;
+	private Map<Pipeline,DownloadMethod> pipelineDownloadMethods;
 
 	private String getFileCommandString(DownloadMethod downloadMethod, String outDir, String workflowName, String storageSource, String downloadKey, String ... objectIDs  )
 	{
@@ -131,7 +132,6 @@ public class DownloadJobGenerator extends JobGeneratorBase {
 		Job move2running;
 		//Download jobs. VCFs downloading serial. Trying to download all in parallel seems to put too great a strain on the system 
 		//since the icgc-storage-client can make full use of all cores on a multi-core system. 
-		DownloadMethod vcfDownloadMethod = DownloadMethod.valueOf(this.vcfDownloadMethod);
 		DownloadMethod bamDownloadMethod = DownloadMethod.valueOf(this.bamDownloadMethod);
 		
 		Function<Predicate<VcfInfo>, List<String>> buildVcfListByPredicate = (p) -> Stream.concat(
@@ -173,6 +173,7 @@ public class DownloadJobGenerator extends JobGeneratorBase {
 		
 		Function<String,List<String>> chooseObjects = (s) -> 
 		{
+			DownloadMethod vcfDownloadMethod = this.pipelineDownloadMethods.get(s);
 			switch (vcfDownloadMethod)
 			{
 				case icgcStorageClient:
@@ -196,12 +197,13 @@ public class DownloadJobGenerator extends JobGeneratorBase {
 			}
 		};
 		
-		Job downloadSangerVCFs = this.getVCF(workflow, move2download, vcfDownloadMethod, Pipeline.sanger, chooseObjects.apply( Pipeline.sanger.toString() ) );
-		Job downloadDkfzEmblVCFs = this.getVCF(workflow, downloadSangerVCFs, vcfDownloadMethod, Pipeline.dkfz_embl, chooseObjects.apply( Pipeline.dkfz_embl.toString() ) );
-		Job downloadBroadVCFs = this.getVCF(workflow, downloadDkfzEmblVCFs, vcfDownloadMethod, Pipeline.broad, chooseObjects.apply( Pipeline.broad.toString() ) );
-		Job downloadMuseVCFs = this.getVCF(workflow, downloadBroadVCFs, vcfDownloadMethod, Pipeline.muse, chooseObjects.apply( Pipeline.muse.toString() ) );
+		Job downloadSangerVCFs = this.getVCF(workflow, move2download, this.pipelineDownloadMethods.get(Pipeline.sanger), Pipeline.sanger, chooseObjects.apply( Pipeline.sanger.toString() ) );
+		Job downloadDkfzEmblVCFs = this.getVCF(workflow, downloadSangerVCFs, this.pipelineDownloadMethods.get(Pipeline.dkfz_embl), Pipeline.dkfz_embl, chooseObjects.apply( Pipeline.dkfz_embl.toString() ) );
+		Job downloadBroadVCFs = this.getVCF(workflow, downloadDkfzEmblVCFs, this.pipelineDownloadMethods.get(Pipeline.broad), Pipeline.broad, chooseObjects.apply( Pipeline.broad.toString() ) );
+		Job downloadMuseVCFs = this.getVCF(workflow, downloadBroadVCFs, this.pipelineDownloadMethods.get(Pipeline.muse), Pipeline.muse, chooseObjects.apply( Pipeline.muse.toString() ) );
+		Job downloadSmufinVCFs = this.getVCF(workflow, downloadMuseVCFs, this.pipelineDownloadMethods.get(Pipeline.smufin), Pipeline.smufin, chooseObjects.apply( Pipeline.smufin.toString() ) );
 		// Once VCFs are downloaded, download the BAMs.
-		Job downloadNormalBam = this.getBAM(workflow, downloadMuseVCFs, bamDownloadMethod, BAMType.normal, chooseObjects.apply( BAMType.normal.toString() ) );
+		Job downloadNormalBam = this.getBAM(workflow, downloadSmufinVCFs, bamDownloadMethod, BAMType.normal, chooseObjects.apply( BAMType.normal.toString() ) );
 		
 		//create a list of jobs to download all tumours.
 		List<Job> getTumourJobs = new ArrayList<Job>(this.tumours.size());
@@ -403,13 +405,11 @@ public class DownloadJobGenerator extends JobGeneratorBase {
 		this.objectToFilenames = objectToFilenames;
 	}
 
-
-	public String getBamDownloadMethod() {
-		return this.bamDownloadMethod;
-	}
-
-
 	public void setBamDownloadMethod(String bamDownloadMethod) {
 		this.bamDownloadMethod = bamDownloadMethod;
+	}
+
+	public void setPipelineDownloadMethods(Map<Pipeline,DownloadMethod> pipelineDownloadMethods) {
+		this.pipelineDownloadMethods = pipelineDownloadMethods;
 	}
 }

@@ -55,7 +55,7 @@ public class OxoGWrapperWorkflow extends BaseOxoGWrapperWorkflow {
 	 *
 	 */
 	public enum Pipeline {
-		sanger, dkfz_embl, broad, muse
+		sanger, dkfz_embl, broad, muse, smufin
 	}
 	
 	/**
@@ -471,6 +471,7 @@ public class OxoGWrapperWorkflow extends BaseOxoGWrapperWorkflow {
 			Job sangerPassFilter = this.passFilterWorkflow(Pipeline.sanger, statFiles);
 			Job broadPassFilter = this.passFilterWorkflow(Pipeline.broad, statFiles);
 			Job dkfzemblPassFilter = this.passFilterWorkflow(Pipeline.dkfz_embl, statFiles);
+			Job smufinPassFilter = this.passFilterWorkflow(Pipeline.smufin, statFiles);
 			// ...No, we're not going to filter the Muse SNV file.
 			
 
@@ -514,6 +515,13 @@ public class OxoGWrapperWorkflow extends BaseOxoGWrapperWorkflow {
 				{
 					Job broadPreprocessVCF = this.preProcessIndelVCF(broadPassFilter, Pipeline.broad, broadIndelVcfName, this.tumours.get(i).getAliquotID());
 					preprocessIndelsJobs.add(broadPreprocessVCF);
+				}
+				//smufin INDEL VCFs will be in /datastore/vcf/smufin - they will not be nested in a GNOS ID-named directory.
+				String smufinIndelVcfName = generateVcfName.apply("", CommonPredicates.isSmufin);
+				if (!smufinIndelVcfName.endsWith(vcfNotFoundToken))
+				{
+					Job smufinPreprocessVCF = this.preProcessIndelVCF(smufinPassFilter, Pipeline.smufin, broadIndelVcfName, this.tumours.get(i).getAliquotID());
+					preprocessIndelsJobs.add(smufinPreprocessVCF);
 				}
 			}
 			//TODO: This probably doesn't need to be a list anymore.
@@ -632,6 +640,7 @@ public class OxoGWrapperWorkflow extends BaseOxoGWrapperWorkflow {
 		generator.setTumours(this.tumours);
 		generator.setVcfs(this.vcfs);
 		generator.setWorkflowNamestoGnosIds(this.workflowNamestoGnosIds);
+		generator.setPipelineDownloadMethods(this.pipelineDownloadMethods);
 		
 		move2running = generator.doDownload(this, pathToScripts, parent);
 		return move2running;
