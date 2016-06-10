@@ -86,7 +86,10 @@ public abstract class BaseOxoGWrapperWorkflow extends AbstractWorkflowDataModel 
 	
 	protected final String workflowURL = "https://github.com/ICGC-TCGA-PanCancer/OxoGWrapperWorkflow/";
 	
-	protected String downloadMethod = "icgcStorageClient";
+	protected String vcfDownloadMethod = "icgcStorageClient";
+	protected String bamDownloadMethod;
+	
+	protected Map<Pipeline, DownloadMethod> pipelineDownloadMethods = new HashMap<OxoGWrapperWorkflow.Pipeline, OxoGWrapperWorkflow.DownloadMethod>(4);
 	
 	protected String sangerGNOSRepoURL;
 	protected String broadGNOSRepoURL;
@@ -115,6 +118,8 @@ public abstract class BaseOxoGWrapperWorkflow extends AbstractWorkflowDataModel 
 	protected boolean allowMissingFiles = false;
 	
 	List<VcfInfo> vcfs;
+	
+	String fileSystemSourcePath ;
 
 	/**
 	 * Get a property name that is mandatory
@@ -178,8 +183,15 @@ public abstract class BaseOxoGWrapperWorkflow extends AbstractWorkflowDataModel 
 		} ;
 
 		try {
-			if (hasPropertyAndNotNull("downloadMethod")) {
-				this.downloadMethod = getProperty("downloadMethod");
+			if (hasPropertyAndNotNull("vcfDownloadMethod")) {
+				this.vcfDownloadMethod = getProperty("vcfDownloadMethod");
+			}
+			if (hasPropertyAndNotNull("bamDownloadMethod")) {
+				this.bamDownloadMethod = getProperty("bamDownloadMethod");
+			}
+			else
+			{
+				this.bamDownloadMethod = this.vcfDownloadMethod;
 			}
 			
 			this.tumourCount = Integer.valueOf(this.getMandatoryProperty(JSONUtils.TUMOUR_COUNT));
@@ -211,7 +223,7 @@ public abstract class BaseOxoGWrapperWorkflow extends AbstractWorkflowDataModel 
 				this.objectToFilenames.put(tInf.getBamTumourObjectID(), tInf.getTumourBAMFileName());
 				this.objectToFilenames.put(tInf.getBamTumourIndexObjectID(), tInf.getTumourBamIndexFileName());
 				
-				if (this.downloadMethod != null && !this.downloadMethod.equals("") && this.downloadMethod.equals(DownloadMethod.gtdownload.toString()))
+				if (this.vcfDownloadMethod != null && !this.vcfDownloadMethod.equals("") && this.vcfDownloadMethod.equals(DownloadMethod.gtdownload.toString()))
 				{
 					tInf.setTumourBamGNOSRepoURL ( this.getMandatoryProperty(JSONUtils.TUMOUR_BAM_DOWNLOAD_URL+"_"+i) );
 				}
@@ -354,16 +366,25 @@ public abstract class BaseOxoGWrapperWorkflow extends AbstractWorkflowDataModel 
 			}
 			
 			//System.out.println("DEBUG: downloadMethod: "+this.downloadMethod);
-			if (this.downloadMethod != null && !this.downloadMethod.equals("") && this.downloadMethod.equals(DownloadMethod.gtdownload.toString()))
+			if (this.vcfDownloadMethod != null && !this.vcfDownloadMethod.equals("") && this.vcfDownloadMethod.equals(DownloadMethod.gtdownload.toString()))
 			{
 				System.out.println("DEBUG: Setting gtdownload-specific config values");
 				this.sangerGNOSRepoURL = this.getMandatoryProperty(JSONUtils.SANGER_DOWNLOAD_URL);
 				this.broadGNOSRepoURL = this.getMandatoryProperty(JSONUtils.BROAD_DOWNLOAD_URL);
 				this.dkfzEmblGNOSRepoURL = this.getMandatoryProperty(JSONUtils.DKFZ_EMBL_DOWNLOAD_URL);
 				this.museGNOSRepoURL = this.getMandatoryProperty(JSONUtils.MUSE_DOWNLOAD_URL);
+				this.gtDownloadVcfKey = this.getMandatoryProperty("gtDownloadVcfKey");
+			}
+			else if ((this.vcfDownloadMethod != null && !this.vcfDownloadMethod.equals("") && this.vcfDownloadMethod.equals(DownloadMethod.filesystemCopy.toString()))
+					||(this.bamDownloadMethod != null && !this.bamDownloadMethod.equals("") && this.bamDownloadMethod.equals(DownloadMethod.filesystemCopy.toString())))
+			{
+				this.fileSystemSourcePath = this.getMandatoryProperty("fileSystemSourcePath");
+			}
+			
+			if (this.bamDownloadMethod != null && !this.bamDownloadMethod.equals("") && this.bamDownloadMethod.equals(DownloadMethod.gtdownload.toString()))
+			{
 				this.normalBamGNOSRepoURL = this.getMandatoryProperty(JSONUtils.NORMAL_BAM_DOWNLOAD_URL);
 				this.gtDownloadBamKey = this.getMandatoryProperty("gtDownloadBamKey");
-				this.gtDownloadVcfKey = this.getMandatoryProperty("gtDownloadVcfKey");
 			}
 			
 		} catch (Exception e) {

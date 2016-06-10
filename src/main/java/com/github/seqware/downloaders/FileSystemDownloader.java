@@ -1,6 +1,9 @@
 package com.github.seqware.downloaders;
 
 
+// NOTE: smuffin will come from NFS always but the BAMs will come from remote source.
+// Also, smuffin pipeline only will supply INDELs and only needs to have minibam generation run.
+
 /**
  * This downloader will copy the input files from a path in the filesystem. This is to be used 
  * when the input files are on a filesystem such as NFS.

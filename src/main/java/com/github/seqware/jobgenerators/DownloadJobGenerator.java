@@ -28,7 +28,8 @@ import net.sourceforge.seqware.pipeline.workflowV2.model.Job;
 
 public class DownloadJobGenerator extends JobGeneratorBase {
 
-	private String downloadMethod;
+	private String vcfDownloadMethod;
+	private String bamDownloadMethod;
 	private String storageSource;
 	private String gtDownloadBamKey;
 	private String gtDownloadVcfKey;
@@ -130,7 +131,8 @@ public class DownloadJobGenerator extends JobGeneratorBase {
 		Job move2running;
 		//Download jobs. VCFs downloading serial. Trying to download all in parallel seems to put too great a strain on the system 
 		//since the icgc-storage-client can make full use of all cores on a multi-core system. 
-		DownloadMethod downloadMethod = DownloadMethod.valueOf(this.downloadMethod);
+		DownloadMethod vcfDownloadMethod = DownloadMethod.valueOf(this.vcfDownloadMethod);
+		DownloadMethod bamDownloadMethod = DownloadMethod.valueOf(this.bamDownloadMethod);
 		
 		Function<Predicate<VcfInfo>, List<String>> buildVcfListByPredicate = (p) -> Stream.concat(
 				this.vcfs.stream().filter(p).map(m -> m.getObjectID()), 
@@ -171,7 +173,7 @@ public class DownloadJobGenerator extends JobGeneratorBase {
 		
 		Function<String,List<String>> chooseObjects = (s) -> 
 		{
-			switch (downloadMethod)
+			switch (vcfDownloadMethod)
 			{
 				case icgcStorageClient:
 					// ICGC storage client - get list of object IDs, use s (workflowname) as lookup.
@@ -186,17 +188,20 @@ public class DownloadJobGenerator extends JobGeneratorBase {
 				case gtdownload:
 					// gtdownloader - look up the GNOS URL, return as list with single item. 
 					return Arrays.asList(workflowURLs.get(s));
+				case filesystemCopy:
+					//Filesystem copy will just take the filenames directly.
+					return workflowObjectIDs.get(s);
 				default:
-					throw new RuntimeException("Unknown download method: "+downloadMethod);
+					throw new RuntimeException("Unknown download method: "+vcfDownloadMethod);
 			}
 		};
 		
-		Job downloadSangerVCFs = this.getVCF(workflow, move2download, downloadMethod, Pipeline.sanger, chooseObjects.apply( Pipeline.sanger.toString() ) );
-		Job downloadDkfzEmblVCFs = this.getVCF(workflow, downloadSangerVCFs, downloadMethod, Pipeline.dkfz_embl, chooseObjects.apply( Pipeline.dkfz_embl.toString() ) );
-		Job downloadBroadVCFs = this.getVCF(workflow, downloadDkfzEmblVCFs, downloadMethod, Pipeline.broad, chooseObjects.apply( Pipeline.broad.toString() ) );
-		Job downloadMuseVCFs = this.getVCF(workflow, downloadBroadVCFs, downloadMethod, Pipeline.muse, chooseObjects.apply( Pipeline.muse.toString() ) );
+		Job downloadSangerVCFs = this.getVCF(workflow, move2download, vcfDownloadMethod, Pipeline.sanger, chooseObjects.apply( Pipeline.sanger.toString() ) );
+		Job downloadDkfzEmblVCFs = this.getVCF(workflow, downloadSangerVCFs, vcfDownloadMethod, Pipeline.dkfz_embl, chooseObjects.apply( Pipeline.dkfz_embl.toString() ) );
+		Job downloadBroadVCFs = this.getVCF(workflow, downloadDkfzEmblVCFs, vcfDownloadMethod, Pipeline.broad, chooseObjects.apply( Pipeline.broad.toString() ) );
+		Job downloadMuseVCFs = this.getVCF(workflow, downloadBroadVCFs, vcfDownloadMethod, Pipeline.muse, chooseObjects.apply( Pipeline.muse.toString() ) );
 		// Once VCFs are downloaded, download the BAMs.
-		Job downloadNormalBam = this.getBAM(workflow, downloadMuseVCFs, downloadMethod, BAMType.normal, chooseObjects.apply( BAMType.normal.toString() ) );
+		Job downloadNormalBam = this.getBAM(workflow, downloadMuseVCFs, bamDownloadMethod, BAMType.normal, chooseObjects.apply( BAMType.normal.toString() ) );
 		
 		//create a list of jobs to download all tumours.
 		List<Job> getTumourJobs = new ArrayList<Job>(this.tumours.size());
@@ -214,7 +219,7 @@ public class DownloadJobGenerator extends JobGeneratorBase {
 			{
 				downloadTumourBamParent = getTumourJobs.get(i-1);
 			}
-			downloadTumourBam = this.getBAM(workflow, downloadTumourBamParent, downloadMethod, BAMType.tumour,chooseObjects.apply( BAMType.tumour.toString()+"_"+this.tumours.get(i).getAliquotID() ) );
+			downloadTumourBam = this.getBAM(workflow, downloadTumourBamParent, bamDownloadMethod, BAMType.tumour,chooseObjects.apply( BAMType.tumour.toString()+"_"+this.tumours.get(i).getAliquotID() ) );
 			getTumourJobs.add(downloadTumourBam);
 		}
 		
@@ -229,13 +234,13 @@ public class DownloadJobGenerator extends JobGeneratorBase {
 		return move2running;
 	}
 
-	public String getDownloadMethod() {
-		return this.downloadMethod;
+	public String getVCFDownloadMethod() {
+		return this.vcfDownloadMethod;
 	}
 
 
-	public void setDownloadMethod(String downloadMethod) {
-		this.downloadMethod = downloadMethod;
+	public void setVCFDownloadMethod(String downloadMethod) {
+		this.vcfDownloadMethod = downloadMethod;
 	}
 
 
@@ -396,5 +401,15 @@ public class DownloadJobGenerator extends JobGeneratorBase {
 
 	public void setObjectToFilenames(Map<String, String> objectToFilenames) {
 		this.objectToFilenames = objectToFilenames;
+	}
+
+
+	public String getBamDownloadMethod() {
+		return this.bamDownloadMethod;
+	}
+
+
+	public void setBamDownloadMethod(String bamDownloadMethod) {
+		this.bamDownloadMethod = bamDownloadMethod;
 	}
 }

@@ -87,7 +87,7 @@ public class OxoGWrapperWorkflow extends BaseOxoGWrapperWorkflow {
 		copy.setCommand("mkdir /datastore/credentials && cp -r /home/ubuntu/.gnos/* /datastore/credentials && ls -l /datastore/credentials");
 		copy.addParent(parentJob);
 		
-		if (this.downloadMethod.equals(DownloadMethod.s3.toString()))
+		if (this.vcfDownloadMethod.equals(DownloadMethod.s3.toString()))
 		{
 			Job s3Setup = this.getWorkflow().createBashJob("s3 credentials setup");
 			s3Setup.setCommand("mkdir ~/.aws && cp /datastore/credentials/aws_credentials ~/.aws/credentials");
@@ -616,7 +616,8 @@ public class OxoGWrapperWorkflow extends BaseOxoGWrapperWorkflow {
 		generator.setBamNormalObjectID(this.bamNormalObjectID);
 		generator.setBroadGNOSRepoURL(this.broadGNOSRepoURL);
 		generator.setDkfzEmblGNOSRepoURL(this.dkfzEmblGNOSRepoURL);
-		generator.setDownloadMethod(this.downloadMethod);
+		generator.setVCFDownloadMethod(this.vcfDownloadMethod);
+		generator.setBamDownloadMethod(this.bamDownloadMethod);
 		generator.setGITemail(this.GITemail);
 		generator.setGitMoveTestMode(this.gitMoveTestMode);
 		generator.setGITname(this.GITname);
