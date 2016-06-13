@@ -146,7 +146,7 @@ public class DownloadJobGenerator extends JobGeneratorBase {
 		List<String> smufinList = buildVcfListByPredicate.apply(CommonPredicates.isSmufin);
 		List<String> normalList = Arrays.asList( this.bamNormalIndexObjectID,this.bamNormalObjectID);
 		//System.out.println("DEBUG: sangerList: "+sangerList.toString());
-		Map<String,List<String>> workflowObjectIDs = new HashMap<String,List<String>>(6);
+		Map<String,List<String>> workflowObjectIDs = new HashMap<String,List<String>>(8);
 		workflowObjectIDs.put(Pipeline.broad.toString(), broadList);
 		workflowObjectIDs.put(Pipeline.sanger.toString(), sangerList);
 		workflowObjectIDs.put(Pipeline.dkfz_embl.toString(), dkfzEmblList);
