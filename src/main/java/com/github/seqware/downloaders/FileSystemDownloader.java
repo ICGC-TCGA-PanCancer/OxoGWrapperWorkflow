@@ -31,7 +31,7 @@ public class FileSystemDownloader implements WorkflowFileDownloader {
 			throw new RuntimeException("You must give a valid source directory!");
 		}
 		
-		String getFilesCommand = "( mkdir -p "+destinationDir+"/\n";
+		String getFilesCommand = "( mkdir -p "+destinationDir+"/ && sudo chmod a+rw "+destinationDir+" \n";
 		for(String fileName : fileNames)
 		{
 			getFilesCommand += " cp "+sourcePathDirectory+"/"+fileName+" "+destinationDir+"/"+fileName+"\n";
