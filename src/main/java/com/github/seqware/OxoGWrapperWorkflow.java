@@ -624,8 +624,6 @@ public class OxoGWrapperWorkflow extends BaseOxoGWrapperWorkflow {
 		generator.setBamNormalObjectID(this.bamNormalObjectID);
 		generator.setBroadGNOSRepoURL(this.broadGNOSRepoURL);
 		generator.setDkfzEmblGNOSRepoURL(this.dkfzEmblGNOSRepoURL);
-		generator.setVCFDownloadMethod(this.vcfDownloadMethod);
-		generator.setBamDownloadMethod(this.bamDownloadMethod);
 		generator.setGITemail(this.GITemail);
 		generator.setGitMoveTestMode(this.gitMoveTestMode);
 		generator.setGITname(this.GITname);
@@ -640,7 +638,10 @@ public class OxoGWrapperWorkflow extends BaseOxoGWrapperWorkflow {
 		generator.setTumours(this.tumours);
 		generator.setVcfs(this.vcfs);
 		generator.setWorkflowNamestoGnosIds(this.workflowNamestoGnosIds);
+		System.out.println(this.pipelineDownloadMethods);
 		generator.setPipelineDownloadMethods(this.pipelineDownloadMethods);
+		generator.setFileSystemSourceDir(this.fileSystemSourcePath);
+		generator.setBamDownloadMethod(DownloadMethod.valueOf(this.bamDownloadMethod));
 		
 		move2running = generator.doDownload(this, pathToScripts, parent);
 		return move2running;

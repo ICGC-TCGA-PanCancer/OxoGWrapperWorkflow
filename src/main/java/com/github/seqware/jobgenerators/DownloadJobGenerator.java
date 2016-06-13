@@ -28,8 +28,7 @@ import net.sourceforge.seqware.pipeline.workflowV2.model.Job;
 
 public class DownloadJobGenerator extends JobGeneratorBase {
 
-	private String vcfDownloadMethod;
-	private String bamDownloadMethod;
+	private DownloadMethod bamDownloadMethod;
 	private String storageSource;
 	private String gtDownloadBamKey;
 	private String gtDownloadVcfKey;
@@ -47,8 +46,9 @@ public class DownloadJobGenerator extends JobGeneratorBase {
 	private Map<String,String> workflowNamestoGnosIds;
 	private Map<String,String> objectToFilenames;
 	private Map<Pipeline,DownloadMethod> pipelineDownloadMethods;
+	private String fileSystemSourceDir;
 
-	private String getFileCommandString(DownloadMethod downloadMethod, String outDir, String workflowName, String storageSource, String downloadKey, String ... objectIDs  )
+	private String getFileCommandString(DownloadMethod downloadMethod, String outDir, String workflowName, String storageSource, String downloadKey, String fileSystemSourceDir, String ... objectIDs  )
 	{
 		switch (downloadMethod)
 		{
@@ -59,7 +59,7 @@ public class DownloadJobGenerator extends JobGeneratorBase {
 			case s3:
 				return ( DownloaderBuilder.of(S3Downloader::new).build() ).getDownloadCommandString(outDir, workflowName, objectIDs);
 			case filesystemCopy:
-				return ( DownloaderBuilder.of(FileSystemDownloader::new).build() ).getDownloadCommandString(outDir, workflowName, objectIDs);
+				return ( DownloaderBuilder.of(FileSystemDownloader::new).with(FileSystemDownloader::setSourcePathDirectory, fileSystemSourceDir).build() ).getDownloadCommandString(outDir, workflowName, objectIDs);
 			default:
 				throw new RuntimeException("Unknown downloadMethod: "+downloadMethod.toString());
 		}
@@ -79,7 +79,7 @@ public class DownloadJobGenerator extends JobGeneratorBase {
 		
 		String outDir = "/datastore/bam/"+bamType.toString()+"/";
 		String getBamCommandString;
-		getBamCommandString = getFileCommandString(downloadMethod, outDir, bamType.toString(), this.storageSource, this.gtDownloadBamKey, objectIDs);
+		getBamCommandString = getFileCommandString(downloadMethod, outDir, bamType.toString(), this.storageSource, this.gtDownloadBamKey, this.fileSystemSourceDir, objectIDs);
 		String moveToFailed = GitUtils.gitMoveCommand("downloading-jobs","failed-jobs",this.JSONlocation + "/" + this.JSONrepoName + "/" + this.JSONfolderName,this.JSONfileName, this.gitMoveTestMode, workflow.getWorkflowBaseDir() + "/scripts/");
 		getBamFileJob.setCommand("( "+getBamCommandString+" ) || "+moveToFailed);
 
@@ -114,7 +114,7 @@ public class DownloadJobGenerator extends JobGeneratorBase {
 		String outDir = "/datastore/vcf/"+workflowName;
 		String moveToFailed = GitUtils.gitMoveCommand("downloading-jobs","failed-jobs",this.JSONlocation + "/" + this.JSONrepoName + "/" + this.JSONfolderName,this.JSONfileName, this.gitMoveTestMode, workflow.getWorkflowBaseDir() + "/scripts/");
 		String getVCFCommand ;
-		getVCFCommand = getFileCommandString(downloadMethod, outDir, workflowName.toString(), this.storageSource, this.gtDownloadVcfKey, objectIDs);
+		getVCFCommand = getFileCommandString(downloadMethod, outDir, workflowName.toString(), this.storageSource, this.gtDownloadVcfKey, this.fileSystemSourceDir, objectIDs);
 		getVCFCommand += (" || " + moveToFailed);
 		getVCFJob.setCommand(getVCFCommand);
 		
@@ -132,7 +132,7 @@ public class DownloadJobGenerator extends JobGeneratorBase {
 		Job move2running;
 		//Download jobs. VCFs downloading serial. Trying to download all in parallel seems to put too great a strain on the system 
 		//since the icgc-storage-client can make full use of all cores on a multi-core system. 
-		DownloadMethod bamDownloadMethod = DownloadMethod.valueOf(this.bamDownloadMethod);
+		DownloadMethod bamDownloadMethod = this.bamDownloadMethod;
 		
 		Function<Predicate<VcfInfo>, List<String>> buildVcfListByPredicate = (p) -> Stream.concat(
 				this.vcfs.stream().filter(p).map(m -> m.getObjectID()), 
@@ -143,6 +143,7 @@ public class DownloadJobGenerator extends JobGeneratorBase {
 		List<String> broadList = buildVcfListByPredicate.apply(CommonPredicates.isBroad);
 		List<String> dkfzEmblList = buildVcfListByPredicate.apply(CommonPredicates.isDkfzEmbl);
 		List<String> museList = buildVcfListByPredicate.apply(CommonPredicates.isMuse);
+		List<String> smufinList = buildVcfListByPredicate.apply(CommonPredicates.isSmufin);
 		List<String> normalList = Arrays.asList( this.bamNormalIndexObjectID,this.bamNormalObjectID);
 		//System.out.println("DEBUG: sangerList: "+sangerList.toString());
 		Map<String,List<String>> workflowObjectIDs = new HashMap<String,List<String>>(6);
@@ -150,6 +151,7 @@ public class DownloadJobGenerator extends JobGeneratorBase {
 		workflowObjectIDs.put(Pipeline.sanger.toString(), sangerList);
 		workflowObjectIDs.put(Pipeline.dkfz_embl.toString(), dkfzEmblList);
 		workflowObjectIDs.put(Pipeline.muse.toString(), museList);
+		workflowObjectIDs.put(Pipeline.smufin.toString(), smufinList);
 		workflowObjectIDs.put(BAMType.normal.toString(), normalList);
 		for (int i = 0; i < this.tumours.size(); i ++)
 		{
@@ -173,8 +175,17 @@ public class DownloadJobGenerator extends JobGeneratorBase {
 		
 		Function<String,List<String>> chooseObjects = (s) -> 
 		{
-			DownloadMethod vcfDownloadMethod = this.pipelineDownloadMethods.get(s);
-			switch (vcfDownloadMethod)
+			DownloadMethod downloadMethod;
+			if (!(s.contains("normal") || s.contains("tumour")))
+			{
+				downloadMethod = this.pipelineDownloadMethods.get(Pipeline.valueOf(s));			
+			}
+			else
+			{
+				downloadMethod = this.bamDownloadMethod;
+			}
+			System.out.println("DEBUG: "+s+" : "+downloadMethod);
+			switch (downloadMethod)
 			{
 				case icgcStorageClient:
 					// ICGC storage client - get list of object IDs, use s (workflowname) as lookup.
@@ -193,7 +204,7 @@ public class DownloadJobGenerator extends JobGeneratorBase {
 					//Filesystem copy will just take the filenames directly.
 					return workflowObjectIDs.get(s);
 				default:
-					throw new RuntimeException("Unknown download method: "+vcfDownloadMethod);
+					throw new RuntimeException("Unknown download method: "+downloadMethod);
 			}
 		};
 		
@@ -236,14 +247,6 @@ public class DownloadJobGenerator extends JobGeneratorBase {
 		return move2running;
 	}
 
-	public String getVCFDownloadMethod() {
-		return this.vcfDownloadMethod;
-	}
-
-
-	public void setVCFDownloadMethod(String downloadMethod) {
-		this.vcfDownloadMethod = downloadMethod;
-	}
 
 
 	public String getStorageSource() {
@@ -405,11 +408,17 @@ public class DownloadJobGenerator extends JobGeneratorBase {
 		this.objectToFilenames = objectToFilenames;
 	}
 
-	public void setBamDownloadMethod(String bamDownloadMethod) {
+	public void setBamDownloadMethod(DownloadMethod bamDownloadMethod) {
 		this.bamDownloadMethod = bamDownloadMethod;
 	}
 
 	public void setPipelineDownloadMethods(Map<Pipeline,DownloadMethod> pipelineDownloadMethods) {
 		this.pipelineDownloadMethods = pipelineDownloadMethods;
 	}
+
+
+	public void setFileSystemSourceDir(String fileSystemSourceDir) {
+		this.fileSystemSourceDir = fileSystemSourceDir;
+	}
+
 }

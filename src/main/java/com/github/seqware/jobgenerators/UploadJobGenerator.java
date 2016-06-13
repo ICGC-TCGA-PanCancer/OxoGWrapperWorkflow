@@ -159,9 +159,9 @@ public class UploadJobGenerator extends JobGeneratorBase {
 		
 		String descriptionEnd = TemplateUtils.getRenderedTemplate("analysisDescriptionSuffix.template");
 		String vcfDescription = TemplateUtils.getRenderedTemplate(Arrays.stream(new String[][]{
-				{ "OxoQScore",this.oxoQScore },					{ "donorID",this.donorID },					{ "specimenID",this.specimenID },
-				{ "workflowName",workflow.getName() },				{ "workflowVersion",workflow.getVersion() },	{ "workflowURL",this.workflowURL },
-				{ "workflowSrcURL",this.workflowSourceURL },	{ "changeLogURL",this.changelogURL },		{ "descriptionSuffix",descriptionEnd },
+				{ "OxoQScore",this.oxoQScore }, { "donorID",this.donorID }, { "specimenID",this.specimenID },
+				{ "workflowName",workflow.getName() }, { "workflowVersion",workflow.getVersion() }, { "workflowURL",this.workflowURL },
+				{ "workflowSrcURL",this.workflowSourceURL }, { "changeLogURL",this.changelogURL }, { "descriptionSuffix",descriptionEnd },
 			}).collect(this.collectToMap), "analysisVCFDescription.template");
 
 		
