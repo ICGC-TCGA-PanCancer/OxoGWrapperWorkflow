@@ -415,24 +415,35 @@ public class OxoGWrapperWorkflow extends BaseOxoGWrapperWorkflow {
 
 		for (VcfInfo vcfInfo : this.vcfs)
 		{
+			boolean useGnosIdInPath = vcfInfo.getOriginatingPipeline() != Pipeline.smufin
+										&& this.pipelineDownloadMethods.get(vcfInfo.getOriginatingPipeline()) != DownloadMethod.filesystemCopy;
 			//Remember: smufin won't have a gnos ID so don't try to use that in the path for stat.
 			statFilesCMD+="stat /datastore/vcf/"+vcfInfo.getOriginatingPipeline().toString()+"/"
-							+(vcfInfo.getOriginatingPipeline()!=Pipeline.smufin?vcfInfo.getPipelineGnosID()+"/":"")
+							+( useGnosIdInPath ? vcfInfo.getPipelineGnosID()+"/" : "")
 							+vcfInfo.getFileName()+ " && \\\n";
 			statFilesCMD+="stat /datastore/vcf/"+vcfInfo.getOriginatingPipeline().toString()+"/"
-							+(vcfInfo.getOriginatingPipeline()!=Pipeline.smufin?vcfInfo.getPipelineGnosID()+"/":"")
+							+(useGnosIdInPath ? vcfInfo.getPipelineGnosID()+"/" : "")
 							+vcfInfo.getIndexFileName()+ " && \\\n";
 		}
 		
 		//stat all tumour BAMS
 		for (int i = 0 ; i < this.tumours.size() ; i++)
 		{
-			statFilesCMD += "stat /datastore/bam/"+BAMType.tumour.toString()+"/"+this.tumours.get(i).getTumourBamGnosID()+"/"+this.tumours.get(i).getTumourBAMFileName() + " && \\\n";
-			statFilesCMD += "stat /datastore/bam/"+BAMType.tumour.toString()+"/"+this.tumours.get(i).getTumourBamGnosID()+"/"+this.tumours.get(i).getTumourBamIndexFileName() + " && \\\n";
+			
+			statFilesCMD += "stat /datastore/bam/"+BAMType.tumour.toString()+"/"
+							+(!this.bamDownloadMethod.equals(DownloadMethod.filesystemCopy) ? this.tumours.get(i).getTumourBamGnosID()+"/" : "")
+							+this.tumours.get(i).getTumourBAMFileName() + " && \\\n";
+			statFilesCMD += "stat /datastore/bam/"+BAMType.tumour.toString()+"/"
+							+(!this.bamDownloadMethod.equals(DownloadMethod.filesystemCopy) ? this.tumours.get(i).getTumourBamGnosID()+"/" : "")
+							+this.tumours.get(i).getTumourBamIndexFileName() + " && \\\n";
 		}
 
-		statFilesCMD += "stat /datastore/bam/"+BAMType.normal.toString()+"/"+this.normalBamGnosID+"/"+this.normalBAMFileName + " && \\\n";
-		statFilesCMD += "stat /datastore/bam/"+BAMType.normal.toString()+"/"+this.normalBamGnosID+"/"+this.normalBamIndexFileName + " \\\n";
+		statFilesCMD += "stat /datastore/bam/"+BAMType.normal.toString()+"/"
+						+(!this.bamDownloadMethod.equals(DownloadMethod.filesystemCopy) ? this.normalBamGnosID +"/" : "")
+						+this.normalBAMFileName + " && \\\n";
+		statFilesCMD += "stat /datastore/bam/"+BAMType.normal.toString()+"/"
+						+(!this.bamDownloadMethod.equals(DownloadMethod.filesystemCopy) ? this.normalBamGnosID +"/" : "")
+						+this.normalBamIndexFileName + " \\\n";
 		statFilesCMD += " ) || "+ moveToFailed;
 		
 		statFiles.setCommand(statFilesCMD);
