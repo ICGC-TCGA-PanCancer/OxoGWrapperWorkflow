@@ -415,8 +415,13 @@ public class OxoGWrapperWorkflow extends BaseOxoGWrapperWorkflow {
 
 		for (VcfInfo vcfInfo : this.vcfs)
 		{
-			statFilesCMD+="stat /datastore/vcf/"+vcfInfo.getOriginatingPipeline().toString()+"/"+vcfInfo.getPipelineGnosID()+"/"+vcfInfo.getFileName()+ " && \\\n";
-			statFilesCMD+="stat /datastore/vcf/"+vcfInfo.getOriginatingPipeline().toString()+"/"+vcfInfo.getPipelineGnosID()+"/"+vcfInfo.getIndexFileName()+ " && \\\n";
+			//Remember: smufin won't have a gnos ID so don't try to use that in the path for stat.
+			statFilesCMD+="stat /datastore/vcf/"+vcfInfo.getOriginatingPipeline().toString()+"/"
+							+(vcfInfo.getOriginatingPipeline()!=Pipeline.smufin?vcfInfo.getPipelineGnosID()+"/":"")
+							+vcfInfo.getFileName()+ " && \\\n";
+			statFilesCMD+="stat /datastore/vcf/"+vcfInfo.getOriginatingPipeline().toString()+"/"
+							+(vcfInfo.getOriginatingPipeline()!=Pipeline.smufin?vcfInfo.getPipelineGnosID()+"/":"")
+							+vcfInfo.getIndexFileName()+ " && \\\n";
 		}
 		
 		//stat all tumour BAMS
@@ -638,7 +643,7 @@ public class OxoGWrapperWorkflow extends BaseOxoGWrapperWorkflow {
 		generator.setTumours(this.tumours);
 		generator.setVcfs(this.vcfs);
 		generator.setWorkflowNamestoGnosIds(this.workflowNamestoGnosIds);
-		System.out.println(this.pipelineDownloadMethods);
+		//System.out.println(this.pipelineDownloadMethods);
 		generator.setPipelineDownloadMethods(this.pipelineDownloadMethods);
 		generator.setFileSystemSourceDir(this.fileSystemSourcePath);
 		generator.setBamDownloadMethod(DownloadMethod.valueOf(this.bamDownloadMethod));
