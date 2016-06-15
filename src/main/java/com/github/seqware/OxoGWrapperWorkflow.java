@@ -418,32 +418,26 @@ public class OxoGWrapperWorkflow extends BaseOxoGWrapperWorkflow {
 			boolean useGnosIdInPath = vcfInfo.getOriginatingPipeline() != Pipeline.smufin
 										&& this.pipelineDownloadMethods.get(vcfInfo.getOriginatingPipeline()) != DownloadMethod.filesystemCopy;
 			//Remember: smufin won't have a gnos ID so don't try to use that in the path for stat.
-			statFilesCMD+="stat /datastore/vcf/"+vcfInfo.getOriginatingPipeline().toString()+"/"
-							+( useGnosIdInPath ? vcfInfo.getPipelineGnosID()+"/" : "")
-							+vcfInfo.getFileName()+ " && \\\n";
-			statFilesCMD+="stat /datastore/vcf/"+vcfInfo.getOriginatingPipeline().toString()+"/"
-							+(useGnosIdInPath ? vcfInfo.getPipelineGnosID()+"/" : "")
-							+vcfInfo.getIndexFileName()+ " && \\\n";
+			String prefix = "stat /datastore/vcf/"+vcfInfo.getOriginatingPipeline().toString()+"/"
+							+( useGnosIdInPath ? vcfInfo.getPipelineGnosID()+"/" : "");
+			statFilesCMD += prefix + vcfInfo.getFileName()+ " && \\\n";
+			statFilesCMD += prefix + vcfInfo.getIndexFileName()+ " && \\\n";
 		}
 		
 		//stat all tumour BAMS
 		for (int i = 0 ; i < this.tumours.size() ; i++)
 		{
-			
-			statFilesCMD += "stat /datastore/bam/"+BAMType.tumour.toString()+"/"
-							+(!this.bamDownloadMethod.equals(DownloadMethod.filesystemCopy) ? this.tumours.get(i).getTumourBamGnosID()+"/" : "")
-							+this.tumours.get(i).getTumourBAMFileName() + " && \\\n";
-			statFilesCMD += "stat /datastore/bam/"+BAMType.tumour.toString()+"/"
-							+(!this.bamDownloadMethod.equals(DownloadMethod.filesystemCopy) ? this.tumours.get(i).getTumourBamGnosID()+"/" : "")
-							+this.tumours.get(i).getTumourBamIndexFileName() + " && \\\n";
+			String prefix = "stat /datastore/bam/"+BAMType.tumour.toString()+"/"
+							+( ! this.bamDownloadMethod.equals(DownloadMethod.filesystemCopy.toString()) ? this.tumours.get(i).getTumourBamGnosID()+"/" : "");
+			statFilesCMD += prefix + this.tumours.get(i).getTumourBAMFileName() + " && \\\n";
+			statFilesCMD += prefix + this.tumours.get(i).getTumourBamIndexFileName() + " && \\\n";
 		}
-
-		statFilesCMD += "stat /datastore/bam/"+BAMType.normal.toString()+"/"
-						+(!this.bamDownloadMethod.equals(DownloadMethod.filesystemCopy) ? this.normalBamGnosID +"/" : "")
-						+this.normalBAMFileName + " && \\\n";
-		statFilesCMD += "stat /datastore/bam/"+BAMType.normal.toString()+"/"
-						+(!this.bamDownloadMethod.equals(DownloadMethod.filesystemCopy) ? this.normalBamGnosID +"/" : "")
-						+this.normalBamIndexFileName + " \\\n";
+		
+		String normalPrefix = "stat /datastore/bam/"+BAMType.normal.toString()+"/"
+								+( ! this.bamDownloadMethod.equals(DownloadMethod.filesystemCopy.toString()) ? this.normalBamGnosID +"/" : ""); 
+		
+		statFilesCMD += normalPrefix + this.normalBAMFileName + " && \\\n";
+		statFilesCMD += normalPrefix + this.normalBamIndexFileName + " \\\n";
 		statFilesCMD += " ) || "+ moveToFailed;
 		
 		statFiles.setCommand(statFilesCMD);
