@@ -530,7 +530,7 @@ public class OxoGWrapperWorkflow extends BaseOxoGWrapperWorkflow {
 				String smufinIndelVcfName = generateVcfName.apply("", CommonPredicates.isSmufin);
 				if (!smufinIndelVcfName.endsWith(vcfNotFoundToken))
 				{
-					Job smufinPreprocessVCF = this.preProcessIndelVCF(smufinPassFilter, Pipeline.smufin, broadIndelVcfName, this.tumours.get(i).getAliquotID());
+					Job smufinPreprocessVCF = this.preProcessIndelVCF(smufinPassFilter, Pipeline.smufin, smufinIndelVcfName, this.tumours.get(i).getAliquotID());
 					preprocessIndelsJobs.add(smufinPreprocessVCF);
 				}
 			}
