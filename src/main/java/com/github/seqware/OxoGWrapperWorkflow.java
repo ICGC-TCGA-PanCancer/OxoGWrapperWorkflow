@@ -569,7 +569,7 @@ public class OxoGWrapperWorkflow extends BaseOxoGWrapperWorkflow {
 			for (int i = 0; i < this.tumours.size() ; i ++)
 			{
 				TumourInfo tInfo = this.tumours.get(i);
-				Job tumourVariantBam = this.doVariantBam(BAMType.tumour,"/datastore/bam/tumour/"+tInfo.getTumourBamGnosID()+"/"+tInfo.getTumourBAMFileName(), tInfo.getTumourBAMFileName(), tInfo.getAliquotID(),combineVCFJobs.toArray(new Job[combineVCFJobs.size()]));
+				Job tumourVariantBam = this.doVariantBam(BAMType.tumour,"/datastore/bam/tumour/"+( DownloadMethod.valueOf(this.bamDownloadMethod) != DownloadMethod.filesystemCopy ? tInfo.getTumourBamGnosID()+"/" : "")+tInfo.getTumourBAMFileName(), tInfo.getTumourBAMFileName(), tInfo.getAliquotID(),combineVCFJobs.toArray(new Job[combineVCFJobs.size()]));
 				variantBamJobs.add(tumourVariantBam);
 			}
 			variantBamJobs.add(normalVariantBam);
