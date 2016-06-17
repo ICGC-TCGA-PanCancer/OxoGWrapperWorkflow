@@ -21,8 +21,8 @@ for pipeline in sanger broad dkfz_embl muse; do
 	
 		while read location; do
 			echo "for location $location:"
-	
-			COUNT_IN_NORMAL=$(samtools view /datastore/bam/normal/*/*.bam 22:$location-$location -c)
+			PATH_TO_NORMAL=$(([ -f /datastore/bam/normal/*/*.bam ] && echo /datastore/bam/normal/*/*.bam) || ([ -f /datastore/bam/normal/*.bam ] && echo /datastore/bam/normal/*.bam))
+			COUNT_IN_NORMAL=$(samtools view $PATH_TO_NORMAL 22:$location-$location -c)
 			echo "count in normal - original bam: $COUNT_IN_NORMAL"
 		
 			NORMAL_FILE_BASENAME=$(basename /datastore/bam/normal/*/*.bam)
@@ -34,7 +34,7 @@ for pipeline in sanger broad dkfz_embl muse; do
 				exit 1;
 			fi
 		
-			for tumour in $(ls /datastore/bam/tumour/*/*.bam) ; do 
+			for tumour in $(ls /datastore/bam/tumour/*/*.bam /datastore/bam/tumour/*.bam) ; do 
 				TUMOUR_FILE_BASENAME=$(basename $tumour)
 				COUNT_IN_TUMOUR_1=$(samtools view $tumour 22:$location-$location -c)
 				echo "count in tumour ${TUMOUR_FILE_BASENAME}: $COUNT_IN_TUMOUR_1"
