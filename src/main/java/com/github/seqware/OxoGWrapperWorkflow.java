@@ -561,7 +561,7 @@ public class OxoGWrapperWorkflow extends BaseOxoGWrapperWorkflow {
 				oxogJobs.add(oxoG);
 			}
 			
-			Job normalVariantBam = this.doVariantBam(BAMType.normal,"/datastore/bam/normal/"+this.normalBamGnosID+"/"+this.normalBAMFileName,combineVCFJobs.toArray(new Job[combineVCFJobs.size()]));
+			Job normalVariantBam = this.doVariantBam(BAMType.normal,"/datastore/bam/normal/"+( DownloadMethod.valueOf(this.bamDownloadMethod) != DownloadMethod.filesystemCopy ? this.normalBamGnosID+"/" : "")+this.normalBAMFileName,combineVCFJobs.toArray(new Job[combineVCFJobs.size()]));
 			List<Job> parentJobsToAnnotationJobs = new ArrayList<Job>(this.tumours.size());
 
 			//create a list of tumour variant-bam jobs.
