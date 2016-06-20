@@ -355,6 +355,8 @@ public class OxoGWrapperWorkflow extends BaseOxoGWrapperWorkflow {
 		generator.setUploadURL(this.uploadURL);
 		generator.setWorkflowSourceURL(this.workflowSourceURL);
 		generator.setWorkflowURL(this.workflowURL);
+		generator.setSkipBamUpload(this.skipBamUpload);
+		generator.setSkipVcfUpload(this.skipVcfUpload);
 		
 		List<String> vcfsForUpload = this.filesForUpload.stream().filter(p -> ((p.contains(".vcf") || p.endsWith(".tar")) && !( p.contains("SNVs_from_INDELs") || p.contains("extracted-snv"))) ).distinct().collect(Collectors.toList());
 		List<String> bamFilesForUpload = this.filesForUpload.stream().filter( p -> p.contains(".bam") || p.contains(".bai") ).distinct().collect(Collectors.toList());
@@ -606,18 +608,11 @@ public class OxoGWrapperWorkflow extends BaseOxoGWrapperWorkflow {
 										: parentJobsToAnnotationJobs.toArray(new Job[parentJobsToAnnotationJobs.size()]);
 			
 			
-			if (!skipUpload)
-			{
-				// indicate job is in uploading stage.
-				Job move2uploading = this.gitMove( "running-jobs", "uploading-jobs", parentsToUpload);
-				Job uploadResults = doUpload(move2uploading);
-				// indicate job is complete.
-				this.gitMove( "uploading-jobs", "completed-jobs", uploadResults);
-			}
-			else
-			{
-				this.gitMove( "running-jobs", "completed-jobs",parentsToUpload);
-			}
+			// indicate job is in uploading stage.
+			Job move2uploading = this.gitMove( "running-jobs", "uploading-jobs", parentsToUpload);
+			Job uploadResults = doUpload(move2uploading);
+			// indicate job is complete.
+			this.gitMove( "uploading-jobs", "completed-jobs", uploadResults);
 			//System.out.println(this.filesForUpload);
 		}
 		catch (Exception e)

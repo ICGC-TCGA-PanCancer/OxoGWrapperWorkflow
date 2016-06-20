@@ -61,7 +61,8 @@ public abstract class BaseOxoGWrapperWorkflow extends AbstractWorkflowDataModel 
 	
 	//This could be used implement a sort of local-file mode. For now, it's just used to speed up testing.
 	protected boolean skipDownload = false;
-	protected boolean skipUpload = false;
+	protected boolean skipBamUpload = false;
+	protected boolean skipVcfUpload = false;
 	
 	//Path to reference file usd for normalization, *relative* to /refdata/
 	protected String refFile = "public/Homo_sapiens_assembly19.fasta";
@@ -189,8 +190,12 @@ public abstract class BaseOxoGWrapperWorkflow extends AbstractWorkflowDataModel 
 				this.skipDownload = Boolean.valueOf(getProperty("skipDownload"));
 			}
 			
-			if (hasPropertyAndNotNull("skipUpload")) {
-				this.skipUpload = Boolean.valueOf(getProperty("skipUpload"));
+			if (hasPropertyAndNotNull("skipBamUpload")) {
+				this.skipBamUpload = Boolean.valueOf(getProperty("skipBamUpload"));
+			}
+			
+			if (hasPropertyAndNotNull("skipVcfUpload")) {
+				this.skipBamUpload = Boolean.valueOf(getProperty("skipVcfUpload"));
 			}
 			
 			if (hasPropertyAndNotNull("skipOxoG")) {

@@ -27,6 +27,8 @@ public class UploadJobGenerator extends JobGeneratorBase {
 	private String tumourMetadataURLs;
 	private String studyRefNameOverride;
 	private String oxoQScore;
+	private boolean setSkipBamUpload = false;
+	private boolean skipVcfupload = false;
 
 	/**
 	 * Uploads files. Will use the vcf-upload script in pancancer/pancancer_upload_download:1.7 to generate metadata.xml, analysis.xml, and the GTO file, and
@@ -35,35 +37,47 @@ public class UploadJobGenerator extends JobGeneratorBase {
 	 * @return
 	 */
 	public Job doUpload(AbstractWorkflowDataModel workflow, Job parentJob, List<String> bamFiles, List<String> vcfs) {
+		
 		String moveToFailed = GitUtils.gitMoveCommand("uploading-jobs","failed-jobs",this.JSONlocation + "/" + this.JSONrepoName + "/" + this.JSONfolderName,this.JSONfileName, this.gitMoveTestMode, workflow.getWorkflowBaseDir() + "/scripts/");
-		// Will need to run gtupload to generate the analysis.xml and manifest files (but not actually upload). 
-		Job generateAnalysisFilesVCFs = generateVCFMetadata(workflow, parentJob, moveToFailed, vcfs);
 		
-		Job generateAnalysisFilesBAMs = generateBAMMetadata(workflow, parentJob, moveToFailed, bamFiles);
-	
 		String gnosServer = this.gnosMetadataUploadURL.replace("http://", "").replace("https://", "").replace("/", "");
-		//Note: It was decided there should be two uploads: one for minibams and one for VCFs (for people who want VCFs but not minibams).
-		Job uploadVCFResults = workflow.getWorkflow().createBashJob("upload VCF results");
-		String uploadVCFCommand = "sudo chmod 0600 /datastore/credentials/rsync.key\n"
-								+ "UPLOAD_PATH=$( echo \""+this.uploadURL+"\" | sed 's/\\(.*\\)\\:\\(.*\\)/\\2/g' )\n"
-								+ "VCF_UUID=$(grep server_path /datastore/files_for_upload/manifest.xml  | sed 's/.*server_path=\\\"\\(.*\\)\\\" .*/\\1/g')\n"
-								+ "( rsync -avtuz -e 'ssh -o UserKnownHostsFile=/datastore/credentials/known_hosts -o IdentitiesOnly=yes -o BatchMode=yes -o PasswordAuthentication=no -o PreferredAuthentications=publickey -i "+this.uploadKey+"'"
-										+ " --rsync-path=\"mkdir -p $UPLOAD_PATH/"+gnosServer+"/$VCF_UUID && rsync\" /datastore/files_for_upload/ " + this.uploadURL+ "/"+gnosServer + "/$VCF_UUID ) ";
-		uploadVCFCommand += (" || " + moveToFailed);
-		uploadVCFResults.setCommand(uploadVCFCommand);
-		uploadVCFResults.addParent(generateAnalysisFilesVCFs);
 		
-		Job uploadBAMResults = workflow.getWorkflow().createBashJob("upload BAM results");
-		String uploadBAMcommand = "sudo chmod 0600 /datastore/credentials/rsync.key\n"
-								+ "UPLOAD_PATH=$( echo \""+this.uploadURL+"\" | sed 's/\\(.*\\)\\:\\(.*\\)/\\2/g' )\n"
-								+ "BAM_UUID=$(grep server_path /datastore/variantbam_results/manifest.xml  | sed 's/.*server_path=\\\"\\(.*\\)\\\" .*/\\1/g')\n"
-								+ "( rsync -avtuz -e 'ssh -o UserKnownHostsFile=/datastore/credentials/known_hosts -o IdentitiesOnly=yes -o BatchMode=yes -o PasswordAuthentication=no -o PreferredAuthentications=publickey -i "+this.uploadKey+"'"
-										+ " --rsync-path=\"mkdir -p $UPLOAD_PATH/"+gnosServer+"/$BAM_UUID && rsync\" /datastore/variantbam_results/ " + this.uploadURL+ "/"+gnosServer + "/$BAM_UUID ) ";
-		uploadBAMcommand += (" || " + moveToFailed);
-		uploadBAMResults.setCommand(uploadBAMcommand);
-		uploadBAMResults.addParent(generateAnalysisFilesBAMs);
+		Job dummyParent = workflow.getWorkflow().createBashJob("dummy upload parent job");
+		dummyParent.setCommand("echo \"dummy job\"");
+		// Will need to run gtupload to generate the analysis.xml and manifest files (but not actually upload).
+		if (!this.skipVcfupload)
+		{
+			Job generateAnalysisFilesVCFs = generateVCFMetadata(workflow, parentJob, moveToFailed, vcfs);
+			//Note: It was decided there should be two uploads: one for minibams and one for VCFs (for people who want VCFs but not minibams).
+			Job uploadVCFResults = workflow.getWorkflow().createBashJob("upload VCF results");
+			String uploadVCFCommand = "sudo chmod 0600 /datastore/credentials/rsync.key\n"
+									+ "UPLOAD_PATH=$( echo \""+this.uploadURL+"\" | sed 's/\\(.*\\)\\:\\(.*\\)/\\2/g' )\n"
+									+ "VCF_UUID=$(grep server_path /datastore/files_for_upload/manifest.xml  | sed 's/.*server_path=\\\"\\(.*\\)\\\" .*/\\1/g')\n"
+									+ "( rsync -avtuz -e 'ssh -o UserKnownHostsFile=/datastore/credentials/known_hosts -o IdentitiesOnly=yes -o BatchMode=yes -o PasswordAuthentication=no -o PreferredAuthentications=publickey -i "+this.uploadKey+"'"
+											+ " --rsync-path=\"mkdir -p $UPLOAD_PATH/"+gnosServer+"/$VCF_UUID && rsync\" /datastore/files_for_upload/ " + this.uploadURL+ "/"+gnosServer + "/$VCF_UUID ) ";
+			uploadVCFCommand += (" || " + moveToFailed);
+			uploadVCFResults.setCommand(uploadVCFCommand);
+			uploadVCFResults.addParent(generateAnalysisFilesVCFs);
+			dummyParent.addParent(uploadVCFResults);
+		}
+		
+		if (!this.setSkipBamUpload)
+		{
+			Job generateAnalysisFilesBAMs = generateBAMMetadata(workflow, parentJob, moveToFailed, bamFiles);
+			Job uploadBAMResults = workflow.getWorkflow().createBashJob("upload BAM results");
+			String uploadBAMcommand = "sudo chmod 0600 /datastore/credentials/rsync.key\n"
+									+ "UPLOAD_PATH=$( echo \""+this.uploadURL+"\" | sed 's/\\(.*\\)\\:\\(.*\\)/\\2/g' )\n"
+									+ "BAM_UUID=$(grep server_path /datastore/variantbam_results/manifest.xml  | sed 's/.*server_path=\\\"\\(.*\\)\\\" .*/\\1/g')\n"
+									+ "( rsync -avtuz -e 'ssh -o UserKnownHostsFile=/datastore/credentials/known_hosts -o IdentitiesOnly=yes -o BatchMode=yes -o PasswordAuthentication=no -o PreferredAuthentications=publickey -i "+this.uploadKey+"'"
+											+ " --rsync-path=\"mkdir -p $UPLOAD_PATH/"+gnosServer+"/$BAM_UUID && rsync\" /datastore/variantbam_results/ " + this.uploadURL+ "/"+gnosServer + "/$BAM_UUID ) ";
+			uploadBAMcommand += (" || " + moveToFailed);
+			uploadBAMResults.setCommand(uploadBAMcommand);
+			uploadBAMResults.addParent(generateAnalysisFilesBAMs);
+			dummyParent.addParent(uploadBAMResults);
+		}
+		
 		//uploadBAMResults.addParent(uploadVCFResults);
-		return uploadBAMResults;
+		return dummyParent;
 	}
 
 	public Job generateBAMMetadata(AbstractWorkflowDataModel workflow, Job parentJob, String moveToFailed, List<String> files) {
@@ -302,5 +316,15 @@ public class UploadJobGenerator extends JobGeneratorBase {
 
 	public void setOxoQScore(String oxoQScore) {
 		this.oxoQScore = oxoQScore;
+	}
+
+	public void setSkipBamUpload(boolean skipBamUpload) {
+		this.setSkipBamUpload = skipBamUpload;
+		
+	}
+
+	public void setSkipVcfUpload(boolean skipVcfUpload) {
+		this.skipVcfupload = skipVcfUpload;
+		
 	}
 }
