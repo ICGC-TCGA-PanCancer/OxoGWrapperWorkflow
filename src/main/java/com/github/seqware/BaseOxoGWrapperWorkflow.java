@@ -195,7 +195,7 @@ public abstract class BaseOxoGWrapperWorkflow extends AbstractWorkflowDataModel 
 			}
 			
 			if (hasPropertyAndNotNull("skipVcfUpload")) {
-				this.skipBamUpload = Boolean.valueOf(getProperty("skipVcfUpload"));
+				this.skipVcfUpload = Boolean.valueOf(getProperty("skipVcfUpload"));
 			}
 			
 			if (hasPropertyAndNotNull("skipOxoG")) {
