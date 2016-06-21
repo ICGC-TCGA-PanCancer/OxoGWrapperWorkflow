@@ -1,6 +1,6 @@
 #! /bin/bash
 
-for pipeline in sanger broad dkfz_embl muse; do
+for pipeline in sanger broad dkfz_embl muse smufin; do
 
 	echo "================================================================"
 	echo "PIPELINE IS: $pipeline"
