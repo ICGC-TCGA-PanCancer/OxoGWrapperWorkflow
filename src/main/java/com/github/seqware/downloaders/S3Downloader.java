@@ -1,10 +1,20 @@
 package com.github.seqware.downloaders;
 
+/**
+ * A download that will download using the AWS S3 tool. 
+ * @author sshorser
+ *
+ */
 public class S3Downloader implements WorkflowFileDownloader {
 
+	/**
+	 * @param downloadDir - The directory to download into.
+	 * @param workflowName - Not used for this downloader.
+	 * @param objectIDs - A list of object IDs to download.
+	 */
 	@Override
 	public String getDownloadCommandString(String downloadDir, String workflowName, String... objectIDs) {
-		WorkflowFileDownloader.checkArgs(downloadDir, workflowName);
+		WorkflowFileDownloader.checkArgs(downloadDir, "DUMMY_VAUE");
 
 		if (objectIDs.length == 0 || objectIDs == null)
 		{

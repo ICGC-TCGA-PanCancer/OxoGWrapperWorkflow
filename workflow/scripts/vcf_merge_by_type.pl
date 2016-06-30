@@ -9,8 +9,8 @@ my $info = {};
 my $d = {};
 
 
-# Inputs: the filenames for SNVs for Broad, Sanger, DKFZ/EMBL;
-# the filenames for INDELs for Broad, Sanger, DKFZ/EMBL;
+# Inputs: the filenames for SNVs for Broad, Sanger, DKFZ/EMBL, MusE;
+# the filenames for INDELs for Broad, Sanger, DKFZ/EMBL, SMuFin;
 # the filenames for SVs for Broad, Sanger, DKFZ/EMBL;
 # the path to the root directory where all the files are;
 # the path to the output directory.
@@ -26,12 +26,13 @@ my $d = {};
 #                           --broad_indel <broad INDEL filename> \
 #                           --sanger_indel <sanger INDEL filename> \
 #                           --de_indel <DKFZ/EMBL INDEL filename> \
+#                           --smufin_indel <SMuFin INDEL filename> \
 #                           --indir /datastore/path_to_above_VCFs/ \
 #                           --outdir /datastore/output_directory 
 
 my ($broad_snv, $sanger_snv, $de_snv, $muse_snv,
         $broad_indel, $sanger_indel, $de_indel,
-        $broad_sv, $sanger_sv, $de_sv,
+        $broad_sv, $sanger_sv, $de_sv, $smufin_indel,
         $in_dir, $out_dir); # = @ARGV;
 
 GetOptions ("broad_snv=s" => \$broad_snv,
@@ -44,11 +45,12 @@ GetOptions ("broad_snv=s" => \$broad_snv,
 			"broad_indel=s" => \$broad_indel,
 			"sanger_indel=s" => \$sanger_indel,
 			"dkfz_embl_indel=s" => \$de_indel,
+			"smufin_indel=s" => \$smufin_indel,
 			"indir=s" => \$in_dir,
 			"outdir=s" => \$out_dir);
 
 my @snv = (split(/,/,$broad_snv), split(/,/,$sanger_snv), split(/,/,$de_snv), split(/,/,$muse_snv));
-my @indel = (split(/,/,$broad_indel), split(/,/,$sanger_indel), split(/,/,$de_indel));
+my @indel = (split(/,/,$broad_indel), split(/,/,$sanger_indel), split(/,/,$de_indel), split(/,/,$smufin_indel));
 my @sv = (split(/,/,$broad_sv), split(/,/,$sanger_sv), split(/,/,$de_sv));
 
 process($out_dir."/snv.clean", @snv);
