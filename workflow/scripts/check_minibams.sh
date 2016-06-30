@@ -8,6 +8,8 @@ for pipeline in sanger broad dkfz_embl muse smufin; do
 	SNV_PATTERN=""
 	if [ "$pipeline" == "muse" ] ; then
 		SNV_PATTERN="/datastore/vcf/$pipeline/*/*somatic.snv*vcf.gz"
+	elif [ "$pipeline" == "smufin" ] ; then
+		SNV_PATTERN="/datastore/vcf/$pipeline/*somatic.indel*bcftools-norm*vcf.gz"
 	else
 		SNV_PATTERN="/datastore/vcf/$pipeline/*/*somatic.snv*pass-filtered*vcf.gz"
 	fi
