@@ -591,11 +591,13 @@ public class OxoGWrapperWorkflow extends BaseOxoGWrapperWorkflow {
 			String moveToFailed = GitUtils.gitMoveCommand("running-jobs","failed-jobs",this.JSONlocation + "/" + this.JSONrepoName + "/" + this.JSONfolderName,this.JSONfileName, this.gitMoveTestMode, this.getWorkflowBaseDir() + "/scripts/");
 			// A list of all pass-filtered files that the minibams will be checked against. 
 			// NOTE: muse will not have any pass-filtered files and smufin will only have indel (or SNV-from-indel) files.
-			String filesToCheck = this.filesForUpload.stream().filter(p-> p.endsWith(".vcf.gz")
-																	&& ( p.contains("pass-filter")
-																		|| (p.toLowerCase().contains("muse") && !p.contains("pass-filter")) 
-																		|| (p.toLowerCase().contains("smufin") && p.toLowerCase().contains("indel") ))
-																	).reduce("", (a,b) -> a+=" "+b);
+			String filesToCheck = this.vcfs.stream().filter(p -> p.getFileName().endsWith(".vcf.gz")
+																&& p.getFileName().contains("pass-filter"))
+													.map( m -> "/datastore/vcf/"+m.getOriginatingPipeline().toString()+"/"
+																+ (m.getOriginatingPipeline() != Pipeline.smufin ? m.getPipelineGnosID() + "/" : "/")
+																+m.getFileName() )
+													.sorted()
+													.reduce("" , (a,b) -> a+=" "+b );
 			minibamSanityCheck.setCommand("(bash "+pathToScripts+ "/check_minibams.sh " + filesToCheck + ") || "+moveToFailed);
 			variantBamJobs.stream().forEach(job -> minibamSanityCheck.addParent(job));
 			parentJobsToAnnotationJobs.add(minibamSanityCheck);
