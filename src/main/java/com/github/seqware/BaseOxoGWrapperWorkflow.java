@@ -414,8 +414,9 @@ public abstract class BaseOxoGWrapperWorkflow extends AbstractWorkflowDataModel 
 				this.museGNOSRepoURL = this.getMandatoryProperty(JSONUtils.MUSE_DOWNLOAD_URL);
 				this.gtDownloadVcfKey = this.getMandatoryProperty("gtDownloadVcfKey");
 			}
-			else if ((this.vcfDownloadMethod != null && !this.vcfDownloadMethod.equals("") && this.vcfDownloadMethod.equals(DownloadMethod.filesystemCopy.toString()))
-					||(this.bamDownloadMethod != null && !this.bamDownloadMethod.equals("") && this.bamDownloadMethod.equals(DownloadMethod.filesystemCopy.toString())))
+			else if ( (this.vcfDownloadMethod != null && !this.vcfDownloadMethod.equals("") && this.vcfDownloadMethod.equals(DownloadMethod.filesystemCopy.toString()))
+					|| (this.bamDownloadMethod != null && !this.bamDownloadMethod.equals("") && this.bamDownloadMethod.equals(DownloadMethod.filesystemCopy.toString()))
+					|| (this.pipelineDownloadMethods.values().stream().anyMatch(p -> p == DownloadMethod.filesystemCopy)))
 			{
 				this.fileSystemSourcePath = this.getMandatoryProperty("fileSystemSourcePath");
 			}
