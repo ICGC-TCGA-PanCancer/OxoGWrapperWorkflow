@@ -1,5 +1,10 @@
 package com.github.seqware.downloaders;
 
+/**
+ * Download from GNOS.
+ * @author sshorser
+ *
+ */
 public class GNOSDownloader implements WorkflowFileDownloader {
 
 	private String downloadKey = null;
@@ -11,7 +16,6 @@ public class GNOSDownloader implements WorkflowFileDownloader {
 	}
 	
 	/**
-	 * Download from GNOS.
 	 * @param downloadDir - the directory to download into.
 	 * @param workflowName - the name of the workflow, and will also be usd in the container name for the docker container that runs the download.
 	 * @param URLs - if you are using gtdownload, only the first item in this list will be used.

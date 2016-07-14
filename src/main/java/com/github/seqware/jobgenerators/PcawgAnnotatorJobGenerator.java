@@ -137,10 +137,17 @@ public class PcawgAnnotatorJobGenerator extends JobGeneratorBase {
 				+ "        ljdursi/pcawg-annotate \\\n"
 				+ "        "+inputType+" /input.vcf /normal_minibam.bam /tumour_minibam.bam ) > "+outDir+"/"+annotatedFileName+" \n"
 				+ "    bgzip -f -c "+outDir+"/"+annotatedFileName+" > "+outDir+"/"+annotatedFileName+".gz \n"
-				+ "    tabix -p vcf "+outDir+"/"+annotatedFileName+".gz \n "
+				+ "    tabix -p vcf "+outDir+"/"+annotatedFileName+".gz \n"
+				+ "    LINES_IN_INPUT=$(zgrep -v '#' "+vcfPath+" | wc -l) \n"
+				+ "    LINES_IN_OUTPUT=$(zgrep -v '#' "+outDir+"/"+annotatedFileName+".gz | wc -l) \n"
+				+ "    echo \"LINES IN INPUT: ${LINES_IN_INPUT}\"\n"
+				+ "    echo \"LINES IN OUTPUT: ${LINES_IN_OUTPUT}\"\n"
+				+ "    if (( LINES_IN_OUTPUT < LINES_IN_INPUT )) ; then\n"
+				+ "        echo \"Annotated file line-count is LOWER than input VCF! Exiting!\"\n"
+				+ "        exit 1\n"
+				+ "    fi\n"
 				+ "fi\n"
 				+ ") " ;
-		
 		
 		String moveToFailed = GitUtils.gitMoveCommand("running-jobs","failed-jobs",this.JSONlocation + "/" + this.JSONrepoName + "/" + this.JSONfolderName,this.JSONfileName, this.gitMoveTestMode, workflow.getWorkflowBaseDir() + "/scripts/");
 		command += " || " + moveToFailed;

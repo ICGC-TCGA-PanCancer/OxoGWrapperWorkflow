@@ -1,5 +1,38 @@
 # CHANGELOG
 
+## 3.0.0
+ - Files can now be "downloaded" (copied, really) from a locally accessible file system. Also, BAMs and VCFs can be downloaded in different ways. As an example:
+
+	```
+	vcfDownloadMethod=icgcStorageClient
+	# To copy a file from the file system set the download method to "filesystemCopy". 
+	bamDownloadMethod=filesystemCopy
+	# Also, you will need to include this property which is the root path to the files.
+	fileSystemSourcePath = /files_for_workflow/
+	# When the workflow runs, VCFs will be downloaded using the ICGC Storage Client tool, and BAMs will be copied from /files_for_workflow.
+	# The normal data file will be copied from /files_for_workflow/my_normal_bam_file.bam into the /datastore/bam/normal directory.
+	normal_data_file_name = my_normal_bam_file.bam
+	```
+  It is also possible to specify a pipeline-specific download method to override the defaule one. For example:
+
+	```
+	vcfDownloadMethod=icgcStorageClient
+	smufinDownloadMethod=filesystemCopy
+	```
+	This will result in all VCFs being downloaded using the ICGC Storage Client, *except* for the smufin VCFs which will be copied from a path on the filesystem (rooted at the value specified by `fileSystemSourcePath`).
+
+	Note that if `bamDownloadMethod` is not specified, BAMs will be downloaded using the method specified by `vcfDownloadMethod`.
+
+
+ - Smufin INDEL VCFs can now be included in the workflow. Mainly this was because there was a need to re-generate the minibams to include smufin results. OxoG *could* be run with smufin inputs but this has **not** been extensively tested. To include smufin files, simply add them like any other pipeline VCF:
+	```
+	smufin_indel_index_file_name_0 = 123-456-789.smufin.20160114.somatic.indel.vcf.gz.tbi
+	smufin_indel_index_object_id_0 = 123-456-789.smufin.20160114.somatic.indel.vcf.gz.tbi
+	smufin_indel_data_file_name_0 = 123-456-789.smufin.20160114.somatic.indel.vcf.gz
+	smufin_indel_data_object_id_0 = 123-456-789.smufin.20160114.somatic.indel.vcf.gz
+	```
+	Note that the filename and object IDs must match: smufin files are not in GNOS so they won't have an actual GNOS object ID so for smufin, the object id IS the filename.
+
 ## 2.0.6
  - Bug fix: the check_minibam script was checking germline files which caused it to fail. This is only a problem when using gtdownload to download files because the other download methods download only the necessary files, but gtdownload downloads the complete fileset including germline files.
  - Bug fix: move the JSON file to the failed-jobs directory if the check_minibam script fails.

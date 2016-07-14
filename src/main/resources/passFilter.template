@@ -1,5 +1,5 @@
 sudo chmod a+rw -R /datastore/vcf/ 
-( for f in $(ls /datastore/vcf/{{workflowName}}/*/*.vcf.gz | grep -v pass | tr '\n' ' ' ) ; do
+( for f in $(ls /datastore/vcf/{{workflowName}}/*/*.vcf.gz /datastore/vcf/{{workflowName}}/*.vcf.gz | grep -v pass | tr '\n' ' ' ) ; do
     echo "processing $f"
     bgzip -d -c $f | grep -Po "^#.*$|([^\t]*\t){6}(PASS\t|\\.\t).*" > ${f/.vcf.gz/}.pass-filtered.vcf
     bgzip -f ${f/.vcf.gz/}.pass-filtered.vcf

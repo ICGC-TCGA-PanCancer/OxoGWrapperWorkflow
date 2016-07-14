@@ -18,6 +18,7 @@ import com.github.seqware.OxoGWrapperWorkflow.BAMType;
 import com.github.seqware.OxoGWrapperWorkflow.DownloadMethod;
 import com.github.seqware.OxoGWrapperWorkflow.Pipeline;
 import com.github.seqware.downloaders.DownloaderBuilder;
+import com.github.seqware.downloaders.FileSystemDownloader;
 import com.github.seqware.downloaders.GNOSDownloader;
 import com.github.seqware.downloaders.ICGCStorageDownloader;
 import com.github.seqware.downloaders.S3Downloader;
@@ -27,7 +28,7 @@ import net.sourceforge.seqware.pipeline.workflowV2.model.Job;
 
 public class DownloadJobGenerator extends JobGeneratorBase {
 
-	private String downloadMethod;
+	private DownloadMethod bamDownloadMethod;
 	private String storageSource;
 	private String gtDownloadBamKey;
 	private String gtDownloadVcfKey;
@@ -44,17 +45,21 @@ public class DownloadJobGenerator extends JobGeneratorBase {
 	private List<VcfInfo> vcfs;
 	private Map<String,String> workflowNamestoGnosIds;
 	private Map<String,String> objectToFilenames;
+	private Map<Pipeline,DownloadMethod> pipelineDownloadMethods;
+	private String fileSystemSourceDir;
 
-	private String getFileCommandString(DownloadMethod downloadMethod, String outDir, String downloadType, String storageSource, String downloadKey, String ... objectIDs  )
+	private String getFileCommandString(DownloadMethod downloadMethod, String outDir, String workflowName, String storageSource, String downloadKey, String fileSystemSourceDir, String ... objectIDs  )
 	{
 		switch (downloadMethod)
 		{
 			case icgcStorageClient:
-				return ( DownloaderBuilder.of(ICGCStorageDownloader::new).with(ICGCStorageDownloader::setStorageSource, storageSource).build() ).getDownloadCommandString(outDir, downloadType, objectIDs);
+				return ( DownloaderBuilder.of(ICGCStorageDownloader::new).with(ICGCStorageDownloader::setStorageSource, storageSource).build() ).getDownloadCommandString(outDir, workflowName, objectIDs);
 			case gtdownload:
-				return ( DownloaderBuilder.of(GNOSDownloader::new).with(GNOSDownloader::setDownloadKey, downloadKey).build() ).getDownloadCommandString(outDir, downloadType, objectIDs);
+				return ( DownloaderBuilder.of(GNOSDownloader::new).with(GNOSDownloader::setDownloadKey, downloadKey).build() ).getDownloadCommandString(outDir, workflowName, objectIDs);
 			case s3:
-				return ( DownloaderBuilder.of(S3Downloader::new).build() ).getDownloadCommandString(outDir, downloadType, objectIDs);
+				return ( DownloaderBuilder.of(S3Downloader::new).build() ).getDownloadCommandString(outDir, workflowName, objectIDs);
+			case filesystemCopy:
+				return ( DownloaderBuilder.of(FileSystemDownloader::new).with(FileSystemDownloader::setSourcePathDirectory, fileSystemSourceDir).build() ).getDownloadCommandString(outDir, workflowName, objectIDs);
 			default:
 				throw new RuntimeException("Unknown downloadMethod: "+downloadMethod.toString());
 		}
@@ -74,7 +79,7 @@ public class DownloadJobGenerator extends JobGeneratorBase {
 		
 		String outDir = "/datastore/bam/"+bamType.toString()+"/";
 		String getBamCommandString;
-		getBamCommandString = getFileCommandString(downloadMethod, outDir, bamType.toString(), this.storageSource, this.gtDownloadBamKey, objectIDs);
+		getBamCommandString = getFileCommandString(downloadMethod, outDir, bamType.toString(), this.storageSource, this.gtDownloadBamKey, this.fileSystemSourceDir, objectIDs);
 		String moveToFailed = GitUtils.gitMoveCommand("downloading-jobs","failed-jobs",this.JSONlocation + "/" + this.JSONrepoName + "/" + this.JSONfolderName,this.JSONfileName, this.gitMoveTestMode, workflow.getWorkflowBaseDir() + "/scripts/");
 		getBamFileJob.setCommand("( "+getBamCommandString+" ) || "+moveToFailed);
 
@@ -109,7 +114,7 @@ public class DownloadJobGenerator extends JobGeneratorBase {
 		String outDir = "/datastore/vcf/"+workflowName;
 		String moveToFailed = GitUtils.gitMoveCommand("downloading-jobs","failed-jobs",this.JSONlocation + "/" + this.JSONrepoName + "/" + this.JSONfolderName,this.JSONfileName, this.gitMoveTestMode, workflow.getWorkflowBaseDir() + "/scripts/");
 		String getVCFCommand ;
-		getVCFCommand = getFileCommandString(downloadMethod, outDir, workflowName.toString(), this.storageSource, this.gtDownloadVcfKey, objectIDs);
+		getVCFCommand = getFileCommandString(downloadMethod, outDir, workflowName.toString(), this.storageSource, this.gtDownloadVcfKey, this.fileSystemSourceDir, objectIDs);
 		getVCFCommand += (" || " + moveToFailed);
 		getVCFJob.setCommand(getVCFCommand);
 		
@@ -127,7 +132,7 @@ public class DownloadJobGenerator extends JobGeneratorBase {
 		Job move2running;
 		//Download jobs. VCFs downloading serial. Trying to download all in parallel seems to put too great a strain on the system 
 		//since the icgc-storage-client can make full use of all cores on a multi-core system. 
-		DownloadMethod downloadMethod = DownloadMethod.valueOf(this.downloadMethod);
+		DownloadMethod bamDownloadMethod = this.bamDownloadMethod;
 		
 		Function<Predicate<VcfInfo>, List<String>> buildVcfListByPredicate = (p) -> Stream.concat(
 				this.vcfs.stream().filter(p).map(m -> m.getObjectID()), 
@@ -138,13 +143,15 @@ public class DownloadJobGenerator extends JobGeneratorBase {
 		List<String> broadList = buildVcfListByPredicate.apply(CommonPredicates.isBroad);
 		List<String> dkfzEmblList = buildVcfListByPredicate.apply(CommonPredicates.isDkfzEmbl);
 		List<String> museList = buildVcfListByPredicate.apply(CommonPredicates.isMuse);
+		List<String> smufinList = buildVcfListByPredicate.apply(CommonPredicates.isSmufin);
 		List<String> normalList = Arrays.asList( this.bamNormalIndexObjectID,this.bamNormalObjectID);
 		//System.out.println("DEBUG: sangerList: "+sangerList.toString());
-		Map<String,List<String>> workflowObjectIDs = new HashMap<String,List<String>>(6);
+		Map<String,List<String>> workflowObjectIDs = new HashMap<String,List<String>>(8);
 		workflowObjectIDs.put(Pipeline.broad.toString(), broadList);
 		workflowObjectIDs.put(Pipeline.sanger.toString(), sangerList);
 		workflowObjectIDs.put(Pipeline.dkfz_embl.toString(), dkfzEmblList);
 		workflowObjectIDs.put(Pipeline.muse.toString(), museList);
+		workflowObjectIDs.put(Pipeline.smufin.toString(), smufinList);
 		workflowObjectIDs.put(BAMType.normal.toString(), normalList);
 		for (int i = 0; i < this.tumours.size(); i ++)
 		{
@@ -168,6 +175,16 @@ public class DownloadJobGenerator extends JobGeneratorBase {
 		
 		Function<String,List<String>> chooseObjects = (s) -> 
 		{
+			DownloadMethod downloadMethod;
+			if (!(s.contains("normal") || s.contains("tumour")))
+			{
+				downloadMethod = this.pipelineDownloadMethods.get(Pipeline.valueOf(s));			
+			}
+			else
+			{
+				downloadMethod = this.bamDownloadMethod;
+			}
+			System.out.println("DEBUG: "+s+" : "+downloadMethod);
 			switch (downloadMethod)
 			{
 				case icgcStorageClient:
@@ -183,17 +200,21 @@ public class DownloadJobGenerator extends JobGeneratorBase {
 				case gtdownload:
 					// gtdownloader - look up the GNOS URL, return as list with single item. 
 					return Arrays.asList(workflowURLs.get(s));
+				case filesystemCopy:
+					//Filesystem copy will just take the filenames directly.
+					return workflowObjectIDs.get(s);
 				default:
 					throw new RuntimeException("Unknown download method: "+downloadMethod);
 			}
 		};
 		
-		Job downloadSangerVCFs = this.getVCF(workflow, move2download, downloadMethod, Pipeline.sanger, chooseObjects.apply( Pipeline.sanger.toString() ) );
-		Job downloadDkfzEmblVCFs = this.getVCF(workflow, downloadSangerVCFs, downloadMethod, Pipeline.dkfz_embl, chooseObjects.apply( Pipeline.dkfz_embl.toString() ) );
-		Job downloadBroadVCFs = this.getVCF(workflow, downloadDkfzEmblVCFs, downloadMethod, Pipeline.broad, chooseObjects.apply( Pipeline.broad.toString() ) );
-		Job downloadMuseVCFs = this.getVCF(workflow, downloadBroadVCFs, downloadMethod, Pipeline.muse, chooseObjects.apply( Pipeline.muse.toString() ) );
+		Job downloadSangerVCFs = this.getVCF(workflow, move2download, this.pipelineDownloadMethods.get(Pipeline.sanger), Pipeline.sanger, chooseObjects.apply( Pipeline.sanger.toString() ) );
+		Job downloadDkfzEmblVCFs = this.getVCF(workflow, downloadSangerVCFs, this.pipelineDownloadMethods.get(Pipeline.dkfz_embl), Pipeline.dkfz_embl, chooseObjects.apply( Pipeline.dkfz_embl.toString() ) );
+		Job downloadBroadVCFs = this.getVCF(workflow, downloadDkfzEmblVCFs, this.pipelineDownloadMethods.get(Pipeline.broad), Pipeline.broad, chooseObjects.apply( Pipeline.broad.toString() ) );
+		Job downloadMuseVCFs = this.getVCF(workflow, downloadBroadVCFs, this.pipelineDownloadMethods.get(Pipeline.muse), Pipeline.muse, chooseObjects.apply( Pipeline.muse.toString() ) );
+		Job downloadSmufinVCFs = this.getVCF(workflow, downloadMuseVCFs, this.pipelineDownloadMethods.get(Pipeline.smufin), Pipeline.smufin, chooseObjects.apply( Pipeline.smufin.toString() ) );
 		// Once VCFs are downloaded, download the BAMs.
-		Job downloadNormalBam = this.getBAM(workflow, downloadMuseVCFs, downloadMethod, BAMType.normal, chooseObjects.apply( BAMType.normal.toString() ) );
+		Job downloadNormalBam = this.getBAM(workflow, downloadSmufinVCFs, bamDownloadMethod, BAMType.normal, chooseObjects.apply( BAMType.normal.toString() ) );
 		
 		//create a list of jobs to download all tumours.
 		List<Job> getTumourJobs = new ArrayList<Job>(this.tumours.size());
@@ -211,7 +232,7 @@ public class DownloadJobGenerator extends JobGeneratorBase {
 			{
 				downloadTumourBamParent = getTumourJobs.get(i-1);
 			}
-			downloadTumourBam = this.getBAM(workflow, downloadTumourBamParent, downloadMethod, BAMType.tumour,chooseObjects.apply( BAMType.tumour.toString()+"_"+this.tumours.get(i).getAliquotID() ) );
+			downloadTumourBam = this.getBAM(workflow, downloadTumourBamParent, bamDownloadMethod, BAMType.tumour,chooseObjects.apply( BAMType.tumour.toString()+"_"+this.tumours.get(i).getAliquotID() ) );
 			getTumourJobs.add(downloadTumourBam);
 		}
 		
@@ -226,14 +247,6 @@ public class DownloadJobGenerator extends JobGeneratorBase {
 		return move2running;
 	}
 
-	public String getDownloadMethod() {
-		return this.downloadMethod;
-	}
-
-
-	public void setDownloadMethod(String downloadMethod) {
-		this.downloadMethod = downloadMethod;
-	}
 
 
 	public String getStorageSource() {
@@ -394,4 +407,18 @@ public class DownloadJobGenerator extends JobGeneratorBase {
 	public void setObjectToFilenames(Map<String, String> objectToFilenames) {
 		this.objectToFilenames = objectToFilenames;
 	}
+
+	public void setBamDownloadMethod(DownloadMethod bamDownloadMethod) {
+		this.bamDownloadMethod = bamDownloadMethod;
+	}
+
+	public void setPipelineDownloadMethods(Map<Pipeline,DownloadMethod> pipelineDownloadMethods) {
+		this.pipelineDownloadMethods = pipelineDownloadMethods;
+	}
+
+
+	public void setFileSystemSourceDir(String fileSystemSourceDir) {
+		this.fileSystemSourceDir = fileSystemSourceDir;
+	}
+
 }

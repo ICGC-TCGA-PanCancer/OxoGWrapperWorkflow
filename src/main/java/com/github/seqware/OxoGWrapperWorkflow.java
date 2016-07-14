@@ -55,7 +55,7 @@ public class OxoGWrapperWorkflow extends BaseOxoGWrapperWorkflow {
 	 *
 	 */
 	public enum Pipeline {
-		sanger, dkfz_embl, broad, muse
+		sanger, dkfz_embl, broad, muse, smufin
 	}
 	
 	/**
@@ -70,7 +70,7 @@ public class OxoGWrapperWorkflow extends BaseOxoGWrapperWorkflow {
 	
 	public enum DownloadMethod
 	{
-		gtdownload, icgcStorageClient, s3
+		gtdownload, icgcStorageClient, s3, filesystemCopy
 	}
 	
 	private List<VcfInfo> extractedSnvsFromIndels = new ArrayList<VcfInfo>();
@@ -87,7 +87,7 @@ public class OxoGWrapperWorkflow extends BaseOxoGWrapperWorkflow {
 		copy.setCommand("mkdir /datastore/credentials && cp -r /home/ubuntu/.gnos/* /datastore/credentials && ls -l /datastore/credentials");
 		copy.addParent(parentJob);
 		
-		if (this.downloadMethod.equals(DownloadMethod.s3.toString()))
+		if (this.vcfDownloadMethod.equals(DownloadMethod.s3.toString()))
 		{
 			Job s3Setup = this.getWorkflow().createBashJob("s3 credentials setup");
 			s3Setup.setCommand("mkdir ~/.aws && cp /datastore/credentials/aws_credentials ~/.aws/credentials");
@@ -289,7 +289,13 @@ public class OxoGWrapperWorkflow extends BaseOxoGWrapperWorkflow {
 			UpdateBamForUpload<String, String> updateFilesForUpload = (path, id) -> {
 				if (id==null || id.trim().equals(""))
 				{
-					this.normalMinibamPath = path;
+					//only update the normalMinibamPath with the path to the actual BAM.
+					//If you get a .bai file here, add it to filesForUpload,
+					//but don't do anything else.
+					if (path.endsWith(".bam"))
+					{
+						this.normalMinibamPath = path;
+					}
 					this.filesForUpload.add(path);
 				}
 				else
@@ -298,7 +304,13 @@ public class OxoGWrapperWorkflow extends BaseOxoGWrapperWorkflow {
 					{
 						if (tInfo.getAliquotID().equals(id))
 						{
-							tInfo.setTumourMinibamPath(path);
+							//Set the tumour minibam path only to the BAM file.
+							//If you get a .bai file here, add it to filesForUpload,
+							//but don't do anything else.
+							if (path.endsWith(".bam"))
+							{
+								tInfo.setTumourMinibamPath(path);
+							}
 							filesForUpload.add(path);
 						}
 					}
@@ -343,6 +355,8 @@ public class OxoGWrapperWorkflow extends BaseOxoGWrapperWorkflow {
 		generator.setUploadURL(this.uploadURL);
 		generator.setWorkflowSourceURL(this.workflowSourceURL);
 		generator.setWorkflowURL(this.workflowURL);
+		generator.setSkipBamUpload(this.skipBamUpload);
+		generator.setSkipVcfUpload(this.skipVcfUpload);
 		
 		List<String> vcfsForUpload = this.filesForUpload.stream().filter(p -> ((p.contains(".vcf") || p.endsWith(".tar")) && !( p.contains("SNVs_from_INDELs") || p.contains("extracted-snv"))) ).distinct().collect(Collectors.toList());
 		List<String> bamFilesForUpload = this.filesForUpload.stream().filter( p -> p.contains(".bam") || p.contains(".bai") ).distinct().collect(Collectors.toList());
@@ -403,19 +417,29 @@ public class OxoGWrapperWorkflow extends BaseOxoGWrapperWorkflow {
 
 		for (VcfInfo vcfInfo : this.vcfs)
 		{
-			statFilesCMD+="stat /datastore/vcf/"+vcfInfo.getOriginatingPipeline().toString()+"/"+vcfInfo.getPipelineGnosID()+"/"+vcfInfo.getFileName()+ " && \\\n";
-			statFilesCMD+="stat /datastore/vcf/"+vcfInfo.getOriginatingPipeline().toString()+"/"+vcfInfo.getPipelineGnosID()+"/"+vcfInfo.getIndexFileName()+ " && \\\n";
+			boolean useGnosIdInPath = vcfInfo.getOriginatingPipeline() != Pipeline.smufin
+										&& this.pipelineDownloadMethods.get(vcfInfo.getOriginatingPipeline()) != DownloadMethod.filesystemCopy;
+			//Remember: smufin won't have a gnos ID so don't try to use that in the path for stat.
+			String prefix = "stat /datastore/vcf/"+vcfInfo.getOriginatingPipeline().toString()+"/"
+							+( useGnosIdInPath ? vcfInfo.getPipelineGnosID()+"/" : "");
+			statFilesCMD += prefix + vcfInfo.getFileName()+ " && \\\n";
+			statFilesCMD += prefix + vcfInfo.getIndexFileName()+ " && \\\n";
 		}
 		
 		//stat all tumour BAMS
 		for (int i = 0 ; i < this.tumours.size() ; i++)
 		{
-			statFilesCMD += "stat /datastore/bam/"+BAMType.tumour.toString()+"/"+this.tumours.get(i).getTumourBamGnosID()+"/"+this.tumours.get(i).getTumourBAMFileName() + " && \\\n";
-			statFilesCMD += "stat /datastore/bam/"+BAMType.tumour.toString()+"/"+this.tumours.get(i).getTumourBamGnosID()+"/"+this.tumours.get(i).getTumourBamIndexFileName() + " && \\\n";
+			String prefix = "stat /datastore/bam/"+BAMType.tumour.toString()+"/"
+							+( ! this.bamDownloadMethod.equals(DownloadMethod.filesystemCopy.toString()) ? this.tumours.get(i).getTumourBamGnosID()+"/" : "");
+			statFilesCMD += prefix + this.tumours.get(i).getTumourBAMFileName() + " && \\\n";
+			statFilesCMD += prefix + this.tumours.get(i).getTumourBamIndexFileName() + " && \\\n";
 		}
-
-		statFilesCMD += "stat /datastore/bam/"+BAMType.normal.toString()+"/"+this.normalBamGnosID+"/"+this.normalBAMFileName + " && \\\n";
-		statFilesCMD += "stat /datastore/bam/"+BAMType.normal.toString()+"/"+this.normalBamGnosID+"/"+this.normalBamIndexFileName + " \\\n";
+		
+		String normalPrefix = "stat /datastore/bam/"+BAMType.normal.toString()+"/"
+								+( ! this.bamDownloadMethod.equals(DownloadMethod.filesystemCopy.toString()) ? this.normalBamGnosID +"/" : ""); 
+		
+		statFilesCMD += normalPrefix + this.normalBAMFileName + " && \\\n";
+		statFilesCMD += normalPrefix + this.normalBamIndexFileName + " \\\n";
 		statFilesCMD += " ) || "+ moveToFailed;
 		
 		statFiles.setCommand(statFilesCMD);
@@ -459,6 +483,7 @@ public class OxoGWrapperWorkflow extends BaseOxoGWrapperWorkflow {
 			Job sangerPassFilter = this.passFilterWorkflow(Pipeline.sanger, statFiles);
 			Job broadPassFilter = this.passFilterWorkflow(Pipeline.broad, statFiles);
 			Job dkfzemblPassFilter = this.passFilterWorkflow(Pipeline.dkfz_embl, statFiles);
+			Job smufinPassFilter = this.passFilterWorkflow(Pipeline.smufin, statFiles);
 			// ...No, we're not going to filter the Muse SNV file.
 			
 
@@ -503,6 +528,13 @@ public class OxoGWrapperWorkflow extends BaseOxoGWrapperWorkflow {
 					Job broadPreprocessVCF = this.preProcessIndelVCF(broadPassFilter, Pipeline.broad, broadIndelVcfName, this.tumours.get(i).getAliquotID());
 					preprocessIndelsJobs.add(broadPreprocessVCF);
 				}
+				//smufin INDEL VCFs will be in /datastore/vcf/smufin - they will not be nested in a GNOS ID-named directory.
+				String smufinIndelVcfName = generateVcfName.apply("", CommonPredicates.isSmufin);
+				if (!smufinIndelVcfName.endsWith(vcfNotFoundToken))
+				{
+					Job smufinPreprocessVCF = this.preProcessIndelVCF(smufinPassFilter, Pipeline.smufin, smufinIndelVcfName, this.tumours.get(i).getAliquotID());
+					preprocessIndelsJobs.add(smufinPreprocessVCF);
+				}
 			}
 			//TODO: This probably doesn't need to be a list anymore.
 			List<Job> combineVCFJobs = new ArrayList<Job>(this.tumours.size());
@@ -531,7 +563,7 @@ public class OxoGWrapperWorkflow extends BaseOxoGWrapperWorkflow {
 				oxogJobs.add(oxoG);
 			}
 			
-			Job normalVariantBam = this.doVariantBam(BAMType.normal,"/datastore/bam/normal/"+this.normalBamGnosID+"/"+this.normalBAMFileName,combineVCFJobs.toArray(new Job[combineVCFJobs.size()]));
+			Job normalVariantBam = this.doVariantBam(BAMType.normal,"/datastore/bam/normal/"+( DownloadMethod.valueOf(this.bamDownloadMethod) != DownloadMethod.filesystemCopy ? this.normalBamGnosID+"/" : "")+this.normalBAMFileName,combineVCFJobs.toArray(new Job[combineVCFJobs.size()]));
 			List<Job> parentJobsToAnnotationJobs = new ArrayList<Job>(this.tumours.size());
 
 			//create a list of tumour variant-bam jobs.
@@ -539,7 +571,7 @@ public class OxoGWrapperWorkflow extends BaseOxoGWrapperWorkflow {
 			for (int i = 0; i < this.tumours.size() ; i ++)
 			{
 				TumourInfo tInfo = this.tumours.get(i);
-				Job tumourVariantBam = this.doVariantBam(BAMType.tumour,"/datastore/bam/tumour/"+tInfo.getTumourBamGnosID()+"/"+tInfo.getTumourBAMFileName(), tInfo.getTumourBAMFileName(), tInfo.getAliquotID(),combineVCFJobs.toArray(new Job[combineVCFJobs.size()]));
+				Job tumourVariantBam = this.doVariantBam(BAMType.tumour,"/datastore/bam/tumour/"+( DownloadMethod.valueOf(this.bamDownloadMethod) != DownloadMethod.filesystemCopy ? tInfo.getTumourBamGnosID()+"/" : "")+tInfo.getTumourBAMFileName(), tInfo.getTumourBAMFileName(), tInfo.getAliquotID(),combineVCFJobs.toArray(new Job[combineVCFJobs.size()]));
 				variantBamJobs.add(tumourVariantBam);
 			}
 			variantBamJobs.add(normalVariantBam);
@@ -557,7 +589,16 @@ public class OxoGWrapperWorkflow extends BaseOxoGWrapperWorkflow {
 
 			Job minibamSanityCheck = this.getWorkflow().createBashJob("Check minibams");
 			String moveToFailed = GitUtils.gitMoveCommand("running-jobs","failed-jobs",this.JSONlocation + "/" + this.JSONrepoName + "/" + this.JSONfolderName,this.JSONfileName, this.gitMoveTestMode, this.getWorkflowBaseDir() + "/scripts/");
-			minibamSanityCheck.setCommand("(bash "+pathToScripts+ "/check_minibams.sh) || "+moveToFailed);
+			// A list of all pass-filtered files that the minibams will be checked against. 
+			// NOTE: muse will not have any pass-filtered files and smufin will only have indel (or SNV-from-indel) files.
+			String filesToCheck = this.vcfs.stream().filter(p -> p.getFileName().endsWith(".vcf.gz")
+																&& p.getFileName().contains("pass-filter"))
+													.map( m -> "/datastore/vcf/"+m.getOriginatingPipeline().toString()+"/"
+																+ (m.getOriginatingPipeline() != Pipeline.smufin ? m.getPipelineGnosID() + "/" : "/")
+																+m.getFileName() )
+													.sorted()
+													.reduce("" , (a,b) -> a+=" "+b );
+			minibamSanityCheck.setCommand("(bash "+pathToScripts+ "/check_minibams.sh " + filesToCheck + ") || "+moveToFailed);
 			variantBamJobs.stream().forEach(job -> minibamSanityCheck.addParent(job));
 			parentJobsToAnnotationJobs.add(minibamSanityCheck);
 
@@ -576,18 +617,11 @@ public class OxoGWrapperWorkflow extends BaseOxoGWrapperWorkflow {
 										: parentJobsToAnnotationJobs.toArray(new Job[parentJobsToAnnotationJobs.size()]);
 			
 			
-			if (!skipUpload)
-			{
-				// indicate job is in uploading stage.
-				Job move2uploading = this.gitMove( "running-jobs", "uploading-jobs", parentsToUpload);
-				Job uploadResults = doUpload(move2uploading);
-				// indicate job is complete.
-				this.gitMove( "uploading-jobs", "completed-jobs", uploadResults);
-			}
-			else
-			{
-				this.gitMove( "running-jobs", "completed-jobs",parentsToUpload);
-			}
+			// indicate job is in uploading stage.
+			Job move2uploading = this.gitMove( "running-jobs", "uploading-jobs", parentsToUpload);
+			Job uploadResults = doUpload(move2uploading);
+			// indicate job is complete.
+			this.gitMove( "uploading-jobs", "completed-jobs", uploadResults);
 			//System.out.println(this.filesForUpload);
 		}
 		catch (Exception e)
@@ -604,7 +638,6 @@ public class OxoGWrapperWorkflow extends BaseOxoGWrapperWorkflow {
 		generator.setBamNormalObjectID(this.bamNormalObjectID);
 		generator.setBroadGNOSRepoURL(this.broadGNOSRepoURL);
 		generator.setDkfzEmblGNOSRepoURL(this.dkfzEmblGNOSRepoURL);
-		generator.setDownloadMethod(this.downloadMethod);
 		generator.setGITemail(this.GITemail);
 		generator.setGitMoveTestMode(this.gitMoveTestMode);
 		generator.setGITname(this.GITname);
@@ -619,6 +652,10 @@ public class OxoGWrapperWorkflow extends BaseOxoGWrapperWorkflow {
 		generator.setTumours(this.tumours);
 		generator.setVcfs(this.vcfs);
 		generator.setWorkflowNamestoGnosIds(this.workflowNamestoGnosIds);
+		//System.out.println(this.pipelineDownloadMethods);
+		generator.setPipelineDownloadMethods(this.pipelineDownloadMethods);
+		generator.setFileSystemSourceDir(this.fileSystemSourcePath);
+		generator.setBamDownloadMethod(DownloadMethod.valueOf(this.bamDownloadMethod));
 		
 		move2running = generator.doDownload(this, pathToScripts, parent);
 		return move2running;
