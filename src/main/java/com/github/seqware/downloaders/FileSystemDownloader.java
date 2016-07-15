@@ -1,5 +1,6 @@
 package com.github.seqware.downloaders;
 
+import java.util.Arrays;
 
 // NOTE: smuffin will come from NFS always but the BAMs will come from remote source.
 // Also, smuffin pipeline only will supply INDELs and only needs to have minibam generation run.
@@ -30,11 +31,26 @@ public class FileSystemDownloader implements WorkflowFileDownloader {
 		{
 			throw new RuntimeException("You must give a valid source directory!");
 		}
+		if (fileNames.length == 0)
+		{
+			throw new RuntimeException("You must give a list of files!");
+		}
+		if (Arrays.stream(fileNames).allMatch(p -> p == null || p.trim().length()==0))
+		{
+			throw new RuntimeException("NONE of the filenames you gave were valid, they were NULL or emptry strings!");
+		}
 		
 		String getFilesCommand = "(sudo mkdir -p "+destinationDir+"/ && sudo chmod a+rw "+destinationDir+" \n";
 		for(String fileName : fileNames)
 		{
-			getFilesCommand += " cp "+sourcePathDirectory+"/"+fileName+" "+destinationDir+"/"+fileName+"\n";
+			if (fileName.trim().length() != 0)
+			{
+				getFilesCommand += " cp "+sourcePathDirectory+"/"+fileName+" "+destinationDir+"/"+fileName+"\n";
+			}
+			else
+			{
+				System.out.println("A fileName for "+workflowName+" that is an empty string was found.");
+			}
 		}
 		getFilesCommand += " ) ";
 		return getFilesCommand;
