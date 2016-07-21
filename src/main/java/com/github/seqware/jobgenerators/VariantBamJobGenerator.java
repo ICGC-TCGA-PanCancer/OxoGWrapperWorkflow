@@ -42,23 +42,23 @@ public class VariantBamJobGenerator extends JobGeneratorBase{
 		if (bamType == BAMType.normal)
 		{
 			oldMinibamName = bamName.replace(".bam", "_minibam");
-			minibamName = this.aliquotID + ".normal.variantbam." + LocalDate.now().format(DateTimeFormatter.BASIC_ISO_DATE) + ".bam";
+			minibamName = this.aliquotID + ".normal.variantbam." + LocalDate.now().format(DateTimeFormatter.BASIC_ISO_DATE);
 			String normalMinibamPath = "/datastore/variantbam_results/"+minibamName;
-			String oldMinibamPath = "/datastore/variantbam_results/"+oldMinibamName+".bam";
-			updateFilesForUpload.accept(normalMinibamPath,null,false);
+			String oldMinibamPath = "/datastore/variantbam_results/"+oldMinibamName;
+			updateFilesForUpload.accept(normalMinibamPath+".bam",null,false);
 			updateFilesForUpload.accept(normalMinibamPath+".bai",null,false);
-			updateFilesForUpload.accept(oldMinibamPath,null,true);
+			updateFilesForUpload.accept(oldMinibamPath+".bam",null,true);
 			updateFilesForUpload.accept(oldMinibamPath+".bai",null,true);
 		}
 		else
 		{
 			oldMinibamName = tumourBAMFileName.replace(".bam", "_minibam");
-			minibamName = this.aliquotID + ".tumour.variantbam." + LocalDate.now().format(DateTimeFormatter.BASIC_ISO_DATE) + ".bam";
+			minibamName = this.aliquotID + ".tumour.variantbam." + LocalDate.now().format(DateTimeFormatter.BASIC_ISO_DATE);
 			String tumourMinibamPath = "/datastore/variantbam_results/"+minibamName;
-			String oldMinibamPath = "/datastore/variantbam_results/"+oldMinibamName+".bam";
-			updateFilesForUpload.accept(tumourMinibamPath,aliquotID,false);
+			String oldMinibamPath = "/datastore/variantbam_results/"+oldMinibamName;
+			updateFilesForUpload.accept(tumourMinibamPath+".bam",aliquotID,false);
 			updateFilesForUpload.accept(tumourMinibamPath+".bai",aliquotID,false);
-			updateFilesForUpload.accept(oldMinibamPath,aliquotID,true);
+			updateFilesForUpload.accept(oldMinibamPath+".bam",aliquotID,true);
 			updateFilesForUpload.accept(oldMinibamPath+".bai",aliquotID,true);
 		}
 		
@@ -69,7 +69,7 @@ public class VariantBamJobGenerator extends JobGeneratorBase{
 			{ "snvVcf", snvVcf }, { "svVcf", svVcf }, { "indelVcf", indelVcf }
 		}).collect(this.collectToMap), "runVariantbam.template" );
 
-		String linkWithOldNamingConvention = "cd /datastore/variantbam_results && ln -s "+minibamName+" "+oldMinibamName;
+		String linkWithOldNamingConvention = "cd /datastore/variantbam_results && ln -s "+minibamName+".bam "+oldMinibamName + ".bam && "+minibamName+".bai "+oldMinibamName+".bai" ;
 		String moveToFailed = GitUtils.gitMoveCommand("running-jobs","failed-jobs",this.JSONlocation + "/" + this.JSONrepoName + "/" + this.JSONfolderName,this.JSONfileName, this.gitMoveTestMode, workflow.getWorkflowBaseDir() + "/scripts/");
 		command = ( "(" + command + " && " + linkWithOldNamingConvention + " ) || " + moveToFailed);
 		runVariantbam.setCommand(command);
