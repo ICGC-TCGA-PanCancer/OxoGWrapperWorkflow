@@ -281,18 +281,20 @@ public class OxoGWrapperWorkflow extends BaseOxoGWrapperWorkflow {
 			variantBamJobGenerator.setSvPadding(String.valueOf(this.svPadding));
 			variantBamJobGenerator.setGitMoveTestMode(this.gitMoveTestMode);
 
-			variantBamJobGenerator.setTumourAliquotID(tumourID);
+			variantBamJobGenerator.setAliquotID(tumourID);
 			variantBamJobGenerator.setSnvVcf(mergedVcfs.stream().filter(isSnv).findFirst().get().getFileName());
 			variantBamJobGenerator.setSvVcf(mergedVcfs.stream().filter(isSv).findFirst().get().getFileName());
 			variantBamJobGenerator.setIndelVcf(mergedVcfs.stream().filter(isIndel).findFirst().get().getFileName());
 			
-			UpdateBamForUpload<String, String> updateFilesForUpload = (path, id) -> {
+			UpdateBamForUpload<String, String, Boolean> updateFilesForUpload = (path, id, isLink) -> {
 				if (id==null || id.trim().equals(""))
 				{
 					//only update the normalMinibamPath with the path to the actual BAM.
 					//If you get a .bai file here, add it to filesForUpload,
 					//but don't do anything else.
-					if (path.endsWith(".bam"))
+					//Also, if what was passed in has been indicated as a symlink, just add
+					//to filesForUpload but do nothing else.
+					if (path.endsWith(".bam") && !isLink)
 					{
 						this.normalMinibamPath = path;
 					}
@@ -307,7 +309,9 @@ public class OxoGWrapperWorkflow extends BaseOxoGWrapperWorkflow {
 							//Set the tumour minibam path only to the BAM file.
 							//If you get a .bai file here, add it to filesForUpload,
 							//but don't do anything else.
-							if (path.endsWith(".bam"))
+							//Also, if what was passed in has been indicated as a symlink, just add
+							//to filesForUpload but do nothing else.
+							if (path.endsWith(".bam") && !isLink)
 							{
 								tInfo.setTumourMinibamPath(path);
 							}
@@ -563,7 +567,11 @@ public class OxoGWrapperWorkflow extends BaseOxoGWrapperWorkflow {
 				oxogJobs.add(oxoG);
 			}
 			
-			Job normalVariantBam = this.doVariantBam(BAMType.normal,"/datastore/bam/normal/"+( DownloadMethod.valueOf(this.bamDownloadMethod) != DownloadMethod.filesystemCopy ? this.normalBamGnosID+"/" : "")+this.normalBAMFileName,combineVCFJobs.toArray(new Job[combineVCFJobs.size()]));
+			String pathToNormalMinibam = "/datastore/bam/normal/" 
+										+ ( DownloadMethod.valueOf(this.bamDownloadMethod) != DownloadMethod.filesystemCopy ? this.normalBamGnosID+"/" : "")
+										+ this.normalBAMFileName;
+			Job normalVariantBam = this.doVariantBam(BAMType.normal,pathToNormalMinibam,
+																	combineVCFJobs.toArray(new Job[combineVCFJobs.size()]));
 			List<Job> parentJobsToAnnotationJobs = new ArrayList<Job>(this.tumours.size());
 
 			//create a list of tumour variant-bam jobs.
@@ -571,7 +579,10 @@ public class OxoGWrapperWorkflow extends BaseOxoGWrapperWorkflow {
 			for (int i = 0; i < this.tumours.size() ; i ++)
 			{
 				TumourInfo tInfo = this.tumours.get(i);
-				Job tumourVariantBam = this.doVariantBam(BAMType.tumour,"/datastore/bam/tumour/"+( DownloadMethod.valueOf(this.bamDownloadMethod) != DownloadMethod.filesystemCopy ? tInfo.getTumourBamGnosID()+"/" : "")+tInfo.getTumourBAMFileName(), tInfo.getTumourBAMFileName(), tInfo.getAliquotID(),combineVCFJobs.toArray(new Job[combineVCFJobs.size()]));
+				String pathToTumourMinibam = "/datastore/bam/tumour/"
+											+ ( DownloadMethod.valueOf(this.bamDownloadMethod) != DownloadMethod.filesystemCopy ? tInfo.getTumourBamGnosID()+"/" : "")
+											+ tInfo.getTumourBAMFileName();
+				Job tumourVariantBam = this.doVariantBam(BAMType.tumour,pathToTumourMinibam,tInfo.getTumourBAMFileName(), tInfo.getAliquotID(),combineVCFJobs.toArray(new Job[combineVCFJobs.size()]));
 				variantBamJobs.add(tumourVariantBam);
 			}
 			variantBamJobs.add(normalVariantBam);

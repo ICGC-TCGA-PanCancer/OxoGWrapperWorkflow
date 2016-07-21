@@ -1,5 +1,7 @@
 package com.github.seqware.jobgenerators;
 
+import java.time.LocalDate;
+import java.time.format.DateTimeFormatter;
 import java.util.Arrays;
 
 import com.github.seqware.GitUtils;
@@ -12,9 +14,9 @@ import net.sourceforge.seqware.pipeline.workflowV2.model.Job;
 public class VariantBamJobGenerator extends JobGeneratorBase{
 
 	@FunctionalInterface
-	public interface UpdateBamForUpload<S,T>
+	public interface UpdateBamForUpload<S,T,U>
 	{
-		public void accept(S s, T t);
+		public void accept(S s, T t, U u);
 	}
 	
 	public VariantBamJobGenerator(String JSONlocation, String JSONrepoName, String JSONfolderName, String JSONfileName) {
@@ -22,7 +24,7 @@ public class VariantBamJobGenerator extends JobGeneratorBase{
 	}
 	
 
-	private String tumourAliquotID;
+	private String aliquotID;
 	private String snvPadding;
 	private String svPadding;
 	private String indelPadding;
@@ -30,24 +32,34 @@ public class VariantBamJobGenerator extends JobGeneratorBase{
 	private String svVcf;
 	private String indelVcf;
 	
-	public Job doVariantBam(AbstractWorkflowDataModel workflow,BAMType bamType, String bamName, String bamPath, String tumourBAMFileName, String tumourID, UpdateBamForUpload<String,String> updateFilesForUpload, Job ...parents)
+	public Job doVariantBam(AbstractWorkflowDataModel workflow,BAMType bamType, String bamName, String bamPath, String tumourBAMFileName, String tumourID, UpdateBamForUpload<String, String, Boolean> updateFilesForUpload, Job ...parents)
 	{
 		Job runVariantbam = workflow.getWorkflow().createBashJob("run "+bamType+(bamType==BAMType.tumour?"_"+tumourID+"_":"")+" variantbam");
 
 		String minibamName = "";
+		//The "old" minibam names will by the names of symlinks pointing to the properly named files.
+		String oldMinibamName = "";
 		if (bamType == BAMType.normal)
 		{
-			minibamName = bamName.replace(".bam", "_minibam");
-			String normalMinibamPath = "/datastore/variantbam_results/"+minibamName+".bam";
-			updateFilesForUpload.accept(normalMinibamPath,null);
-			updateFilesForUpload.accept(normalMinibamPath+".bai",null);
+			oldMinibamName = bamName.replace(".bam", "_minibam");
+			minibamName = this.aliquotID + ".normal.variantbam." + LocalDate.now().format(DateTimeFormatter.BASIC_ISO_DATE) + ".bam";
+			String normalMinibamPath = "/datastore/variantbam_results/"+minibamName;
+			String oldMinibamPath = "/datastore/variantbam_results/"+oldMinibamName+".bam";
+			updateFilesForUpload.accept(normalMinibamPath,null,false);
+			updateFilesForUpload.accept(normalMinibamPath+".bai",null,false);
+			updateFilesForUpload.accept(oldMinibamPath,null,true);
+			updateFilesForUpload.accept(oldMinibamPath+".bai",null,true);
 		}
 		else
 		{
-			minibamName = tumourBAMFileName.replace(".bam", "_minibam");
-			String tumourMinibamPath = "/datastore/variantbam_results/"+minibamName+".bam";
-			updateFilesForUpload.accept(tumourMinibamPath,tumourAliquotID);
-			updateFilesForUpload.accept(tumourMinibamPath+".bai",tumourAliquotID);
+			oldMinibamName = tumourBAMFileName.replace(".bam", "_minibam");
+			minibamName = this.aliquotID + ".tumour.variantbam." + LocalDate.now().format(DateTimeFormatter.BASIC_ISO_DATE) + ".bam";
+			String tumourMinibamPath = "/datastore/variantbam_results/"+minibamName;
+			String oldMinibamPath = "/datastore/variantbam_results/"+oldMinibamName+".bam";
+			updateFilesForUpload.accept(tumourMinibamPath,aliquotID,false);
+			updateFilesForUpload.accept(tumourMinibamPath+".bai",aliquotID,false);
+			updateFilesForUpload.accept(oldMinibamPath,aliquotID,true);
+			updateFilesForUpload.accept(oldMinibamPath+".bai",aliquotID,true);
 		}
 		
 		String command = TemplateUtils.getRenderedTemplate(Arrays.stream( new String[][] {
@@ -56,9 +68,10 @@ public class VariantBamJobGenerator extends JobGeneratorBase{
 			{ "indelPadding", String.valueOf(this.indelPadding) }, { "pathToBam", bamPath },
 			{ "snvVcf", snvVcf }, { "svVcf", svVcf }, { "indelVcf", indelVcf }
 		}).collect(this.collectToMap), "runVariantbam.template" );
-		
+
+		String linkWithOldNamingConvention = "cd /datastore/variantbam_results && ln -s "+minibamName+" "+oldMinibamName;
 		String moveToFailed = GitUtils.gitMoveCommand("running-jobs","failed-jobs",this.JSONlocation + "/" + this.JSONrepoName + "/" + this.JSONfolderName,this.JSONfileName, this.gitMoveTestMode, workflow.getWorkflowBaseDir() + "/scripts/");
-		command += (" || " + moveToFailed);
+		command = ( "(" + command + " && " + linkWithOldNamingConvention + " ) || " + moveToFailed);
 		runVariantbam.setCommand(command);
 
 		Arrays.stream(parents).forEach(parent -> runVariantbam.addParent(parent));
@@ -66,12 +79,12 @@ public class VariantBamJobGenerator extends JobGeneratorBase{
 		return runVariantbam;
 	}
 
-	public String getTumourAliquotID() {
-		return this.tumourAliquotID;
+	public String getAliquotID() {
+		return this.aliquotID;
 	}
 
-	public void setTumourAliquotID(String tumourAliquotID) {
-		this.tumourAliquotID = tumourAliquotID;
+	public void setAliquotID(String aliquotID) {
+		this.aliquotID = aliquotID;
 	}
 
 	public String getSnvPadding() {
