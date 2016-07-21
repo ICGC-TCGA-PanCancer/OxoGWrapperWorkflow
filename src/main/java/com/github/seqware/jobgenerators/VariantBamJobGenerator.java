@@ -32,9 +32,9 @@ public class VariantBamJobGenerator extends JobGeneratorBase{
 	private String svVcf;
 	private String indelVcf;
 	
-	public Job doVariantBam(AbstractWorkflowDataModel workflow,BAMType bamType, String bamName, String bamPath, String tumourBAMFileName, String tumourID, UpdateBamForUpload<String, String, Boolean> updateFilesForUpload, Job ...parents)
+	public Job doVariantBam(AbstractWorkflowDataModel workflow,BAMType bamType, String bamName, String bamPath, String tumourBAMFileName, UpdateBamForUpload<String, String, Boolean> updateFilesForUpload, Job ...parents)
 	{
-		Job runVariantbam = workflow.getWorkflow().createBashJob("run "+bamType+(bamType==BAMType.tumour?"_"+tumourID+"_":"")+" variantbam");
+		Job runVariantbam = workflow.getWorkflow().createBashJob("run "+bamType+(bamType == BAMType.tumour ? "_" + this.aliquotID + "_" : "")+" variantbam");
 
 		String minibamName = "";
 		//The "old" minibam names will by the names of symlinks pointing to the properly named files.
@@ -63,7 +63,7 @@ public class VariantBamJobGenerator extends JobGeneratorBase{
 		}
 		
 		String command = TemplateUtils.getRenderedTemplate(Arrays.stream( new String[][] {
-			{ "containerNameSuffix", bamType + (bamType == BAMType.tumour ? "_with_tumour_"+tumourID:"") },
+			{ "containerNameSuffix", bamType + (bamType == BAMType.tumour ? "_with_tumour_"+this.aliquotID : "") },
 			{ "minibamName", minibamName+".bam"},  {"snvPadding", String.valueOf(this.snvPadding)}, {"svPadding", String.valueOf(this.svPadding)},
 			{ "indelPadding", String.valueOf(this.indelPadding) }, { "pathToBam", bamPath },
 			{ "snvVcf", snvVcf }, { "svVcf", svVcf }, { "indelVcf", indelVcf }
