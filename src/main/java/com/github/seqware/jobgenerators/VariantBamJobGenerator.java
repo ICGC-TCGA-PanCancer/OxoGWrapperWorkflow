@@ -69,7 +69,7 @@ public class VariantBamJobGenerator extends JobGeneratorBase{
 			{ "snvVcf", snvVcf }, { "svVcf", svVcf }, { "indelVcf", indelVcf }
 		}).collect(this.collectToMap), "runVariantbam.template" );
 
-		String linkWithOldNamingConvention = "cd /datastore/variantbam_results && ln -s "+minibamName+".bam "+oldMinibamName + ".bam && "+minibamName+".bai "+oldMinibamName+".bai" ;
+		String linkWithOldNamingConvention = "cd /datastore/variantbam_results && ln -sf "+minibamName+".bam "+oldMinibamName + ".bam && ln -sf "+minibamName+".bam.bai "+oldMinibamName+".bam.bai" ;
 		String moveToFailed = GitUtils.gitMoveCommand("running-jobs","failed-jobs",this.JSONlocation + "/" + this.JSONrepoName + "/" + this.JSONfolderName,this.JSONfileName, this.gitMoveTestMode, workflow.getWorkflowBaseDir() + "/scripts/");
 		command = ( "(" + command + " && " + linkWithOldNamingConvention + " ) || " + moveToFailed);
 		runVariantbam.setCommand(command);
