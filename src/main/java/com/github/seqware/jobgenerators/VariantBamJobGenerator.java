@@ -41,7 +41,7 @@ public class VariantBamJobGenerator extends JobGeneratorBase{
 		String oldMinibamName = "";
 		if (bamType == BAMType.normal)
 		{
-			oldMinibamName = (bamName.replace(".bam", "_minibam"))+".bam";
+			oldMinibamName = bamName.replace(".bam", "_minibam") + ".bam";
 			minibamName = this.aliquotID + ".normal.variantbam." + LocalDate.now().format(DateTimeFormatter.BASIC_ISO_DATE) + ".bam";
 			String normalMinibamPath = "/datastore/variantbam_results/"+minibamName;
 			String oldMinibamPath = "/datastore/variantbam_results/"+oldMinibamName;
@@ -52,7 +52,7 @@ public class VariantBamJobGenerator extends JobGeneratorBase{
 		}
 		else
 		{
-			oldMinibamName = tumourBAMFileName.replace(".bam", "_minibam");
+			oldMinibamName = tumourBAMFileName.replace(".bam", "_minibam") + ".bam";
 			minibamName = this.aliquotID + ".tumour.variantbam." + LocalDate.now().format(DateTimeFormatter.BASIC_ISO_DATE) + ".bam";
 			String tumourMinibamPath = "/datastore/variantbam_results/"+minibamName;
 			String oldMinibamPath = "/datastore/variantbam_results/"+oldMinibamName;
