@@ -1,5 +1,18 @@
 # CHANGELOG
 
+## 3.0.1
+ - The filename of the output minibam has changed. The name will now look like this: `${tumour or normal aliquot id}.${"tumour" or "normal"}.variantbam.${date}.bam`
+
+	For example:
+ 
+	7d7205e8-d864-11e3-be46-bd5eb93a18bb.**tumour**.variantbam.20160721.bam
+
+	or:
+
+	9d7d05b8-d564-21a5-bf47-ad5ec83214zc.**normal**.variantbam.20160721.bam
+
+	If you are still using the old naming convention, the upload should contain a symbolic link with that name pointing to the minibam file with the new name.
+ 
 ## 3.0.0
  - Files can now be "downloaded" (copied, really) from a locally accessible file system. Also, BAMs and VCFs can be downloaded in different ways. As an example:
 

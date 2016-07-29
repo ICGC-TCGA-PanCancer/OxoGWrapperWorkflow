@@ -43,6 +43,7 @@ perl -I /opt/gt-download-upload-wrapper/gt-download-upload-wrapper-2.0.13/lib/ /
 	--description-file /vcf/description.txt \
 	--workflow-version {{ workflowVersion }} \
 	--workflow-src-url https://github.com/ICGC-TCGA-PanCancer/OxoGWrapperWorkflow \
+	--force-copy \
 	--workflow-url https://github.com/ICGC-TCGA-PanCancer/OxoGWrapperWorkflow" 
 set +x
 
