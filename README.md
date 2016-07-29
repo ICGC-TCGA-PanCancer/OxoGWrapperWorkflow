@@ -40,7 +40,7 @@ To produce a full SeqWare bundle, you will need to use SeqWare:
 
 ```
 	docker run --rm -v /datastore/:/datastore/ \
-		-v /workflows/Workflow_Bundle_OxoGWrapper_2.0.6_SeqWare_1.1.2/:/workflow/ \
+		-v /workflows/Workflow_Bundle_OxoGWrapper_3.0.1_SeqWare_1.1.2/:/workflow/ \
 		-v /var/run/docker.sock:/var/run/docker.sock \
 		-v /home/ubuntu/.gnos/:/home/ubuntu/.gnos/ \
 		-v /home/ubuntu/SomeIniFile.INI:/ini \
@@ -77,7 +77,7 @@ Populating such an INI file is a lot of work and since most of the necessary inf
 you can use the INIGenerator to produce an INI for you. It works like this:
 
 ```
-cd /workflows/Workflow_Bundle_OxoGWrapper_2.0.6_SeqWare_1.1.2/Workflow_Bundle_OxoGWrapper/2.0.6/
+cd /workflows/Workflow_Bundle_OxoGWrapper_3.0.1_SeqWare_1.1.2/Workflow_Bundle_OxoGWrapper/2.0.6/
 java -cp ./classes:./bin com.github.seqware.INIGenerator ~/BTCA-SG.BTCA_donor_A153.json
 ```
 
@@ -95,15 +95,18 @@ Other fields that are useful to populate in the INI:
  - gnosKey - The path to the key that will be used when talking to GNOS to generate gto files and metadata.
  - rsyncKey - The path to the key that will be used when the results are rsynced.
  - uploadURL - The URL to use in the rsync command at the end of the workflow, such as: `someUser@10.10.10.10:~/incoming/oxog_results/`
- - downloadMethod - Which method to use to download files. Default will be to use the icgc storage client (`icgcStorageClient`), but you can also specify `gtdownload` or `s3` (which will use `aws s3`).
+ - vcfDownloadMethod - Which method to use to download VCF files. Default will be to use the icgc storage client (`icgcStorageClient`), but you can also specify `gtdownload` or `s3` (which will use `aws s3`).
+ - bamDownloadMethod - Which method to use to download BAM files. Default will be to use the icgc storage client (`icgcStorageClient`), but you can also specify `gtdownload` or `s3` (which will use `aws s3`).
+ - smufinDownloadMethod - Which method to use to download a pipeline, such as smufin. If this is not specified, then vcfDownloadMethod will be used.
  - storageSource - Where to download files from, if the `downloadMethod` is `icgcStorageClient`. Defaults to `collab` but if you are using the icgc storage client in AWS, you will want to specify `aws`.
  - allowMissingFiles - Set to `true` if you know that some of the filesets from earlier pipelines might be missing a VCF or two (NOTE: it is assumed that you will have _at least one_ VCF from each pipeline). Only VCFs can be missing. Missing BAM files will cause the workflow to fail. 
 
 ### Download Methods
-There are three tools that this workflow can download files:
+There are four methods that this workflow can use to obtain input files:
  - icgc-storage-client
  - gtdownload
  - aws CLI
+ - filesystem copy
  
 #### icgc-storage-client
 This is the **default** download method.
@@ -127,6 +130,10 @@ You must also ensure that your INI file contains GNOS repos for each file set yo
 This will use Amazon's AWS CLI tool to download from an S3 URL. Currently, it can only download from the OICR Collaboratory buckets in S3. 
 To use this download method, specify `downloadMethod=s3` in the INI file.
 You must have valid credentials to download from this location. Place your `credentials` file in `~/.gnos` so that the workflow can have access to it when it downloads.
+
+#### filesystem copy
+This will simply copy the files from a specied base path. This can be useful if you have a VM base image with input files built into it, or if files are stored on a shared network drive.
+You must specify `fileSystemSourcePath` in your INI file as the root from where files will be copied. You should use the filename as the file object ID when your download is done as a filesystem copy.
 
 ### Flow Control
 
