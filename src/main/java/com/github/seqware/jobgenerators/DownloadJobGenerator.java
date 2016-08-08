@@ -105,22 +105,34 @@ public class DownloadJobGenerator extends JobGeneratorBase {
 	 */
 	private Job getVCF(AbstractWorkflowDataModel workflow, Job parentJob, DownloadMethod downloadMethod, Pipeline workflowName, String ... objectIDs) {
 		//System.out.printf("DEBUG: getVCF: "+downloadMethod + " ; "+ workflowName + " ; %s\n", objectIDs);
-		if (objectIDs == null || objectIDs.length == 0)
+		boolean isSmufin = workflowName == Pipeline.smufin;
+		boolean noInputObjects = (objectIDs == null || objectIDs.length == 0); 
+		
+		if ( noInputObjects && !isSmufin)
 		{
 			throw new RuntimeException("Cannot have empty objectIDs!");
 		}
-		
-		Job getVCFJob = workflow.getWorkflow().createBashJob("get VCF for workflow " + workflowName);
-		String outDir = "/datastore/vcf/"+workflowName;
-		String moveToFailed = GitUtils.gitMoveCommand("downloading-jobs","failed-jobs",this.JSONlocation + "/" + this.JSONrepoName + "/" + this.JSONfolderName,this.JSONfileName, this.gitMoveTestMode, workflow.getWorkflowBaseDir() + "/scripts/");
-		String getVCFCommand ;
-		getVCFCommand = getFileCommandString(downloadMethod, outDir, workflowName.toString(), this.storageSource, this.gtDownloadVcfKey, this.fileSystemSourceDir, objectIDs);
-		getVCFCommand += (" || " + moveToFailed);
-		getVCFJob.setCommand(getVCFCommand);
-		
-		getVCFJob.addParent(parentJob);
-
-		return getVCFJob;
+		else if ( noInputObjects && isSmufin )
+		{
+			// If no object IDs are given  for Smufin that's OK because some donors just won't have ANY smufin files.
+			Job getVCFJob = workflow.getWorkflow().createBashJob("DUMMY JOB get VCF for workflow " + workflowName);
+			getVCFJob.addParent(parentJob);
+			return getVCFJob;
+		}
+		else
+		{
+			Job getVCFJob = workflow.getWorkflow().createBashJob("get VCF for workflow " + workflowName);
+			String outDir = "/datastore/vcf/"+workflowName;
+			String moveToFailed = GitUtils.gitMoveCommand("downloading-jobs","failed-jobs",this.JSONlocation + "/" + this.JSONrepoName + "/" + this.JSONfolderName,this.JSONfileName, this.gitMoveTestMode, workflow.getWorkflowBaseDir() + "/scripts/");
+			String getVCFCommand ;
+			getVCFCommand = getFileCommandString(downloadMethod, outDir, workflowName.toString(), this.storageSource, this.gtDownloadVcfKey, this.fileSystemSourceDir, objectIDs);
+			getVCFCommand += (" || " + moveToFailed);
+			getVCFJob.setCommand(getVCFCommand);
+			
+			getVCFJob.addParent(parentJob);
+	
+			return getVCFJob;
+		}
 	}
 
 	private Job getVCF(AbstractWorkflowDataModel workflow, Job parentJob, DownloadMethod downloadMethod, Pipeline workflowName, List<String> objectIDs) {
