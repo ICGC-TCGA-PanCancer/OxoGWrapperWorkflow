@@ -405,7 +405,7 @@ public abstract class BaseOxoGWrapperWorkflow extends AbstractWorkflowDataModel 
 			}
 			
 			//System.out.println("DEBUG: downloadMethod: "+this.downloadMethod);
-			if (this.vcfDownloadMethod != null && !this.vcfDownloadMethod.equals("") && this.vcfDownloadMethod.equals(DownloadMethod.gtdownload.toString()))
+			if ( this.vcfDownloadMethod != null && !this.vcfDownloadMethod.equals("") && this.vcfDownloadMethod.equals(DownloadMethod.gtdownload.toString()))
 			{
 				System.out.println("DEBUG: Setting gtdownload-specific config values");
 				this.sangerGNOSRepoURL = this.getMandatoryProperty(JSONUtils.SANGER_DOWNLOAD_URL);
@@ -414,7 +414,34 @@ public abstract class BaseOxoGWrapperWorkflow extends AbstractWorkflowDataModel 
 				this.museGNOSRepoURL = this.getMandatoryProperty(JSONUtils.MUSE_DOWNLOAD_URL);
 				this.gtDownloadVcfKey = this.getMandatoryProperty("gtDownloadVcfKey");
 			}
-			else if ( (this.vcfDownloadMethod != null && !this.vcfDownloadMethod.equals("") && this.vcfDownloadMethod.equals(DownloadMethod.filesystemCopy.toString()))
+			//If the VCF download method is not gtdownload, it might only be set for specific pipelines. So check each one and set appropriately.
+			else
+			{
+				for (Pipeline key : this.pipelineDownloadMethods.keySet())
+				{
+					if (this.pipelineDownloadMethods.get(key) == DownloadMethod.gtdownload)
+					{
+						switch (key) {
+						case broad:
+							this.broadGNOSRepoURL = this.getMandatoryProperty(JSONUtils.BROAD_DOWNLOAD_URL);
+							break;
+						case dkfz_embl:
+							this.dkfzEmblGNOSRepoURL = this.getMandatoryProperty(JSONUtils.DKFZ_EMBL_DOWNLOAD_URL);
+						case muse:
+							this.museGNOSRepoURL = this.getMandatoryProperty(JSONUtils.MUSE_DOWNLOAD_URL);
+						case sanger:
+							this.sangerGNOSRepoURL = this.getMandatoryProperty(JSONUtils.SANGER_DOWNLOAD_URL);
+						//case smufin:
+							//smufin will never come from GNOS
+						default:
+							break;
+						}
+					}
+				}
+			}
+			
+			//If anything downloads via filesystemCopy, get appropriate properties.
+			if ( (this.vcfDownloadMethod != null && !this.vcfDownloadMethod.equals("") && this.vcfDownloadMethod.equals(DownloadMethod.filesystemCopy.toString()))
 					|| (this.bamDownloadMethod != null && !this.bamDownloadMethod.equals("") && this.bamDownloadMethod.equals(DownloadMethod.filesystemCopy.toString()))
 					|| (this.pipelineDownloadMethods.values().stream().anyMatch(p -> p == DownloadMethod.filesystemCopy)))
 			{
