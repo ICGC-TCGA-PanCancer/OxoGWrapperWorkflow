@@ -1,4 +1,4 @@
-<bundle version="3.0.1">
+<bundle version="3.0.2">
   <workflow name="OxoGWrapper" version="${workflow-version}" seqware_version="${seqware-version}"
   basedir="${workflow_bundle_dir}/Workflow_Bundle_OxoGWrapper/${workflow-version}">
     <description>${workflow-description}</description>
