@@ -1,5 +1,9 @@
 # CHANGELOG
 
+## 3.0.2
+ - Bug fix: Workflows that have no associated smufin inputs will not fail.
+ - Bug fix: Workflows that have a mix of download methods including filesystemCopy and gtdownload will not fail.
+
 ## 3.0.1
  - The filename of the output minibam has changed. The name will now look like this: `${tumour or normal aliquot id}.${"tumour" or "normal"}.variantbam.${date}.bam`
 
