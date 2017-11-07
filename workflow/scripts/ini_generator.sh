@@ -1,6 +1,11 @@
 #! /bin/bash
 
 # User should configure these:
+gnosMetadataUploadURL="https://gtrepo-osdc-tcga.annailabs.com"
+snvPadding="10"
+svPadding="500"
+indelPadding="200"
+studyRefNameOverride="tcga_pancancer_vcf"
 
 gitMoveTestMode="true"
 storageSource="aws"
@@ -20,6 +25,16 @@ JSONlocation="/home/seqware/gitroot/"
 GITemail="denis.yuen+icgc@gmail.com"
 GITname="icgc-bot"
 GITPemFile="/datastore/credentials/git.pem"
+vcfDownloadMethod="gtdownload"
+smufinDownloadMethod="filesystemCopy"
+bamDownloadMethod="gtdownload"
+allowMissingFiles="true"
+smufinDownloadMethod="filesystemCopy"
+fileSystemSourcePath="/datastore/smufin_files/"
+skipBamUpload="false"
+skipVcfUpload="true"
+gtDownloadVcfKey="/path/to/key"
+gtDownloadBamKey="/path/to/key"
 
 PATH_TO_JSON_DIR=$1
 PATH_TO_OXOG_CLASSES=$2
@@ -75,4 +90,32 @@ for f in $(ls $PATH_TO_JSON_DIR) ; do
 	update_or_append $DEST_DIR/$ini_file_name svPadding $svPadding
 	update_or_append $DEST_DIR/$ini_file_name snvPadding $snvPadding
 	update_or_append $DEST_DIR/$ini_file_name indelPadding $indelPadding
+	#update_or_append $DEST_DIR/$ini_file_name downloadMethod $downloadMethod
+        update_or_append $DEST_DIR/$ini_file_name gnosMetadataUploadURL $gnosMetadataUploadURL
+        update_or_append $DEST_DIR/$ini_file_name allowMissingFiles $allowMissingFiles
+        update_or_append $DEST_DIR/$ini_file_name vcfDownloadMethod $vcfDownloadMethod
+        update_or_append $DEST_DIR/$ini_file_name bamDownloadMethod $bamDownloadMethod
+        update_or_append $DEST_DIR/$ini_file_name fileSystemSourcePath $fileSystemSourcePath
+        update_or_append $DEST_DIR/$ini_file_name smufinDownloadMethod $smufinDownloadMethod
+        update_or_append $DEST_DIR/$ini_file_name dummy $dummy
+        update_or_append $DEST_DIR/$ini_file_name skipBamUpload $skipBamUpload
+        update_or_append $DEST_DIR/$ini_file_name skipVcfUpload $skipVcfUpload
+
+        # Now we inject smufin file names
+        for tumour in $(cat $DEST_DIR/$ini_file_name  | grep -w tumour_aliquot_id_.\ =\ .* | sed 's/.*_\([0-9]\) = \(.*\)/\1:\2/g') ; do
+
+                TUMOUR_ALIQUOT_ID=$(echo $tumour | sed -e 's/.*:\(.*\)/\1/g')
+                TUMOUR_INDEX=$(echo $tumour | sed -e 's/\(.*\):.*/\1/g')
+                if ! grep -q $TUMOUR_ALIQUOT_ID ~/donors_without_smufins.txt ; then
+                        echo "adding tumour $tumour for smufin"
+                        echo "smufin_indel_data_file_name_$TUMOUR_INDEX = $TUMOUR_ALIQUOT_ID.smufin.somatic.indel.vcf.gz"  >> $DEST_DIR/$ini_file_name
+                        echo "smufin_indel_data_object_id_$TUMOUR_INDEX = $TUMOUR_ALIQUOT_ID.smufin.somatic.indel.vcf.gz"  >> $DEST_DIR/$ini_file_name
+                        echo "smufin_indel_index_file_name_$TUMOUR_INDEX = $TUMOUR_ALIQUOT_ID.smufin.somatic.indel.vcf.gz.tbi"  >> $DEST_DIR/$ini_file_name
+                        echo "smufin_indel_index_object_id_$TUMOUR_INDEX = $TUMOUR_ALIQUOT_ID.smufin.somatic.indel.vcf.gz.tbi"  >> $DEST_DIR/$ini_file_name
+                else
+                        echo "there is no smufin file for tumour $tumour so smufin will not be included in the new minibam"
+                fi
+        done;
+
+
 done;
